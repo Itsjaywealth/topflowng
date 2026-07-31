@@ -1,555 +1,416 @@
 /**
  * TopFlowNG — Production Backend
  *
- * ── Quick start ──────────────────────────────────
- *  1. npm install
- *  2. cp .env.example .env  →  fill in your keys
- *  3. Whitelist your server IP in Clubkonnect dashboard
- *  4. Set Paystack webhook URL to: https://topflowng.com/api/paystack/webhook
- *  5. npm run dev   (development)
- *     npm start     (production)
- * ─────────────────────────────────────────────────
+ * Stack: Express · PostgreSQL · JWT · Paystack · Clubkonnect VTU
+ * Security: Helmet · express-rate-limit · CORS · Sentry
  */
 
-require("dotenv").config();
-const express      = require("express");
-const axios        = require("axios");
-const crypto       = require("crypto");
-const { v4: uuidv4 } = require("uuid");
-const rateLimit    = require("express-rate-limit");
-const helmet       = require("helmet");
-const cors         = require("cors");
-const path         = require("path");
+'use strict';
 
-// ── Internal modules ──
-const { stmt, creditWallet, debitWallet, refundWallet } = require("./database");
-const { router: authRouter, protect } = require("./auth");
+// ── Sentry (must be first) ───────────────────────────────────────────────────
+const Sentry = require('@sentry/node');
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'production',
+    tracesSampleRate: 0.2,
+  });
+}
+
+const express      = require('express');
+const cors         = require('cors');
+const helmet       = require('helmet');
+const rateLimit    = require('express-rate-limit');
+const path         = require('path');
+const crypto       = require('crypto');
+const jwt          = require('jsonwebtoken');
+const axios        = require('axios');
+require('dotenv').config();
+
+const db = require('./database');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ═══════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════
-const CK = {
-  USER_ID: process.env.CLUBKONNECT_USER_ID,
-  API_KEY: process.env.CLUBKONNECT_API_KEY,
-  BASE:    process.env.CLUBKONNECT_BASE_URL || "https://www.clubkonnect.com",
-};
-
-const PS = {
-  SECRET: process.env.PAYSTACK_SECRET_KEY,
-  BASE:   "https://api.paystack.co",
-};
-
-const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
-
-// ── Lookup tables ────────────────────────────────
-const NETWORK = { mtn: "01", airtel: "02", glo: "03", "9mobile": "04" };
-const DISCO   = {
-  ekedc: "EKEDC", ikedc: "IKEDC", phed: "PHED",
-  bedc:  "BEDC",  aedc:  "AEDC",  jed:  "JED",
-  kedco: "KEDCO", eedc:  "EEDC",
-};
-const CABLETV = { dstv: "DSTV", gotv: "GOTV", startimes: "STARTIMES" };
-const BETTING = {
-  bet9ja: "BET9JA", sportybet: "SPORTYBET", betking: "BETKING",
-  "1xbet": "1XBET", nairabet: "NAIRABET", bangbet: "BANGBET",
-};
-
-// ═══════════════════════════════════════════════
-// MIDDLEWARE
-// ═══════════════════════════════════════════════
-
-// Webhook needs raw body for HMAC check — register BEFORE express.json()
-app.use("/api/paystack/webhook", express.raw({ type: "application/json" }));
-
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
-  origin: process.env.NODE_ENV === "production"
-    ? ["https://topflowng.com", "https://www.topflowng.com"]
-    : "*",
+// ── Security Middleware ──────────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled so inline scripts in HTML still work
+  crossOriginEmbedderPolicy: false,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname)));
 
-// ── Rate limiting ────────────────────────────────
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 60,
-  message: { success: false, message: "Too many requests." },
-});
+app.use(cors({
+  origin: process.env.APP_URL || '*',
+  credentials: true,
+}));
+
+// ── Rate Limiters ────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 10,   // 10 attempts per 15 min for login/register
-  message: { success: false, message: "Too many attempts. Please wait." },
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many attempts, please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-app.use("/api/", apiLimiter);
-app.use("/api/auth/", authLimiter);
-
-// ═══════════════════════════════════════════════
-// AUTH ROUTES
-// ═══════════════════════════════════════════════
-app.use("/api/auth", authRouter);
-
-// ═══════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════
-
-async function ckGet(endpoint, params = {}) {
-  const res = await axios.get(`${CK.BASE}/${endpoint}`, {
-    params: { UserID: CK.USER_ID, APIKey: CK.API_KEY, ...params },
-    timeout: 30000,
-  });
-  return res.data;
-}
-
-async function paystackReq(method, endpoint, data = {}) {
-  const res = await axios({
-    method, url: `${PS.BASE}${endpoint}`,
-    headers: { Authorization: `Bearer ${PS.SECRET}` },
-    data, timeout: 30000,
-  });
-  return res.data;
-}
-
-const reqID = () => `TFN-${Date.now()}-${uuidv4().split("-")[0].toUpperCase()}`;
-
-function apiErr(res, status, message, details = null) {
-  return res.status(status).json({ success: false, message, ...(details && { details }) });
-}
-
-// ═══════════════════════════════════════════════
-// WALLET ROUTES
-// ═══════════════════════════════════════════════
-
-/** GET /api/wallet — current user's balance + last 30 transactions */
-app.get("/api/wallet", protect, (req, res) => {
-  const user = stmt.userById.get(req.user.id);
-  const txns = stmt.txnsByUser.all(req.user.id);
-  res.json({
-    success: true,
-    data: {
-      balance:      user.wallet_balance,
-      transactions: txns,
-    },
-  });
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  message: { error: 'Too many requests, slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// ═══════════════════════════════════════════════
-// PAYSTACK — WALLET FUNDING
-// ═══════════════════════════════════════════════
+// Raw body for Paystack webhook signature verification
+app.use('/api/paystack/webhook', express.raw({ type: 'application/json' }));
 
-/**
- * POST /api/paystack/initialize
- * Body: { amount }  (Naira, min 100)
- * Protected — user must be logged in
- */
-app.post("/api/paystack/initialize", protect, async (req, res) => {
-  const { amount } = req.body;
-  const user = req.user;
+// JSON body for everything else
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: false }));
 
-  if (!amount || amount < 100) {
-    return apiErr(res, 400, "Minimum funding amount is ₦100");
-  }
+// Static files
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
+// ── JWT Auth Middleware ──────────────────────────────────────────────────────
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'No token provided' });
   try {
-    const reference = `TFN-FUND-${uuidv4()}`;
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
 
-    // Record the pending Paystack reference
-    stmt.insertPsRef.run({
-      reference,
-      user_id:      user.id,
-      amount_naira: Number(amount),
-    });
+// ── Health Check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', ts: new Date().toISOString() });
+});
 
-    const data = await paystackReq("POST", "/transaction/initialize", {
-      email:        user.email,
-      amount:       Math.round(Number(amount) * 100), // kobo
-      reference,
-      callback_url: `${APP_URL}/api/paystack/callback`,
-      metadata: {
-        userId: user.id,
-        userName: `${user.first_name} ${user.last_name}`,
-        cancel_action: APP_URL,
-        custom_fields: [
-          { display_name: "Platform",  variable_name: "platform",  value: "TopFlowNG" },
-          { display_name: "User ID",   variable_name: "user_id",   value: user.id },
-        ],
-      },
-    });
+// ── Auth Routes ──────────────────────────────────────────────────────────────
+app.post('/api/auth/register', authLimiter, async (req, res) => {
+  try {
+    const { fullName, email, phone, password } = req.body;
+    if (!fullName || !email || !phone || !password)
+      return res.status(400).json({ error: 'All fields are required' });
+    if (password.length < 6)
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-    res.json({
-      success:          true,
-      authorizationUrl: data.data.authorization_url,
-      reference,
-    });
+    const existing = await db.findUserByEmail(email);
+    if (existing) return res.status(409).json({ error: 'Email already registered' });
+
+    const existingPhone = await db.findUserByPhone(phone);
+    if (existingPhone) return res.status(409).json({ error: 'Phone already registered' });
+
+    const user  = await db.createUser({ fullName, email, phone, password });
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.status(201).json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet) } });
   } catch (err) {
-    console.error("Paystack init error:", err?.response?.data || err.message);
-    apiErr(res, 500, "Could not open payment page. Please try again.", err?.response?.data);
+    console.error('Register error:', err.message);
+    if (err.code === '23505') return res.status(409).json({ error: 'Email or phone already registered' });
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-/**
- * GET /api/paystack/callback
- * Paystack redirects here after payment. Verify, credit wallet, redirect to dashboard.
- */
-app.get("/api/paystack/callback", async (req, res) => {
-  const { reference } = req.query;
-  if (!reference) return res.redirect("/?error=no_reference");
-
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
-    // Check if already processed (idempotency)
-    const psRef = stmt.psRefByRef.get(reference);
-    if (psRef && psRef.status === "completed") {
-      return res.redirect("/?already=true");
+    const { email, password } = req.body;
+    if (!email || !password)
+      return res.status(400).json({ error: 'Email and password required' });
+
+    const user = await db.findUserByEmail(email);
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const ok = await db.verifyPassword(user, password);
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet) } });
+  } catch (err) {
+    console.error('Login error:', err.message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// ── User Profile & Wallet ────────────────────────────────────────────────────
+app.get('/api/user/profile', authMiddleware, async (req, res) => {
+  try {
+    const user = await db.findUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet) });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+app.get('/api/wallet/balance', authMiddleware, async (req, res) => {
+  try {
+    const balance = await db.getWalletBalance(req.user.id);
+    res.json({ balance });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to fetch balance' });
+  }
+});
+
+app.get('/api/wallet/transactions', authMiddleware, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const txns  = await db.getTransactions(req.user.id, limit);
+    res.json({ transactions: txns });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+// ── Paystack Payment Initialisation ─────────────────────────────────────────
+app.post('/api/paystack/initialize', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const { amount } = req.body; // amount in Naira
+    if (!amount || amount < 100) return res.status(400).json({ error: 'Minimum top-up is ₦100' });
+
+    const user     = await db.findUserById(req.user.id);
+    const amountKobo = Math.round(parseFloat(amount) * 100);
+    const reference  = `TF-${Date.now()}-${req.user.id}`;
+
+    const response = await axios.post('https://api.paystack.co/transaction/initialize', {
+      email:     user.email,
+      amount:    amountKobo,
+      reference,
+      callback_url: `${process.env.APP_URL}/dashboard`,
+      metadata: { user_id: req.user.id, user_email: user.email },
+    }, {
+      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+    });
+
+    res.json({ authorization_url: response.data.data.authorization_url, reference });
+  } catch (err) {
+    console.error('Paystack init error:', err.response?.data || err.message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Payment initialization failed' });
+  }
+});
+
+// ── Paystack Webhook ─────────────────────────────────────────────────────────
+app.post('/api/paystack/webhook', async (req, res) => {
+  try {
+    const secret    = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY;
+    const signature = req.headers['x-paystack-signature'];
+    const hash      = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
+
+    if (hash !== signature) {
+      console.warn('Invalid Paystack webhook signature');
+      return res.status(400).json({ error: 'Invalid signature' });
     }
 
-    const data = await paystackReq("GET", `/transaction/verify/${reference}`);
+    const event = JSON.parse(req.body.toString());
 
-    if (data.data.status === "success") {
-      const amountNaira = data.data.amount / 100;
-      const userId      = data.data.metadata?.userId;
+    if (event.event === 'charge.success') {
+      const { reference, amount, metadata } = event.data;
+      const userId  = metadata?.user_id;
+      const naira   = amount / 100;
 
-      if (userId) {
-        creditWallet(userId, amountNaira, `Wallet funded via card (${reference})`, {
-          service: "wallet_funding", reference, providerData: { source: "paystack_callback" },
-        });
-        stmt.completePsRef.run(reference);
-      }
-      return res.redirect(`/?funded=true&amount=${amountNaira}`);
+      if (!userId) return res.sendStatus(200);
+
+      const alreadyProcessed = await db.paystackRefExists(reference);
+      if (alreadyProcessed) return res.sendStatus(200);
+
+      await db.savePaystackRef(reference, userId, naira);
+      await db.creditWallet(userId, naira, `Wallet top-up via Paystack`, reference);
+      console.log(`Wallet credited: user ${userId} +₦${naira} [${reference}]`);
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Webhook error:', err.message);
+    Sentry.captureException(err);
+    res.sendStatus(500);
+  }
+});
+
+// ── VTU — Airtime ────────────────────────────────────────────────────────────
+app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const { network, phone, amount } = req.body;
+    if (!network || !phone || !amount) return res.status(400).json({ error: 'network, phone, amount required' });
+
+    const cost    = parseFloat(amount);
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
+
+    const networkMap = { MTN: 'MTN', GLO: 'GLO', AIRTEL: 'AIRTEL', '9MOBILE': '9MOBILE', ETISALAT: '9MOBILE' };
+    const ckNetwork  = networkMap[network.toUpperCase()] || network.toUpperCase();
+
+    const params = {
+      UserID:  process.env.CLUBKONNECT_USER_ID,
+      APIKey:  process.env.CLUBKONNECT_API_KEY,
+      MobileNetwork: ckNetwork,
+      Amount:  cost,
+      MobileNumber: phone,
+      RequestID: `AIR-${Date.now()}`,
+      CallBackURL: '',
+    };
+
+    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/Airtime/`, { params });
+    const data  = ckRes.data;
+
+    if (data.status === '200' || data.Status === 'Successful') {
+      await db.debitWallet(req.user.id, cost, `Airtime recharge — ${network} ${phone}`, params.RequestID);
+      res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}` });
     } else {
-      return res.redirect("/?error=payment_failed");
+      await db.logFailedTransaction(req.user.id, `Failed airtime — ${network} ${phone}`, cost);
+      res.status(400).json({ error: data.message || data.Message || 'Airtime purchase failed' });
     }
   } catch (err) {
-    console.error("Paystack callback error:", err?.response?.data || err.message);
-    return res.redirect("/?error=verification_failed");
+    console.error('Airtime error:', err.message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Airtime service unavailable' });
   }
 });
 
-/**
- * POST /api/paystack/webhook
- * Server-to-server confirmation (most reliable). HMAC verified.
- */
-app.post("/api/paystack/webhook", (req, res) => {
-  const signature = req.headers["x-paystack-signature"];
-  const hash = crypto
-    .createHmac("sha512", process.env.PAYSTACK_WEBHOOK_SECRET || PS.SECRET)
-    .update(req.body)
-    .digest("hex");
+// ── VTU — Data Bundle ────────────────────────────────────────────────────────
+app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const { network, phone, planCode, amount } = req.body;
+    if (!network || !phone || !planCode || !amount) return res.status(400).json({ error: 'network, phone, planCode, amount required' });
 
-  if (hash !== signature) {
-    console.warn("Webhook: invalid signature");
-    return res.status(401).send("Invalid signature");
-  }
+    const cost    = parseFloat(amount);
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-  res.sendStatus(200); // Always reply 200 fast
+    const params = {
+      UserID:  process.env.CLUBKONNECT_USER_ID,
+      APIKey:  process.env.CLUBKONNECT_API_KEY,
+      MobileNetwork: network.toUpperCase(),
+      DataPlan: planCode,
+      MobileNumber: phone,
+      RequestID: `DATA-${Date.now()}`,
+      CallBackURL: '',
+    };
 
-  const event = JSON.parse(req.body.toString());
-  if (event.event === "charge.success") {
-    const { amount, reference, metadata } = event.data;
-    const amountNaira = amount / 100;
-    const userId      = metadata?.userId;
+    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/Databundle/`, { params });
+    const data  = ckRes.data;
 
-    if (!userId) return;
-
-    // Idempotency: skip if already processed via callback
-    const psRef = stmt.psRefByRef.get(reference);
-    if (psRef?.status === "completed") return;
-
-    try {
-      creditWallet(userId, amountNaira, `Wallet funded via bank transfer (${reference})`, {
-        service: "wallet_funding", reference, providerData: { source: "paystack_webhook" },
-      });
-      stmt.completePsRef.run(reference);
-      console.log(`✓ Webhook: ₦${amountNaira} credited to ${userId}`);
-    } catch (e) {
-      console.error("Webhook credit error:", e.message);
+    if (data.status === '200' || data.Status === 'Successful') {
+      await db.debitWallet(req.user.id, cost, `Data bundle — ${network} ${planCode}`, params.RequestID);
+      res.json({ success: true, message: `Data bundle activated for ${phone}` });
+    } else {
+      await db.logFailedTransaction(req.user.id, `Failed data — ${network} ${phone}`, cost);
+      res.status(400).json({ error: data.message || data.Message || 'Data purchase failed' });
     }
+  } catch (err) {
+    console.error('Data error:', err.message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Data service unavailable' });
   }
 });
 
-// ═══════════════════════════════════════════════
-// VTU SERVICE ROUTES  (all protected)
-// ═══════════════════════════════════════════════
-
-/** POST /api/services/airtime */
-app.post("/api/services/airtime", protect, async (req, res) => {
-  const { network, phone, amount } = req.body;
-  const userId = req.user.id;
-
-  if (!network || !phone || !amount) return apiErr(res, 400, "network, phone, and amount are required");
-  const netCode = NETWORK[network.toLowerCase()];
-  if (!netCode) return apiErr(res, 400, `Unknown network`);
-  if (amount < 50 || amount > 50000) return apiErr(res, 400, "Amount must be ₦50–₦50,000");
-
-  const requestID = reqID();
+// ── VTU — Cable TV ───────────────────────────────────────────────────────────
+app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    debitWallet(userId, Number(amount), `${network.toUpperCase()} ₦${amount} airtime → ${phone}`, { service: "airtime", reference: requestID });
-  } catch (e) {
-    return apiErr(res, 402, e.message);
-  }
+    const { provider, smartCardNumber, planCode, amount } = req.body;
+    if (!provider || !smartCardNumber || !planCode || !amount) return res.status(400).json({ error: 'provider, smartCardNumber, planCode, amount required' });
 
-  try {
-    const data = await ckGet("APIGetAirTimeV1.asp", {
-      MobileNetwork: netCode, Amount: amount, MobileNumber: phone,
-      RequestID: requestID, CallbackURL: `${APP_URL}/api/callbacks/ck`,
-    });
+    const cost    = parseFloat(amount);
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    if (data.Status && data.Status !== "Order Successful") {
-      refundWallet(userId, Number(amount), `Refund: airtime to ${phone} failed`);
-      return apiErr(res, 502, data.Status || "Provider error", data);
+    const params = {
+      UserID:  process.env.CLUBKONNECT_USER_ID,
+      APIKey:  process.env.CLUBKONNECT_API_KEY,
+      CableTV: provider.toUpperCase(),
+      Package: planCode,
+      SmartCardNo: smartCardNumber,
+      RequestID: `CABLE-${Date.now()}`,
+      CallBackURL: '',
+    };
+
+    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/CableTV/`, { params });
+    const data  = ckRes.data;
+
+    if (data.status === '200' || data.Status === 'Successful') {
+      await db.debitWallet(req.user.id, cost, `${provider} subscription — ${smartCardNumber}`, params.RequestID);
+      res.json({ success: true, message: `${provider} subscription activated` });
+    } else {
+      await db.logFailedTransaction(req.user.id, `Failed cable — ${provider}`, cost);
+      res.status(400).json({ error: data.message || data.Message || 'Cable TV subscription failed' });
     }
-
-    res.json({ success: true, message: `₦${amount} airtime sent to ${phone}`, requestId: requestID });
   } catch (err) {
-    refundWallet(userId, Number(amount), `Refund: airtime to ${phone} (network error)`);
-    console.error("Airtime error:", err?.response?.data || err.message);
-    apiErr(res, 500, "Airtime failed. Wallet refunded.", err.message);
+    console.error('Cable TV error:', err.message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Cable TV service unavailable' });
   }
 });
 
-/** POST /api/services/data */
-app.post("/api/services/data", protect, async (req, res) => {
-  const { network, plan, phone, amount } = req.body;
-  const userId = req.user.id;
-
-  if (!network || !plan || !phone || !amount) return apiErr(res, 400, "network, plan, phone, amount required");
-  const netCode = NETWORK[network.toLowerCase()];
-  if (!netCode) return apiErr(res, 400, "Unknown network");
-
-  const requestID = reqID();
+// ── VTU — Electricity ────────────────────────────────────────────────────────
+app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    debitWallet(userId, Number(amount), `${network.toUpperCase()} ${plan} data → ${phone}`, { service: "data", reference: requestID });
-  } catch (e) {
-    return apiErr(res, 402, e.message);
-  }
+    const { disco, meterNumber, meterType, amount } = req.body;
+    if (!disco || !meterNumber || !meterType || !amount) return res.status(400).json({ error: 'disco, meterNumber, meterType, amount required' });
 
-  try {
-    const data = await ckGet("APIGetDataBundleV1.asp", {
-      MobileNetwork: netCode, DataPlan: plan, MobileNumber: phone,
-      RequestID: requestID, CallbackURL: `${APP_URL}/api/callbacks/ck`,
-    });
+    const cost    = parseFloat(amount);
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    if (data.Status && data.Status !== "Order Successful") {
-      refundWallet(userId, Number(amount), `Refund: data to ${phone} failed`);
-      return apiErr(res, 502, data.Status || "Provider error", data);
+    const params = {
+      UserID:  process.env.CLUBKONNECT_USER_ID,
+      APIKey:  process.env.CLUBKONNECT_API_KEY,
+      ElectricCompany: disco.toUpperCase(),
+      MeterType: meterType.toUpperCase(),
+      MeterNumber: meterNumber,
+      Amount: cost,
+      RequestID: `ELEC-${Date.now()}`,
+      CallBackURL: '',
+    };
+
+    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/Electricity/`, { params });
+    const data  = ckRes.data;
+
+    if (data.status === '200' || data.Status === 'Successful') {
+      await db.debitWallet(req.user.id, cost, `Electricity — ${disco} ${meterNumber}`, params.RequestID);
+      res.json({ success: true, message: `Electricity token sent`, token: data.token || data.Token || '' });
+    } else {
+      await db.logFailedTransaction(req.user.id, `Failed electricity — ${disco}`, cost);
+      res.status(400).json({ error: data.message || data.Message || 'Electricity payment failed' });
     }
-
-    res.json({ success: true, message: `${plan} data activated on ${phone}`, requestId: requestID });
   } catch (err) {
-    refundWallet(userId, Number(amount), `Refund: data to ${phone} (error)`);
-    apiErr(res, 500, "Data purchase failed. Wallet refunded.", err.message);
+    console.error('Electricity error:', err.message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Electricity service unavailable' });
   }
 });
 
-/** POST /api/services/electricity/verify */
-app.post("/api/services/electricity/verify", protect, async (req, res) => {
-  const { disco, meterNumber, meterType = "Prepaid" } = req.body;
-  if (!disco || !meterNumber) return apiErr(res, 400, "disco and meterNumber required");
-  const discoCode = DISCO[disco.toLowerCase()];
-  if (!discoCode) return apiErr(res, 400, `Unknown DISCO`);
-
-  try {
-    const data = await ckGet("APIVerifyMeterV1.asp", {
-      MeterNo: meterNumber, DiscoName: discoCode, MeterType: meterType,
-    });
-    res.json({ success: true, data });
-  } catch (err) {
-    apiErr(res, 500, "Meter verification failed", err.message);
-  }
+// ── SPA Fallback ─────────────────────────────────────────────────────────────
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'topflowng.html'));
 });
 
-/** POST /api/services/electricity */
-app.post("/api/services/electricity", protect, async (req, res) => {
-  const { disco, meterNumber, meterType = "Prepaid", amount } = req.body;
-  const userId = req.user.id;
+// ── Sentry Error Handler ─────────────────────────────────────────────────────
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
-  if (!disco || !meterNumber || !amount) return apiErr(res, 400, "disco, meterNumber, amount required");
-  if (amount < 1000) return apiErr(res, 400, "Minimum ₦1,000");
-  const discoCode = DISCO[disco.toLowerCase()];
-  if (!discoCode) return apiErr(res, 400, "Unknown DISCO");
-
-  const requestID = reqID();
-  try {
-    debitWallet(userId, Number(amount), `${disco.toUpperCase()} token — meter ${meterNumber}`, { service: "electricity", reference: requestID });
-  } catch (e) {
-    return apiErr(res, 402, e.message);
-  }
-
-  try {
-    const data = await ckGet("APIGetElectricityV1.asp", {
-      MeterNo: meterNumber, DiscoName: discoCode, MeterType: meterType,
-      Amount: amount, RequestID: requestID, CallbackURL: `${APP_URL}/api/callbacks/ck`,
-    });
-
-    if (data.Status && data.Status !== "Order Successful") {
-      refundWallet(userId, Number(amount), `Refund: electricity token failed`);
-      return apiErr(res, 502, data.Status || "Provider error", data);
-    }
-
-    res.json({
-      success: true,
-      message: `Token delivered to meter ${meterNumber}`,
-      token:   data.Token || data.MainToken || "Check your SMS",
-      requestId: requestID,
-    });
-  } catch (err) {
-    refundWallet(userId, Number(amount), `Refund: electricity ${meterNumber} (error)`);
-    apiErr(res, 500, "Electricity purchase failed. Wallet refunded.", err.message);
-  }
+// ── Global Error Handler ─────────────────────────────────────────────────────
+app.use((err, req, res, _next) => {
+  console.error('Unhandled error:', err.message);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
-/** POST /api/services/cable/verify */
-app.post("/api/services/cable/verify", protect, async (req, res) => {
-  const { provider, smartCardNo } = req.body;
-  if (!provider || !smartCardNo) return apiErr(res, 400, "provider and smartCardNo required");
-  const provCode = CABLETV[provider.toLowerCase()];
-  if (!provCode) return apiErr(res, 400, "Unknown provider");
+// ── Start Server ─────────────────────────────────────────────────────────────
+async function start() {
+  await db.initDB();
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`TopFlowNG running on port ${PORT}`);
+  });
+}
 
-  try {
-    const data = await ckGet("APIVerifyCableTVV1.asp", { CableTV: provCode, SmartCardNo: smartCardNo });
-    res.json({ success: true, data });
-  } catch (err) {
-    apiErr(res, 500, "Smart card verification failed", err.message);
-  }
+start().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
-
-/** POST /api/services/cable */
-app.post("/api/services/cable", protect, async (req, res) => {
-  const { provider, smartCardNo, package: pkg, amount } = req.body;
-  const userId = req.user.id;
-
-  if (!provider || !smartCardNo || !pkg || !amount) return apiErr(res, 400, "All cable fields required");
-  const provCode = CABLETV[provider.toLowerCase()];
-  if (!provCode) return apiErr(res, 400, "Unknown provider");
-
-  const requestID = reqID();
-  try {
-    debitWallet(userId, Number(amount), `${provider.toUpperCase()} ${pkg} — card ${smartCardNo}`, { service: "cable", reference: requestID });
-  } catch (e) {
-    return apiErr(res, 402, e.message);
-  }
-
-  try {
-    const data = await ckGet("APIGetCableTVV1.asp", {
-      CableTV: provCode, Package: pkg, SmartCardNo: smartCardNo,
-      RequestID: requestID, CallbackURL: `${APP_URL}/api/callbacks/ck`,
-    });
-
-    if (data.Status && data.Status !== "Order Successful") {
-      refundWallet(userId, Number(amount), `Refund: cable TV sub failed`);
-      return apiErr(res, 502, data.Status || "Provider error", data);
-    }
-
-    res.json({ success: true, message: `${pkg} subscription renewed`, requestId: requestID });
-  } catch (err) {
-    refundWallet(userId, Number(amount), `Refund: cable TV (error)`);
-    apiErr(res, 500, "Cable TV failed. Wallet refunded.", err.message);
-  }
-});
-
-/** POST /api/services/betting */
-app.post("/api/services/betting", protect, async (req, res) => {
-  const { company, customerId, amount } = req.body;
-  const userId = req.user.id;
-
-  if (!company || !customerId || !amount) return apiErr(res, 400, "company, customerId, amount required");
-  if (amount < 100) return apiErr(res, 400, "Minimum ₦100");
-  const compCode = BETTING[company.toLowerCase()];
-  if (!compCode) return apiErr(res, 400, "Unknown betting company");
-
-  const requestID = reqID();
-  try {
-    debitWallet(userId, Number(amount), `${company.toUpperCase()} wallet → ${customerId}`, { service: "betting", reference: requestID });
-  } catch (e) {
-    return apiErr(res, 402, e.message);
-  }
-
-  try {
-    const data = await ckGet("APIGetBettingV1.asp", {
-      BettingCompany: compCode, CustomerID: customerId,
-      Amount: amount, RequestID: requestID, CallbackURL: `${APP_URL}/api/callbacks/ck`,
-    });
-
-    if (data.Status && data.Status !== "Order Successful") {
-      refundWallet(userId, Number(amount), `Refund: betting wallet failed`);
-      return apiErr(res, 502, data.Status || "Provider error", data);
-    }
-
-    res.json({ success: true, message: `₦${amount} funded to ${company} wallet`, requestId: requestID });
-  } catch (err) {
-    refundWallet(userId, Number(amount), `Refund: betting to ${customerId} (error)`);
-    apiErr(res, 500, "Betting funding failed. Wallet refunded.", err.message);
-  }
-});
-
-/** POST /api/services/waec */
-app.post("/api/services/waec", protect, async (req, res) => {
-  const { quantity = 1 } = req.body;
-  const userId   = req.user.id;
-  const PRICE    = 3500;
-  const total    = PRICE * Number(quantity);
-  const requestID = reqID();
-
-  try {
-    debitWallet(userId, total, `WAEC e-PIN × ${quantity}`, { service: "waec", reference: requestID });
-  } catch (e) {
-    return apiErr(res, 402, e.message);
-  }
-
-  try {
-    const data = await ckGet("APIGetWAECV1.asp", {
-      Quantity: quantity, RequestID: requestID, CallbackURL: `${APP_URL}/api/callbacks/ck`,
-    });
-
-    if (data.Status && data.Status !== "Order Successful") {
-      refundWallet(userId, total, `Refund: WAEC PIN failed`);
-      return apiErr(res, 502, data.Status || "Provider error", data);
-    }
-
-    res.json({ success: true, pins: data.Pins || data, requestId: requestID });
-  } catch (err) {
-    refundWallet(userId, total, `Refund: WAEC (error)`);
-    apiErr(res, 500, "WAEC PIN failed. Wallet refunded.", err.message);
-  }
-});
-
-// ═══════════════════════════════════════════════
-// CLUBKONNECT DELIVERY CALLBACK
-// ═══════════════════════════════════════════════
-app.post("/api/callbacks/ck", (req, res) => {
-  console.log("CK Callback:", JSON.stringify(req.body, null, 2));
-  // TODO: update DB order status and push notification to user
-  res.sendStatus(200);
-});
-
-// ═══════════════════════════════════════════════
-// SERVE FRONTEND
-// ═══════════════════════════════════════════════
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "topflowng.html")));
-app.use((req, res) => res.status(404).json({ success: false, message: "Not found" }));
-app.use((err, req, res, next) => {
-  console.error("Unhandled:", err);
-  res.status(500).json({ success: false, message: "Server error" });
-});
-
-// ═══════════════════════════════════════════════
-// START
-// ═══════════════════════════════════════════════
-app.listen(PORT, () => {
-  const ckReady = CK.USER_ID && CK.API_KEY ? "✓ Configured" : "✗ Set CLUBKONNECT_USER_ID + API_KEY";
-  const psReady = PS.SECRET              ? "✓ Configured" : "✗ Set PAYSTACK_SECRET_KEY";
-  console.log(`
-╔══════════════════════════════════════════════════╗
-║           TopFlowNG — Server Ready               ║
-╠══════════════════════════════════════════════════╣
-║  URL:         http://localhost:${PORT}               ║
-║  DB:          topflowng.db (SQLite/WAL)           ║
-║  Clubkonnect: ${ckReady.padEnd(36)} ║
-║  Paystack:    ${psReady.padEnd(36)} ║
-╚══════════════════════════════════════════════════╝
-  `);
-});
-
-module.exports = app;
