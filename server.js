@@ -7,7 +7,7 @@
 
 'use strict';
 
-// ── Sentry (must be first) ───────────────────────────────────────────────────
+// ── Sentry (must be first) ──────────────────────────────────────────────────
 const Sentry = require('@sentry/node');
 if (process.env.SENTRY_DSN) {
   Sentry.init({
@@ -30,6 +30,7 @@ require('dotenv').config();
 const db = require('./database');
 
 const app  = express();
+app.set('trust proxy', 1); // Trust Railway's load balancer for accurate rate limiting
 const PORT = process.env.PORT || 3000;
 
 // ── Security Middleware ──────────────────────────────────────────────────────
