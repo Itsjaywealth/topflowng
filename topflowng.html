@@ -526,6 +526,7 @@ const TXN_LIMIT = 30;
 let selectedDataPlan = null;
 let selectedCablePlan = null;
 let resetToken = null;
+let pendingPaymentReference = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 async function api(method, path, body, noAuth) {
@@ -629,6 +630,7 @@ async function handleLogin() {
     user  = data.user;
     localStorage.setItem('tf_token', token);
     launchApp();
+    await completePendingPayment();
   } catch (e) {
     showErr('login-error', e.message);
   }
@@ -651,6 +653,7 @@ async function handleRegister() {
     user  = data.user;
     localStorage.setItem('tf_token', token);
     launchApp();
+    await completePendingPayment();
   } catch (e) {
     showErr('register-error', e.message);
   }
@@ -704,6 +707,7 @@ async function init() {
   const params = new URLSearchParams(window.location.search);
   const rst = params.get('reset');
   const ver = params.get('verified');
+  pendingPaymentReference = ver;
 
   if (rst) {
     resetToken = rst;
@@ -722,10 +726,7 @@ async function init() {
     const data = await api('GET', '/api/user/profile');
     user = data;
     launchApp();
-    if (ver) {
-      window.history.replaceState({}, '', '/');
-      verifyPayment(ver);
-    }
+    await completePendingPayment();
   } catch {
     localStorage.removeItem('tf_token');
     token = null;
@@ -1144,6 +1145,15 @@ async function initiateFunding() {
     showErr('fund-modal-error', e.message);
     setLoading('btn-fund-pay', false);
   }
+}
+
+async function completePendingPayment() {
+  const reference = pendingPaymentReference;
+  if (!reference) return;
+
+  pendingPaymentReference = null;
+  window.history.replaceState({}, '', '/');
+  await verifyPayment(reference);
 }
 
 async function verifyPayment(reference) {
