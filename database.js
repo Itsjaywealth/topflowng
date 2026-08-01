@@ -76,6 +76,34 @@ async function initDB() {
       ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reference TEXT;
     `);
 
+    // Older production databases used `ref` and did not include an id column.
+    // Normalize that legacy idempotency table before webhook queries run.
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'paystack_refs'
+            AND column_name = 'ref'
+        ) AND NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'paystack_refs'
+            AND column_name = 'reference'
+        ) THEN
+          ALTER TABLE paystack_refs RENAME COLUMN ref TO reference;
+        END IF;
+      END $$;
+    `);
+    await client.query(`
+      ALTER TABLE paystack_refs ADD COLUMN IF NOT EXISTS id BIGSERIAL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_paystack_refs_reference
+        ON paystack_refs(reference);
+    `);
+
     console.log('Database schema ready');
   } finally {
     client.release();
