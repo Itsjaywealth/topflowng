@@ -783,6 +783,7 @@ async function init() {
 function launchApp() {
   document.getElementById('auth-screen').classList.remove('active');
   document.getElementById('main-app').classList.add('active');
+    goTab('home');
   updateUserUI();
   loadBalance();
   loadRecentTxns();
