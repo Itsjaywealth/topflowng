@@ -71,6 +71,11 @@ async function initDB() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
     `).catch(() => {});
 
+    // Existing production databases may predate the transaction reference field.
+    await client.query(`
+      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reference TEXT;
+    `);
+
     console.log('Database schema ready');
   } finally {
     client.release();
