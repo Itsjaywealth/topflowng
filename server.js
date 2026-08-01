@@ -308,31 +308,59 @@ app.post('/api/paystack/initialize', authMiddleware, apiLimiter, async (req, res
   }
 });
 
+async function getVerifiedPaystackPayment(reference) {
+  const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
+    headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+  });
+  const payment = response.data.data;
+  if (payment.status !== 'success' || payment.reference !== reference) {
+    const error = new Error('Paystack payment is not a verified successful charge');
+    error.code = 'PAYMENT_NOT_SUCCESSFUL';
+    throw error;
+  }
+  const userId = payment.metadata?.user_id;
+  if (!userId) {
+    const error = new Error(`Verified Paystack payment ${reference} has no user_id metadata`);
+    error.code = 'PAYMENT_USER_MISSING';
+    throw error;
+  }
+  return { userId: Number(userId), amount: payment.amount / 100 };
+}
+
+function monitorUncreditedPaystackPayment(reference) {
+  setTimeout(async () => {
+    try {
+      if (!await db.paystackRefExists(reference)) {
+        console.error(`ALERT: verified Paystack payment ${reference} is still uncredited after 60 seconds`);
+      }
+    } catch (err) {
+      console.error(`ALERT: unable to check Paystack credit state for ${reference}:`, err.message);
+    }
+  }, 60_000).unref();
+}
+
+async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) {
+  const payment = await getVerifiedPaystackPayment(reference);
+  if (expectedUserId && payment.userId !== Number(expectedUserId)) {
+    const error = new Error('Payment does not belong to the authenticated user');
+    error.code = 'PAYMENT_USER_MISMATCH';
+    throw error;
+  }
+  monitorUncreditedPaystackPayment(reference);
+  const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
+  console.log(`Paystack payment ${result.credited ? 'credited' : 'already credited'}: user ${payment.userId} +₦${payment.amount} [${reference}]`);
+  return { ...result, userId: payment.userId };
+}
+
 app.get('/api/paystack/verify/:reference', authMiddleware, async (req, res) => {
   try {
-    const { reference } = req.params;
-    const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-    });
-
-    const data = response.data.data;
-    if (data.status !== 'success') return res.status(400).json({ error: 'Payment not successful' });
-
-    // Idempotent credit
-    const already = await db.paystackRefExists(reference);
-    if (!already) {
-      const userId = data.metadata?.user_id || req.user.id;
-      const naira  = data.amount / 100;
-      await db.savePaystackRef(reference, userId, naira);
-      await db.creditWallet(userId, naira, 'Wallet top-up via Paystack', reference);
-    }
-
-    const balance = await db.getWalletBalance(req.user.id);
-    res.json({ success: true, balance });
+    const result = await verifyAndCreditPaystackPayment(req.params.reference, req.user.id);
+    res.json({ success: true, balance: result.balance, credited: result.credited });
   } catch (err) {
     console.error('Paystack verify error:', err.response?.data || err.message);
     Sentry.captureException(err);
-    res.status(500).json({ error: 'Payment verification failed' });
+    const status = ['PAYMENT_NOT_SUCCESSFUL', 'PAYMENT_USER_MISMATCH'].includes(err.code) ? 400 : 500;
+    res.status(status).json({ error: 'Payment verification failed' });
   }
 });
 
@@ -350,18 +378,9 @@ app.post('/api/paystack/webhook', async (req, res) => {
     const event = JSON.parse(req.body.toString());
 
     if (event.event === 'charge.success') {
-      const { reference, amount, metadata } = event.data;
-      const userId = metadata?.user_id;
-      const naira  = amount / 100;
-
-      if (!userId) return res.sendStatus(200);
-
-      const alreadyProcessed = await db.paystackRefExists(reference);
-      if (alreadyProcessed) return res.sendStatus(200);
-
-      await db.savePaystackRef(reference, userId, naira);
-      await db.creditWallet(userId, naira, 'Wallet top-up via Paystack', reference);
-      console.log(`Wallet credited: user ${userId} +₦${naira} [${reference}]`);
+      // The signed webhook identifies the event; Paystack's verify API remains
+      // the source of truth before a wallet is ever credited.
+      await verifyAndCreditPaystackPayment(event.data.reference);
     }
 
     res.sendStatus(200);
