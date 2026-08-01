@@ -534,7 +534,16 @@ async function api(method, path, body, noAuth) {
   if (!noAuth && token) opts.headers['Authorization'] = 'Bearer ' + token;
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(path, opts);
-  const json = await r.json();
+  const raw = await r.text();
+  let json = {};
+  if (raw) {
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      if (!r.ok) throw new Error(raw.trim() || `Request failed (${r.status})`);
+      throw new Error('Invalid server response');
+    }
+  }
   if (!r.ok) throw new Error(json.error || 'Request failed');
   return json;
 }
@@ -762,7 +771,9 @@ async function loadBalance() {
     const prev = parseFloat(document.getElementById('balance-display').textContent.replace(/[₦,]/g,'')) || 0;
     animateBalance(prev, data.balance);
     user.wallet = data.balance;
-  } catch {}
+  } catch {
+    document.getElementById('balance-display').textContent = 'Unavailable';
+  }
 }
 
 function updateBalance(newBal) {
@@ -795,7 +806,9 @@ async function loadRecentTxns() {
     } else {
       el.innerHTML = data.transactions.map(txnHTML).join('');
     }
-  } catch {}
+  } catch {
+    document.getElementById('recent-txns').innerHTML = '<div class="txn-empty">Transactions are temporarily unavailable. Please try again.</div>';
+  }
 }
 
 let txnFilter = 'all';
@@ -807,7 +820,9 @@ async function loadAllTxns(reset) {
     txnOffset += data.transactions.length;
     renderTxns();
     document.getElementById('btn-load-more').style.display = data.transactions.length < TXN_LIMIT ? 'none' : 'block';
-  } catch {}
+  } catch {
+    document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Transactions are temporarily unavailable. Please try again.</div>';
+  }
 }
 
 function renderTxns() {
