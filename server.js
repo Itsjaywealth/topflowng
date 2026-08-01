@@ -563,17 +563,6 @@ app.get('/api/admin/users', adminMiddleware, async (req, res) => {
   }
 });
 
-// TEMP: admin bootstrap - REMOVE AFTER USE
-app.get('/api/bootstrap-admin-TF2024', async (req, res) => {
-try {
-const { Pool } = require('pg');
-const p = new Pool({ connectionString: process.env.DATABASE_URL });
-const r = await p.query("UPDATE users SET is_admin=true WHERE email='josephegbedi@gmail.com' RETURNING id,email,is_admin");
-await p.end();
-res.json({ ok: true, row: r.rows[0] });
-} catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 // ── SPA Fallback ─────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'topflowng.html'));
