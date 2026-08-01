@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * TopFlowNG â PostgreSQL Database Layer
+ * TopFlowNG — PostgreSQL Database Layer
  * Tables: users, transactions, password_resets, paystack_refs
  */
 
 const { Pool } = require('pg');
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcryptjs');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -18,7 +18,7 @@ const pool = new Pool({
 
 const SALT_ROUNDS = 12;
 
-// ââ Schema Init ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Schema Init ───────────────────────────────────────────────────────────────
 async function initDB() {
   const client = await pool.connect();
   try {
@@ -77,7 +77,7 @@ async function initDB() {
   }
 }
 
-// ââ User Queries ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── User Queries ──────────────────────────────────────────────────────────────
 async function findUserByEmail(email) {
   const { rows } = await pool.query(
     'SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
@@ -122,7 +122,7 @@ async function updateUserPassword(userId, newPassword) {
   await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hash, userId]);
 }
 
-// ââ Wallet ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Wallet ────────────────────────────────────────────────────────────────────
 async function getWalletBalance(userId) {
   const { rows } = await pool.query(
     'SELECT wallet FROM users WHERE id = $1',
@@ -198,7 +198,7 @@ async function logFailedTransaction(userId, description, amount) {
   ).catch(err => console.error('Failed to log failed transaction:', err.message));
 }
 
-// ââ Password Reset ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Password Reset ────────────────────────────────────────────────────────────
 async function createPasswordReset(userId, token) {
   // Invalidate any existing tokens for this user
   await pool.query(
@@ -237,7 +237,7 @@ async function consumePasswordReset(token, newPassword) {
   }
 }
 
-// ââ Paystack Idempotency ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Paystack Idempotency ──────────────────────────────────────────────────────
 async function paystackRefExists(reference) {
   const { rows } = await pool.query(
     'SELECT id FROM paystack_refs WHERE reference = $1 LIMIT 1',
@@ -254,7 +254,7 @@ async function savePaystackRef(reference, userId, amount) {
   );
 }
 
-// ââ Admin Queries âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Admin Queries ─────────────────────────────────────────────────────────────
 async function getAdminStats() {
   const { rows } = await pool.query(`
     SELECT
@@ -281,7 +281,7 @@ async function getAllTransactions(limit = 50, offset = 0) {
   return rows;
 }
 
-acync function getAllUsers(limit = 50, offset = 0) {
+async function getAllUsers(limit = 50, offset = 0) {
   const { rows } = await pool.query(
     `SELECT id, full_name, email, phone, wallet, is_admin, created_at
      FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
