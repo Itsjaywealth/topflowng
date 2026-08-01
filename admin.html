@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TopFlowNG Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0E2235;
+  --amber:#F5A623;
+  --green:#1A7A4A;
+  --red:#DC2626;
+  --white:#FFFFFF;
+  --slate:#EEF0F4;
+  --mid:#6B7280;
+  --radius:10px;
+  --font:'IBM Plex Sans',system-ui,sans-serif;
+}
+body{font-family:var(--font);background:var(--slate);color:var(--ink);min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* ── AUTH SCREEN ── */
+#login-screen{
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+}
+.login-card{
+  background:var(--white);border-radius:var(--radius);padding:40px;
+  width:100%;max-width:380px;box-shadow:0 4px 24px rgba(14,34,53,.10);
+}
+.login-card h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.login-card p{color:var(--mid);font-size:14px;margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.field input{
+  width:100%;padding:10px 14px;border:1.5px solid #D1D5DB;border-radius:8px;
+  font-size:15px;outline:none;transition:border-color .15s;
+}
+.field input:focus{border-color:var(--ink)}
+.btn{
+  width:100%;padding:12px;background:var(--ink);color:var(--white);
+  border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;
+  transition:opacity .15s;
+}
+.btn:hover{opacity:.88}
+.btn.amber{background:var(--amber);color:var(--ink)}
+.error-msg{color:var(--red);font-size:13px;margin-top:12px;display:none}
+
+/* ── LAYOUT ── */
+#app{display:none}
+.sidebar{
+  position:fixed;top:0;left:0;width:220px;height:100vh;
+  background:var(--ink);padding:24px 0;display:flex;flex-direction:column;
+}
+.sidebar-logo{
+  padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.1);
+  font-size:17px;font-weight:700;color:var(--white);
+}
+.sidebar-logo span{color:var(--amber)}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:12px 24px;
+  color:rgba(255,255,255,.65);font-size:14px;font-weight:500;cursor:pointer;
+  transition:all .15s;border-left:3px solid transparent;
+}
+.nav-item:hover,.nav-item.active{
+  color:var(--white);background:rgba(255,255,255,.07);
+  border-left-color:var(--amber);
+}
+.nav-item svg{flex-shrink:0;opacity:.8}
+.sidebar-footer{
+  margin-top:auto;padding:16px 24px;border-top:1px solid rgba(255,255,255,.1);
+}
+.sidebar-user{color:rgba(255,255,255,.55);font-size:12px}
+.sidebar-user strong{display:block;color:var(--white);font-size:13px;margin-bottom:2px}
+.logout-btn{
+  margin-top:10px;padding:8px 14px;background:transparent;
+  border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);
+  border-radius:6px;font-size:12px;cursor:pointer;width:100%;
+  transition:all .15s;
+}
+.logout-btn:hover{background:rgba(255,255,255,.08);color:var(--white)}
+
+.main{margin-left:220px;padding:32px 36px;min-height:100vh}
+.page-title{font-size:24px;font-weight:700;margin-bottom:4px}
+.page-sub{color:var(--mid);font-size:14px;margin-bottom:28px}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{
+  background:var(--white);border-radius:var(--radius);padding:20px 22px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.stat-label{font-size:12px;font-weight:500;color:var(--mid);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.stat-value{font-size:28px;font-weight:700;color:var(--ink);line-height:1}
+.stat-sub{font-size:12px;color:var(--mid);margin-top:4px}
+.stat-card.amber .stat-value{color:var(--amber)}
+.stat-card.green .stat-value{color:var(--green)}
+
+/* ── TABLE ── */
+.section{background:var(--white);border-radius:var(--radius);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;margin-bottom:24px}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;border-bottom:1px solid var(--slate);
+}
+.section-title{font-size:15px;font-weight:600}
+.section-meta{font-size:13px;color:var(--mid)}
+.search-input{
+  padding:7px 12px;border:1.5px solid #D1D5DB;border-radius:7px;
+  font-size:13px;outline:none;width:200px;transition:border-color .15s;
+}
+.search-input:focus{border-color:var(--ink)}
+table{width:100%;border-collapse:collapse}
+th{
+  padding:10px 22px;text-align:left;font-size:12px;font-weight:600;
+  color:var(--mid);text-transform:uppercase;letter-spacing:.04em;
+  background:var(--slate);
+}
+td{padding:13px 22px;font-size:13px;border-bottom:1px solid var(--slate)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#F9FAFB}
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:20px;
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;
+}
+.badge.credit{background:#D1FAE5;color:#065F46}
+.badge.debit{background:#FEE2E2;color:#991B1B}
+.badge.pending{background:#FEF3C7;color:#92400E}
+.badge.admin{background:#EDE9FE;color:#5B21B6}
+.badge.user{background:var(--slate);color:var(--mid)}
+.amount-positive{color:var(--green);font-weight:600}
+.amount-negative{color:var(--red);font-weight:600}
+
+/* ── PAGINATION ── */
+.pagination{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 22px;border-top:1px solid var(--slate);
+  font-size:13px;color:var(--mid);
+}
+.page-btns{display:flex;gap:8px}
+.page-btn{
+  padding:5px 12px;border:1.5px solid #D1D5DB;border-radius:6px;
+  font-size:13px;background:var(--white);cursor:pointer;transition:all .15s;
+}
+.page-btn:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
+.page-btn:disabled{opacity:.4;cursor:default}
+
+/* ── EMPTY / LOADING ── */
+.table-empty{padding:40px;text-align:center;color:var(--mid);font-size:14px}
+.spinner{
+  display:inline-block;width:20px;height:20px;
+  border:2.5px solid var(--slate);border-top-color:var(--ink);
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:0;padding:0 22px;border-bottom:1px solid var(--slate)}
+.tab{
+  padding:12px 18px;font-size:13px;font-weight:500;color:var(--mid);
+  cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px;
+  transition:all .15s;
+}
+.tab.active{color:var(--ink);border-bottom-color:var(--amber);font-weight:600}
+.tab:hover:not(.active){color:var(--ink)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>TopFlowNG <span style="color:var(--amber)">Admin</span></h1>
+    <p>Sign in with your admin account</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="admin-email" placeholder="admin@topflowng.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn" id="login-btn" onclick="adminLogin()">Sign in</button>
+    <p class="error-msg" id="login-error"></p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Top<span>Flow</span>NG</div>
+    <nav style="margin-top:16px">
+      <div class="nav-item active" onclick="showTab('overview')" id="nav-overview">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </div>
+      <div class="nav-item" onclick="showTab('transactions')" id="nav-transactions">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        Transactions
+      </div>
+      <div class="nav-item" onclick="showTab('users')" id="nav-users">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Users
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <strong id="sidebar-name">Admin</strong>
+        <span id="sidebar-email"></span>
+      </div>
+      <button class="logout-btn" onclick="adminLogout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main-content">
+    <!-- OVERVIEW -->
+    <div id="tab-overview">
+      <div class="page-title">Overview</div>
+      <div class="page-sub" id="overview-date">Loading...</div>
+      <div class="stats-grid">
+        <div class="stat-card green">
+          <div class="stat-label">Total Revenue</div>
+          <div class="stat-value" id="stat-revenue">—</div>
+          <div class="stat-sub">All wallet top-ups</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Total VTU Spent</div>
+          <div class="stat-value" id="stat-spent">—</div>
+          <div class="stat-sub">Airtime · Data · Bills</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Registered Users</div>
+          <div class="stat-value" id="stat-users">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Transactions</div>
+          <div class="stat-value" id="stat-txns">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+      </div>
+
+      <!-- Recent transactions preview -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Recent Transactions</div>
+          <div class="section-meta" id="recent-txn-count"></div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Reference</th><th>User</th><th>Description</th>
+            <th>Amount</th><th>Type</th><th>Date</th>
+          </tr></thead>
+          <tbody id="recent-txns-body">
+            <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div id="tab-transactions" style="display:none">
+      <div class="page-title">Transactions</div>
+      <div class="page-sub">All platform transactions</div>
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title" id="txn-section-title">All transactions</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="search-input" type="text" id="txn-search" placeholder="Search description..." oninput="filterTxns()">
+            <select class="search-input" id="txn-type-filter" onchange="filterTxns()" style="width:140px">
+              <option value="">All types</option>
+              <option value="credit">Credits</option>
+              <option value="debit">Debits</option>
+            </select>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab active" onclick="filterTxnTab('all',this)">All</div>
+          <div class="tab" onclick="filterTxnTab('airtime',this)">Airtime</div>
+          <div class="tab" onclick="filterTxnTab('data',this)">Data</div>
+          <div class="tab" onclick="filterTxnTab('electricity',this)">Electricity</div>
+          <div class="tab" onclick="filterTxnTab('cable',this)">Cable TV</div>
+          <div class="tab" onclick="filterTxnTab('topup',this)">Top-ups</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Reference</th><th>User</th><th>Description</th>
+            <th>Amount</th><th>Type</th><th>Date</th>
+          </tr></thead>
+          <tbody id="txns-body">
+            <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span id="txn-pagination-info">Loading...</span>
+          <div class="page-btns">
+            <button class="page-btn" id="txn-prev" onclick="txnPage(-1)" disabled>← Prev</button>
+            <button class="page-btn" id="txn-next" onclick="txnPage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="tab-users" style="display:none">
+      <div class="page-title">Users</div>
+      <div class="page-sub">All registered accounts</div>
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title" id="users-section-title">All users</div>
+          <input class="search-input" type="text" id="user-search" placeholder="Search name or email..." oninput="filterUsers()">
+        </div>
+        <table>
+          <thead><tr>
+            <th>Name</th><th>Email</th><th>Phone</th>
+            <th>Wallet</th><th>Role</th><th>Joined</th>
+          </tr></thead>
+          <tbody id="users-body">
+            <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span id="user-pagination-info">Loading...</span>
+          <div class="page-btns">
+            <button class="page-btn" id="user-prev" onclick="userPage(-1)" disabled>← Prev</button>
+            <button class="page-btn" id="user-next" onclick="userPage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('admin_token') || '';
+let allTxns = [], allUsers = [];
+let txnOffset = 0, userOffset = 0;
+const PAGE = 50;
+let txnTabFilter = 'all';
+
+// ── AUTH ───────────────────────────────────────────────────────────────────
+async function adminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pass = document.getElementById('admin-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if (!email || !pass) { showErr('Email and password required'); return; }
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  try {
+    const r = await apiFetch('/api/auth/login', { method:'POST', body:{ email, password:pass } }, false);
+    if (!r.user?.isAdmin) { showErr('Not an admin account'); btn.textContent='Sign in'; btn.disabled=false; return; }
+    TOKEN = r.token;
+    localStorage.setItem('admin_token', TOKEN);
+    document.getElementById('sidebar-name').textContent = r.user.fullName;
+    document.getElementById('sidebar-email').textContent = r.user.email;
+    initApp();
+  } catch(e) {
+    showErr(e.message || 'Login failed');
+    btn.textContent = 'Sign in'; btn.disabled = false;
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function adminLogout() {
+  TOKEN = ''; localStorage.removeItem('admin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── API HELPER ─────────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}, auth=true) {
+  const headers = { 'Content-Type':'application/json' };
+  if (auth) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const r = await fetch(API + path, {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('overview-date').textContent = new Date().toLocaleDateString('en-NG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  loadOverview();
+  loadTransactions();
+  loadUsers();
+}
+
+// ── OVERVIEW ───────────────────────────────────────────────────────────────
+async function loadOverview() {
+  try {
+    const stats = await apiFetch('/api/admin/stats');
+    document.getElementById('stat-revenue').textContent = '₦' + fmt(stats.total_credited || 0);
+    document.getElementById('stat-spent').textContent = '₦' + fmt(stats.total_debited || 0);
+    document.getElementById('stat-users').textContent = num(stats.total_users || 0);
+    document.getElementById('stat-txns').textContent = num(stats.total_transactions || 0);
+  } catch(e) { console.error('Stats error:', e.message); }
+}
+
+// ── TRANSACTIONS ───────────────────────────────────────────────────────────
+async function loadTransactions() {
+  try {
+    const data = await apiFetch(`/api/admin/transactions?limit=200&offset=0`);
+    allTxns = data.transactions || [];
+    txnOffset = 0;
+    renderTxns();
+  } catch(e) {
+    document.getElementById('txns-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load transactions</td></tr>`;
+    document.getElementById('recent-txns-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load</td></tr>`;
+  }
+}
+
+function getFilteredTxns() {
+  const search = (document.getElementById('txn-search')?.value || '').toLowerCase();
+  const typeF = document.getElementById('txn-type-filter')?.value || '';
+  return allTxns.filter(t => {
+    const desc = (t.description || '').toLowerCase();
+    const matchSearch = !search || desc.includes(search) || (t.reference||'').toLowerCase().includes(search);
+    const matchType = !typeF || t.type === typeF;
+    const matchTab = txnTabFilter === 'all' ? true :
+      txnTabFilter === 'airtime' ? desc.includes('airtime') :
+      txnTabFilter === 'data' ? desc.includes('data') :
+      txnTabFilter === 'electricity' ? desc.includes('electricity') :
+      txnTabFilter === 'cable' ? (desc.includes('cable') || desc.includes('dstv') || desc.includes('gotv') || desc.includes('startimes')) :
+      txnTabFilter === 'topup' ? (t.type === 'credit' && desc.includes('paystack')) : true;
+    return matchSearch && matchType && matchTab;
+  });
+}
+
+function renderTxns() {
+  const filtered = getFilteredTxns();
+  const page = filtered.slice(txnOffset, txnOffset + PAGE);
+  const recent = allTxns.slice(0, 10);
+
+  // Recent transactions on overview
+  document.getElementById('recent-txn-count').textContent = allTxns.length + ' total';
+  document.getElementById('recent-txns-body').innerHTML = recent.map(txnRow).join('') || emptyRow(6, 'No transactions yet');
+
+  // Full transactions table
+  document.getElementById('txns-body').innerHTML = page.map(txnRow).join('') || emptyRow(6, 'No transactions match');
+  document.getElementById('txn-section-title').textContent = filtered.length + ' transactions';
+  document.getElementById('txn-pagination-info').textContent = `${txnOffset+1}–${Math.min(txnOffset+PAGE, filtered.length)} of ${filtered.length}`;
+  document.getElementById('txn-prev').disabled = txnOffset === 0;
+  document.getElementById('txn-next').disabled = txnOffset + PAGE >= filtered.length;
+}
+
+function txnRow(t) {
+  const amt = parseFloat(t.amount);
+  const isCredit = t.type === 'credit';
+  return `<tr>
+    <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(t.reference||'—').substring(0,18)}</td>
+    <td>${esc(t.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(t.user_email||'')}</span></td>
+    <td>${esc(t.description||'—')}</td>
+    <td class="${isCredit?'amount-positive':'amount-negative'}">${isCredit?'+':'-'}₦${fmt(amt)}</td>
+    <td><span class="badge ${isCredit?'credit':'debit'}">${isCredit?'Credit':'Debit'}</span></td>
+    <td style="color:var(--mid);font-size:12px">${fmtDate(t.created_at)}</td>
+  </tr>`;
+}
+
+function filterTxns() { txnOffset=0; renderTxns(); }
+function txnPage(dir) { txnOffset = Math.max(0, txnOffset + dir*PAGE); renderTxns(); }
+function filterTxnTab(key, el) {
+  txnTabFilter = key; txnOffset = 0;
+  document.querySelectorAll('#tab-transactions .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderTxns();
+}
+
+// ── USERS ───────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    const data = await apiFetch(`/api/admin/users?limit=200&offset=0`);
+    allUsers = data.users || [];
+    userOffset = 0;
+    renderUsers();
+  } catch(e) {
+    document.getElementById('users-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load users</td></tr>`;
+  }
+}
+
+function getFilteredUsers() {
+  const search = (document.getElementById('user-search')?.value || '').toLowerCase();
+  return allUsers.filter(u => {
+    return !search ||
+      (u.full_name||'').toLowerCase().includes(search) ||
+      (u.email||'').toLowerCase().includes(search) ||
+      (u.phone||'').includes(search);
+  });
+}
+
+function renderUsers() {
+  const filtered = getFilteredUsers();
+  const page = filtered.slice(userOffset, userOffset + PAGE);
+  document.getElementById('users-body').innerHTML = page.map(userRow).join('') || emptyRow(6, 'No users match');
+  document.getElementById('users-section-title').textContent = filtered.length + ' users';
+  document.getElementById('user-pagination-info').textContent = `${userOffset+1}–${Math.min(userOffset+PAGE, filtered.length)} of ${filtered.length}`;
+  document.getElementById('user-prev').disabled = userOffset === 0;
+  document.getElementById('user-next').disabled = userOffset + PAGE >= filtered.length;
+}
+
+function userRow(u) {
+  return `<tr>
+    <td style="font-weight:500">${esc(u.full_name||'—')}</td>
+    <td>${esc(u.email||'—')}</td>
+    <td style="font-family:monospace;font-size:12px">${esc(u.phone||'—')}</td>
+    <td class="${parseFloat(u.wallet)>0?'amount-positive':''}">₦${fmt(parseFloat(u.wallet||0))}</td>
+    <td><span class="badge ${u.is_admin?'admin':'user'}">${u.is_admin?'Admin':'User'}</span></td>
+    <td style="color:var(--mid);font-size:12px">${fmtDate(u.created_at)}</td>
+  </tr>`;
+}
+
+function filterUsers() { userOffset=0; renderUsers(); }
+function userPage(dir) { userOffset = Math.max(0, userOffset + dir*PAGE); renderUsers(); }
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  ['overview','transactions','users'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('nav-'+t).classList.toggle('active', t===tab);
+  });
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function fmt(n) { return Number(n).toLocaleString('en-NG', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+function num(n) { return Number(n).toLocaleString(); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('en-NG', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function emptyRow(cols, msg) { return `<tr><td colspan="${cols}" class="table-empty">${msg}</td></tr>`; }
+
+// ── BOOT ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Handle enter key on login
+  ['admin-email','admin-password'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key==='Enter') adminLogin(); });
+  });
+
+  if (TOKEN) {
+    // Try to restore session
+    apiFetch('/api/user/profile').then(u => {
+      if (!u.isAdmin) { adminLogout(); return; }
+      document.getElementById('sidebar-name').textContent = u.fullName;
+      document.getElementById('sidebar-email').textContent = u.email;
+      initApp();
+    }).catch(() => adminLogout());
+  }
+});
+</script>
+</body>
+</html>
