@@ -287,6 +287,47 @@ async function savePaystackRef(reference, userId, amount) {
   );
 }
 
+// Atomically claims a Paystack reference and creates its wallet credit. Keeping
+// both writes in one transaction prevents webhook/callback races and avoids
+// marking a reference processed when the wallet credit fails.
+async function creditVerifiedPaystackPayment(reference, userId, amount) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const claim = await client.query(
+      `INSERT INTO paystack_refs (reference, user_id, amount)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (reference) DO NOTHING
+       RETURNING reference`,
+      [reference, userId, amount]
+    );
+
+    if (claim.rows.length === 0) {
+      await client.query('COMMIT');
+      return { credited: false, balance: await getWalletBalance(userId) };
+    }
+
+    const { rows } = await client.query(
+      'UPDATE users SET wallet = wallet + $1 WHERE id = $2 RETURNING wallet',
+      [amount, userId]
+    );
+    if (rows.length === 0) throw new Error(`User ${userId} not found for Paystack credit`);
+
+    await client.query(
+      `INSERT INTO transactions (user_id, type, amount, description, reference)
+       VALUES ($1, 'credit', $2, $3, $4)`,
+      [userId, amount, 'Wallet top-up via Paystack', reference]
+    );
+    await client.query('COMMIT');
+    return { credited: true, balance: parseFloat(rows[0].wallet) };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 // ── Admin Queries ─────────────────────────────────────────────────────────────
 async function getAdminStats() {
   const { rows } = await pool.query(`
@@ -340,6 +381,7 @@ module.exports = {
   consumePasswordReset,
   paystackRefExists,
   savePaystackRef,
+  creditVerifiedPaystackPayment,
   getAdminStats,
   getAllTransactions,
   getAllUsers,
