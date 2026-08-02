@@ -666,7 +666,7 @@ app.get('*', (req, res) => {
 
 // ── Sentry Error Handler ─────────────────────────────────────────────────────
 if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
+  Sentry.setupExpressErrorHandler(app);
 }
 
 // ── Global Error Handler ─────────────────────────────────────────────────────
