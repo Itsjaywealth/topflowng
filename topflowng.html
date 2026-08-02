@@ -228,7 +228,38 @@ body{background:var(--mist)}
 }
 @media (prefers-reduced-motion:reduce){.balance-amount,.receipt-check{transition:none!important}}
 
-</style>
+
+/* ── Service flows — deliberate, legible forms ───────────────────────────── */
+.service-screen{background:var(--white)}
+.svc-header{height:68px;padding:0 max(20px,calc((100vw - 1120px)/2));gap:14px;border-bottom:1px solid #E2E6EC}
+.svc-back{width:34px;height:34px;border:1px solid #E2E6EC;border-radius:8px;background:var(--white);font-size:0}
+.svc-back::after{content:'←';font-size:17px}
+.svc-title{font:800 18px/1 var(--display);letter-spacing:-.45px}
+.svc-body{width:min(100%,640px);margin:0 auto;padding:28px 20px 112px}
+.svc-body::before{content:'Choose the details, then confirm exactly what you are buying.';display:block;margin:0 0 28px;color:var(--graphite);font:400 13px/1.5 var(--font)}
+.field{margin-bottom:24px}
+.field label{font:700 11px/1 var(--font);letter-spacing:.08em;color:var(--graphite);margin-bottom:9px}
+.field input,.field select{min-height:48px;padding:12px 14px;border:1px solid #D9DEE6;border-radius:8px;font:500 15px/1.25 var(--font)}
+.field input:focus,.field select:focus{border-color:#B46F00;box-shadow:0 0 0 3px rgba(245,166,35,.15)}
+.network-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.network-chip{min-height:44px;display:flex;align-items:center;justify-content:center;padding:9px 10px;background:var(--white);border:1px solid #D9DEE6;border-radius:8px;color:var(--ink);font:600 13px/1 var(--font);cursor:pointer}
+.network-chip.selected{border-color:var(--ink);background:var(--ink);color:var(--white)}
+.amount-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.amount-preset{min-height:42px;display:flex;align-items:center;justify-content:center;border:1px solid #D9DEE6;border-radius:8px;background:var(--white);color:var(--ink);font:600 12px/1 var(--font);cursor:pointer}
+.amount-preset.selected{border-color:#B46F00;background:#FFF8E9;color:var(--ink)}
+.data-plans{display:grid;gap:8px;margin:0}
+.data-plan{margin:0;padding:14px 15px;border:1px solid #D9DEE6;border-radius:8px;background:var(--white)}
+.data-plan.selected{border-color:var(--ink);background:#F7F9FB}
+.plan-name,.data-plan-name{font:700 13px/1.35 var(--font);color:var(--ink)}
+.plan-price,.data-plan-price{margin-top:4px;color:var(--graphite);font:500 12px/1.35 var(--font)}
+.btn-confirm{position:sticky;bottom:14px;min-height:50px;border-radius:8px;background:var(--amber);font:700 14px/1 var(--font);box-shadow:0 9px 18px rgba(14,34,53,.12)}
+.svc-error{border-radius:8px;font:500 13px/1.45 var(--font)}
+@media (min-width:760px){
+  .svc-header{padding-left:32px;padding-right:32px}
+  .svc-body{padding-top:44px}
+  .network-chips{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+\n</style>
 </head>
 <body>
 <div id="app">
