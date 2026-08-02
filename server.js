@@ -25,7 +25,6 @@ const path       = require('path');
 const crypto     = require('crypto');
 const jwt        = require('jsonwebtoken');
 const axios      = require('axios');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const db = require('./database');
@@ -34,27 +33,26 @@ const app  = express();
 app.set('trust proxy', 1); // Trust Railway's load balancer for accurate rate limiting
 const PORT = process.env.PORT || 3000;
 
-// ── Email Transport (optional — logs to console if no SMTP configured) ────────
-function getMailer() {
-  if (process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-  }
-  // Fallback: log to console (visible in Railway logs)
-  return null;
-}
-
+// ── Email delivery (Resend HTTPS API) ───────────────────────────────────────
 async function sendEmail({ to, subject, html }) {
-  const mailer = getMailer();
-  if (mailer) {
-    await mailer.sendMail({ from: process.env.SMTP_FROM || 'noreply@topflowng.com', to, subject, html });
-  } else {
-    console.log(`[EMAIL - no SMTP configured]\nTo: ${to}\nSubject: ${subject}\n${html.replace(/<[^>]+>/g, '')}`);
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('Email delivery is not configured');
   }
+
+  const response = await axios.post('https://api.resend.com/emails', {
+    from: process.env.RESEND_FROM || 'TopFlowNG <noreply@mail.topflowng.com>',
+    to: [to],
+    subject,
+    html,
+  }, {
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 15_000,
+  });
+
+  console.log(`Email accepted by Resend: ${response.data?.data?.id || 'unknown id'}`);
 }
 
 // ── Security Middleware ──────────────────────────────────────────────────────
