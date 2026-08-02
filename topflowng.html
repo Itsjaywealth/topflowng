@@ -494,6 +494,24 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   #screen-history .txn-info { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-6); }
   #screen-history .txn-meta { justify-content:flex-end; }
 }
+
+
+/* ── Design system: Authentication ─────────────────────────────────────── */
+#auth-screen { min-height:100dvh; }
+.auth-header { padding:var(--space-12) var(--space-6) var(--space-8); }
+.auth-logo { font-size:30px; line-height:34px; }
+.auth-body { padding:var(--space-8) var(--space-6) calc(var(--space-12) + env(safe-area-inset-bottom)); }
+.auth-tabs { margin-bottom:var(--space-8); }
+.auth-tab { min-height:44px; }
+.auth-form .field { margin-bottom:var(--space-6); }
+.auth-form .field input { min-height:48px; border-radius:var(--radius-sm); }
+.auth-form .btn-primary { min-height:52px; border-radius:var(--radius-sm); }
+.auth-error,.auth-success { border-radius:var(--radius-sm); line-height:20px; }
+@media (min-width:768px) {
+  #auth-screen { justify-content:center; padding:var(--space-12) 0; }
+  .auth-header { max-width:520px; padding:0 0 var(--space-8); }
+  .auth-body { max-width:520px; border-radius:var(--radius-lg); box-shadow:var(--elevation-2); padding:var(--space-8); }
+}
 </style>
 </head>
 <body>
