@@ -434,7 +434,10 @@ async function processClubkonnectPurchase({ userId, requestId, serviceType, amou
 
   let providerRaw;
   try {
-    const response = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}${endpoint}`, { params, timeout: 30_000 });
+    const providerUrl = endpoint.startsWith('http')
+      ? endpoint
+      : `${process.env.CLUBKONNECT_BASE_URL}${endpoint}`;
+    const response = await axios.get(providerUrl, { params, timeout: 30_000 });
     providerRaw = response.data;
   } catch (err) {
     providerRaw = err.response?.data;
@@ -506,7 +509,7 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
-      description: `${network} airtime — ${phone}`, endpoint: '/APIAirtimeV1.asp', params,
+      description: `${network} airtime — ${phone}`, endpoint: 'https://www.nellobytesystems.com/APIAirtimeV1.asp', params,
     });
     if (result.outcome === 'success') return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
