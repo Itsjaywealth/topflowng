@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TopFlowNG Admin</title>
+<title>TopFlowNG Admin</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -162,7 +162,30 @@ tr:hover td{background:#F9FAFB}
 }
 .tab.active{color:var(--ink);border-bottom-color:var(--amber);font-weight:600}
 .tab:hover:not(.active){color:var(--ink)}
-</style>
+
+/* ── Internal operations workspace ───────────────────────────────────────── */
+:root{--font:'Inter',system-ui,sans-serif;--display:'Manrope',system-ui,sans-serif;--mist:#EEF0F4;--graphite:#6B7280}
+body{background:var(--mist);font-family:var(--font)}
+.login-card{border-radius:14px;box-shadow:none;border:1px solid #E2E6EC}
+.login-card h1,.page-title{font-family:var(--display);letter-spacing:-.7px}
+.sidebar{width:236px;padding-top:28px}
+.sidebar-logo{font-family:var(--display);font-size:19px;letter-spacing:-.6px}
+.nav-item{min-height:44px;font-size:13px}
+.main{margin-left:236px;max-width:1500px;padding:38px 42px}
+.page-title{font-size:32px;line-height:1;margin-bottom:8px}
+.page-sub{font-size:13px}
+.stats-grid{gap:12px}
+.stat-card{border:1px solid #E2E6EC;border-radius:10px;box-shadow:none;padding:18px}
+.stat-label{font-size:10px;letter-spacing:.08em}
+.stat-value{font-family:var(--display);font-size:28px;letter-spacing:-.8px}
+.section{border:1px solid #E2E6EC;border-radius:10px;box-shadow:none}
+.section-header{padding:16px 18px}
+.section-title{font-family:var(--display);font-size:15px}
+.search-input{min-height:36px;border:1px solid #D9DEE6;border-radius:7px;font-family:var(--font)}
+th{padding:11px 18px;background:#F7F8FA;font-size:10px;letter-spacing:.08em}
+td{padding:13px 18px;font-size:12px}
+@media(max-width:820px){.sidebar{position:static;width:100%;height:auto;flex-direction:row;align-items:center;padding:14px;overflow-x:auto}.sidebar-logo{padding:0 12px 0 0;border:0;white-space:nowrap}.sidebar-footer{display:none}.nav-item{padding:9px 11px;white-space:nowrap}.main{margin-left:0;padding:24px 16px}.stats-grid{grid-template-columns:repeat(2,1fr)}.section{overflow-x:auto}.page-title{font-size:27px}}
+\n</style>
 </head>
 <body>
 
