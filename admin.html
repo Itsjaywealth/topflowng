@@ -248,7 +248,7 @@ tr:hover td{background:#F9FAFB}
         <table>
           <thead><tr>
             <th>Reference</th><th>User</th><th>Description</th>
-            <th>Amount</th><th>Type</th><th>Date</th>
+            <th>Amount</th><th>Status</th><th>Date</th>
           </tr></thead>
           <tbody id="recent-txns-body">
             <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
@@ -458,11 +458,11 @@ function txnRow(t) {
   const amt = parseFloat(t.amount);
   const isCredit = t.type === 'credit';
   return `<tr>
-    <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(t.reference||'—').substring(0,18)}</td>
+    <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(t.reference||'—').substring(0,18)}${t.provider_order_id ? `<br><span style="font-size:10px">CK: ${esc(t.provider_order_id)}</span>` : ''}</td>
     <td>${esc(t.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(t.user_email||'')}</span></td>
     <td>${esc(t.description||'—')}</td>
     <td class="${isCredit?'amount-positive':'amount-negative'}">${isCredit?'+':'-'}₦${fmt(amt)}</td>
-    <td><span class="badge ${isCredit?'credit':'debit'}">${isCredit?'Credit':'Debit'}</span></td>
+    <td><span class="badge ${t.status==='pending'?'admin':isCredit?'credit':'debit'}">${esc(t.status || (isCredit?'completed':'completed'))}</span></td>
     <td style="color:var(--mid);font-size:12px">${fmtDate(t.created_at)}</td>
   </tr>`;
 }
