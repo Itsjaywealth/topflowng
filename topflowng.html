@@ -259,6 +259,20 @@ body{background:var(--mist)}
   .svc-body{padding-top:44px}
   .network-chips{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
+\n
+/* ── Transaction history — a compact, truthful ledger ───────────────────── */
+#screen-history{max-width:1120px;width:100%;margin:0 auto;background:var(--white);padding:28px 20px 100px}
+.history-head{display:flex;align-items:end;justify-content:space-between;margin:0 0 22px}
+.eyebrow{margin-bottom:7px;color:var(--graphite);font:700 10px/1 var(--font);letter-spacing:.1em;text-transform:uppercase}
+.history-head h1{font:800 28px/.95 var(--display);letter-spacing:-1.1px;color:var(--ink)}
+.history-refresh{appearance:none;border:1px solid #D9DEE6;background:var(--white);border-radius:7px;padding:9px 12px;color:var(--ink);font:700 12px/1 var(--font);cursor:pointer}
+.filter-chips{gap:7px;margin:0 0 20px;padding:0 0 4px}
+.filter-chip{padding:8px 12px;border:1px solid #D9DEE6;border-radius:7px;background:var(--white);color:var(--graphite);font:600 12px/1 var(--font)}
+.filter-chip.active{background:var(--ink);border-color:var(--ink);color:var(--white)}
+#screen-history .txn-list{border-top:1px solid #E2E6EC}
+#screen-history .txn-item{padding:15px 0}
+.load-more{min-height:46px;border-radius:8px;border:1px solid #D9DEE6;background:var(--white);font:700 13px/1 var(--font);color:var(--ink);margin-top:16px}
+@media (min-width:760px){#screen-history{padding:42px 32px 120px}.history-head h1{font-size:34px}}
 \n</style>
 </head>
 <body>
@@ -411,6 +425,13 @@ body{background:var(--mist)}
   </div>
 
   <div class="screen" id="screen-history">
+    <div class="history-head">
+      <div>
+        <div class="eyebrow">Wallet ledger</div>
+        <h1>Transactions</h1>
+      </div>
+      <button class="history-refresh" type="button" onclick="loadAllTxns(true)">Refresh</button>
+    </div>
     <div class="filter-chips">
       <div class="filter-chip active" onclick="filterTxns('all',this)">All</div>
       <div class="filter-chip" onclick="filterTxns('airtime',this)">Airtime</div>
