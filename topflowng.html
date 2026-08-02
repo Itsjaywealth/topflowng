@@ -329,6 +329,16 @@ body{background:var(--mist)}
 .acct-arrow{font-size:20px;color:var(--graphite)}
 .btn-logout{min-height:48px;margin-top:14px;border-radius:8px;background:var(--white);border:1px solid #F3C9C9;font:700 13px/1 var(--font)}
 @media (min-width:760px){#screen-account{padding:42px 32px 120px}}
+\n
+/* ── Dashboard status clarity ────────────────────────────────────────────── */
+.txn-meta{display:flex;align-items:center;gap:7px;margin-top:4px;min-width:0}
+.txn-date{margin:0}
+.txn-status{display:inline-flex;align-items:center;border-radius:4px;padding:3px 5px;font:700 9px/1 var(--font);letter-spacing:.025em;white-space:nowrap}
+.txn-status.completed{background:#EAF6EF;color:var(--emerald)}
+.txn-status.pending{background:#FFF5DE;color:#8A5700}
+.txn-status.failed{background:#FEF0F0;color:#B42318}
+.txn-amount.failed{color:#B42318}
+@media(max-width:390px){.txn-status{font-size:8px;padding:3px 4px}}
 \n</style>
 </head>
 <body>
@@ -1024,17 +1034,20 @@ function updateBalance(newBal) {
 
 // ── TRANSACTIONS ────────────────────────────────────────────────────────
 function txnHTML(t) {
-  const pending = t.status === 'pending';
-  const icon = t.type === 'credit' ? '⬇' : t.status === 'failed' ? '✕' : pending ? '◷' : '⬆';
-  const cls  = t.status === 'failed' ? 'failed' : t.type;
-  const sign = t.type === 'credit' ? '+' : pending ? '' : '-';
+  const status = t.status || 'completed';
+  const pending = status === 'pending';
+  const failed = status === 'failed';
+  const icon = t.type === 'credit' ? '↓' : failed ? '×' : pending ? '◷' : '↑';
+  const cls  = failed ? 'failed' : t.type;
+  const statusText = failed ? 'Failed — not charged' : pending ? 'Pending provider confirmation' : 'Completed';
+  const amountText = failed ? fmt(t.amount) : `${t.type === 'credit' ? '+' : pending ? '' : '-'}${fmt(t.amount)}`;
   return `<div class="txn-item">
     <div class="txn-icon ${cls}">${icon}</div>
     <div class="txn-info">
       <div class="txn-desc">${t.description}</div>
-      <div class="txn-date">${fmtDate(t.created_at)}</div>
+      <div class="txn-meta"><span class="txn-date">${fmtDate(t.created_at)}</span><span class="txn-status ${status}">${statusText}</span></div>
     </div>
-    <div class="txn-amount ${cls}">${sign}${fmt(t.amount)}${pending ? ' · Pending' : ''}</div>
+    <div class="txn-amount ${cls}">${amountText}</div>
   </div>`;
 }
 
