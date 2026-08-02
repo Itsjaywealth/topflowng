@@ -439,6 +439,38 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   .service-tile { transition:none; }
   .service-tile:hover { transform:none; }
 }
+
+
+/* ── Design system: Service purchase flows ─────────────────────────────── */
+.service-screen { background:var(--white); }
+.svc-header { position:sticky; top:0; z-index:3; min-height:72px; padding:0 var(--space-4); background:rgba(255,255,255,.96); backdrop-filter:blur(12px); }
+.svc-back { min-width:44px; min-height:44px; border-radius:var(--radius-sm); }
+.svc-title { font:800 20px/24px var(--display); letter-spacing:-.55px; }
+.svc-body { padding:var(--space-8) var(--space-4) calc(104px + env(safe-area-inset-bottom)); }
+.svc-body::before { max-width:56ch; margin-bottom:var(--space-8); font-size:14px; line-height:22px; }
+.svc-body .field { margin-bottom:var(--space-6); }
+.svc-body .field label { font-size:11px; line-height:16px; }
+.network-chip,.amount-preset,.data-plan { transition:border-color .16s ease,background .16s ease,box-shadow .16s ease; }
+.network-chip:hover,.amount-preset:hover,.data-plan:hover { border-color:#AAB5C3; }
+.network-chip:focus-visible,.amount-preset:focus-visible,.data-plan:focus-visible { outline:3px solid rgba(245,166,35,.35); outline-offset:2px; }
+.network-chip { min-height:48px; border-radius:var(--radius-sm); }
+.amount-preset { min-height:44px; border-radius:var(--radius-sm); font-variant-numeric:tabular-nums; }
+.data-plan { min-height:64px; border-radius:var(--radius-md); box-shadow:var(--elevation-0); }
+.data-plan.selected { box-shadow:0 0 0 2px var(--ink); }
+.btn-confirm { min-height:52px; bottom:max(var(--space-4),env(safe-area-inset-bottom)); border-radius:var(--radius-sm); }
+.svc-error,.svc-success { padding:var(--space-3) var(--space-4); border-radius:var(--radius-sm); font-size:13px; line-height:20px; }
+@media (min-width:768px) {
+  .svc-body { width:min(100%,760px); padding:var(--space-12) var(--space-8) 120px; }
+  .svc-header { padding-left:var(--space-8); padding-right:var(--space-8); }
+  .network-chips { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .amount-presets { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (min-width:1024px) {
+  .service-screen { left:236px; }
+  .svc-header { padding-left:var(--space-12); padding-right:var(--space-12); }
+  .svc-body { width:min(100%,900px); margin-left:var(--space-12); margin-right:auto; padding-left:0; padding-right:0; }
+  .svc-body::before { font-size:15px; line-height:24px; }
+}
 </style>
 </head>
 <body>
