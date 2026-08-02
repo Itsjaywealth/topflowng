@@ -506,7 +506,7 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
-      description: `${network} airtime — ${phone}`, endpoint: '/API/Airtime/', params,
+      description: `${network} airtime — ${phone}`, endpoint: '/APIAirtimeV1.asp', params,
     });
     if (result.outcome === 'success') return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
