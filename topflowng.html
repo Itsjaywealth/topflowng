@@ -550,6 +550,19 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   #screen-account { padding:var(--space-12); }
   #screen-account > * { max-width:760px; }
 }
+
+/* ── Repair: landing must never shrink its content as a flex child ───────── */
+#marketing > .marketing-nav,
+#marketing > .marketing-main,
+#marketing > .marketing-how,
+#marketing > .marketing-trust,
+#marketing > .marketing-footer { flex:0 0 auto; }
+#marketing { overflow-x:clip; }
+@media (min-width:760px) and (max-width:1023px) {
+  .marketing-main { grid-template-columns:1fr; gap:40px; padding:56px 32px; margin:0 auto; }
+  .marketing-copy h1 { max-width:680px; font-size:clamp(44px,7vw,58px); }
+  .marketing-ledger { max-width:680px; }
+}
 </style>
 </head>
 <body>
