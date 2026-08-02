@@ -520,8 +520,10 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    const networkMap = { MTN: 'MTN', GLO: 'GLO', AIRTEL: 'AIRTEL', '9MOBILE': '9MOBILE', ETISALAT: '9MOBILE' };
-    const ckNetwork  = networkMap[network.toUpperCase()] || network.toUpperCase();
+    // Clubkonnect's MobileNetwork parameter requires numeric provider codes, not network names.
+    const networkMap = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
+    const ckNetwork  = networkMap[network.toUpperCase()];
+    if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
     const requestId  = `AIR-${Date.now()}-${req.user.id}`;
 
     const params = {
@@ -558,11 +560,15 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
+    const networkMap = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
+    const ckNetwork  = networkMap[network.toUpperCase()];
+    if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
+
     const requestId = `DATA-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: process.env.CLUBKONNECT_USER_ID,
       APIKey: process.env.CLUBKONNECT_API_KEY,
-      MobileNetwork: network.toUpperCase(),
+      MobileNetwork: ckNetwork,
       DataPlan: planCode,
       MobileNumber: phone,
       RequestID: requestId,
