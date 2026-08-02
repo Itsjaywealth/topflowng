@@ -431,6 +431,31 @@ function normalizeClubkonnectResponse(raw) {
   return { outcome: 'pending', statusCode, status, remark, description, orderId, raw: data };
 }
 
+const CLUBKONNECT_QUERY_URL = process.env.CLUBKONNECT_QUERY_URL || 'https://www.nellobytesystems.com/APIQuery.asp';
+
+async function queryClubkonnectOrder(orderId) {
+  const userId = process.env.CLUBKONNECT_USER_ID;
+  const apiKey = process.env.CLUBKONNECT_API_KEY;
+  if (!userId || !apiKey) {
+    const error = new Error('Clubkonnect Query API is not configured');
+    error.code = 'CLUBKONNECT_NOT_CONFIGURED';
+    throw error;
+  }
+
+  try {
+    const response = await axios.get(CLUBKONNECT_QUERY_URL, {
+      params: { UserID: userId, APIKey: apiKey, OrderID: orderId },
+      timeout: 30_000,
+    });
+    return normalizeClubkonnectResponse(response.data);
+  } catch (err) {
+    if (err.response?.data) return normalizeClubkonnectResponse(err.response.data);
+    const error = new Error(`Clubkonnect Query API request failed: ${err.message}`);
+    error.code = 'CLUBKONNECT_QUERY_UNREACHABLE';
+    throw error;
+  }
+}
+
 async function processClubkonnectPurchase({ userId, requestId, serviceType, amount, description, endpoint, params }) {
   await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
 
@@ -626,6 +651,57 @@ app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) =>
     console.error('Electricity error:', err.message);
     Sentry.captureException(err);
     res.status(500).json({ error: 'Electricity service unavailable' });
+  }
+});
+
+// ── Clubkonnect VTU Reconciliation ──────────────────────────────────────────
+// Manual, admin-only resolution. It uses the provider's documented Query API and
+// never trusts a browser claim or a stale initial response.
+app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (req, res) => {
+  const requestId = String(req.params.requestId || '').trim();
+  try {
+    const order = await db.getVtuOrderByRequestId(requestId);
+    if (!order) return res.status(404).json({ error: 'VTU order not found' });
+    if (order.status !== 'pending') {
+      return res.json({ outcome: order.status, order, message: 'This order is already in a terminal state.' });
+    }
+    if (!order.provider_order_id) {
+      return res.status(409).json({
+        error: 'This pending order has no provider order ID and cannot be queried automatically.',
+        order,
+      });
+    }
+
+    const provider = await queryClubkonnectOrder(order.provider_order_id);
+    await db.recordVtuProviderResponse(requestId, provider);
+
+    let balance = null;
+    if (provider.outcome === 'success') {
+      const settled = await db.completeVtuOrder(requestId, { allowPending: true });
+      balance = settled.balance;
+      console.log(`Clubkonnect pending order settled: ${requestId} [${order.provider_order_id}]`);
+    } else if (provider.outcome === 'failed') {
+      await db.markVtuOrderFailed(requestId, { allowPending: true });
+      console.warn(`Clubkonnect pending order failed on reconciliation: ${requestId} [${order.provider_order_id}]`);
+    } else {
+      console.log(`Clubkonnect pending order remains pending: ${requestId} [${order.provider_order_id}]`);
+    }
+
+    const updated = await db.getVtuOrderByRequestId(requestId);
+    res.json({
+      outcome: provider.outcome,
+      order: updated,
+      balance,
+      message: provider.outcome === 'pending'
+        ? 'Clubkonnect still reports this order as pending. No wallet debit was made.'
+        : provider.outcome === 'success'
+          ? 'Clubkonnect confirmed delivery and the wallet was debited once.'
+          : 'Clubkonnect confirmed failure. No wallet debit was made.',
+    });
+  } catch (err) {
+    console.error(`Clubkonnect reconciliation error for ${requestId}:`, err.message);
+    Sentry.captureException(err);
+    res.status(502).json({ error: 'Unable to reconcile this provider order right now.' });
   }
 });
 
