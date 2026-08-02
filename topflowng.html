@@ -512,6 +512,31 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   .auth-header { max-width:520px; padding:0 0 var(--space-8); }
   .auth-body { max-width:520px; border-radius:var(--radius-lg); box-shadow:var(--elevation-2); padding:var(--space-8); }
 }
+
+
+/* ── Design system: Landing page ────────────────────────────────────────── */
+#marketing { min-height:100dvh; }
+.marketing-nav { min-height:72px; padding:var(--space-4) var(--space-6); }
+.marketing-login { min-height:44px; padding:0 var(--space-2); }
+.marketing-main { gap:var(--space-12); padding:var(--space-12) var(--space-6); }
+.marketing-copy h1 { letter-spacing:-2.25px; }
+.marketing-actions { margin-top:var(--space-8); }
+.marketing-primary,.marketing-secondary { min-height:52px; border-radius:var(--radius-sm); }
+.marketing-ledger { padding:var(--space-6) 0; }
+.ledger-row { padding:var(--space-4) 0; }
+.marketing-how { padding:var(--space-12) var(--space-6); }
+.marketing-how li { padding:var(--space-6) 0; }
+.marketing-trust { padding:var(--space-8) var(--space-6); }
+.marketing-footer { padding:var(--space-4) var(--space-6) calc(var(--space-4) + env(safe-area-inset-bottom)); }
+@media (min-width:1024px) {
+  .marketing-nav,.marketing-main,.marketing-how,.marketing-footer { max-width:1280px; }
+  .marketing-nav { padding-left:var(--space-12); padding-right:var(--space-12); }
+  .marketing-main { grid-template-columns:minmax(0,1.14fr) minmax(380px,.86fr); gap:clamp(64px,8vw,128px); padding:96px var(--space-12) 80px; }
+  .marketing-copy h1 { font-size:clamp(54px,5.5vw,76px); line-height:.96; }
+  .marketing-how { padding:88px var(--space-12); }
+  .marketing-trust { padding:var(--space-8) var(--space-12); }
+  .marketing-footer { padding:var(--space-6) var(--space-12); }
+}
 </style>
 </head>
 <body>
