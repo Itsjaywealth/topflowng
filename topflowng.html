@@ -103,6 +103,7 @@
     .receipt-overlay.open{display:flex}
     .receipt-card{background:var(--white);border-radius:20px 20px 0 0;padding:28px 24px 40px;width:100%}
     .receipt-check{width:52px;height:52px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:22px;margin:0 auto 16px}
+    .receipt-check.pending{background:var(--amber);color:var(--ink)}
     .receipt-title{font-size:20px;font-weight:700;text-align:center;color:var(--ink);margin-bottom:4px}
     .receipt-sub{font-size:13px;text-align:center;color:var(--mid);margin-bottom:24px}
     .receipt-lines{display:flex;flex-direction:column}
@@ -784,16 +785,17 @@ function updateBalance(newBal) {
 
 // ── TRANSACTIONS ────────────────────────────────────────────────────────
 function txnHTML(t) {
-  const icon = t.type === 'credit' ? '⬇' : t.status === 'failed' ? '✕' : '⬆';
+  const pending = t.status === 'pending';
+  const icon = t.type === 'credit' ? '⬇' : t.status === 'failed' ? '✕' : pending ? '◷' : '⬆';
   const cls  = t.status === 'failed' ? 'failed' : t.type;
-  const sign = t.type === 'credit' ? '+' : '-';
+  const sign = t.type === 'credit' ? '+' : pending ? '' : '-';
   return `<div class="txn-item">
     <div class="txn-icon ${cls}">${icon}</div>
     <div class="txn-info">
       <div class="txn-desc">${t.description}</div>
       <div class="txn-date">${fmtDate(t.created_at)}</div>
     </div>
-    <div class="txn-amount ${cls}">${sign}${fmt(t.amount)}</div>
+    <div class="txn-amount ${cls}">${sign}${fmt(t.amount)}${pending ? ' · Pending' : ''}</div>
   </div>`;
 }
 
@@ -990,18 +992,14 @@ async function buyAirtime() {
   setLoading('btn-buy-airtime', true, 'Processing…');
   try {
     const data = await api('POST', '/api/vtu/airtime', {network, phone, amount});
-    if (data.balance !== undefined) updateBalance(data.balance);
-    closeService('airtime');
-    showReceipt({
-      title: 'Airtime sent!',
-      sub: data.message,
-      lines: [
-        ['Network', network],
-        ['Phone', phone],
-        ['Amount', fmt(amount)],
-        ['Reference', 'AIR-' + Date.now()],
-      ]
-    });
+    if (data.pending) {
+      closeService('airtime');
+      showReceipt({ title: 'Airtime pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+    } else {
+      if (data.balance !== undefined) updateBalance(data.balance);
+      closeService('airtime');
+      showReceipt({ title: 'Airtime sent!', sub: data.message, lines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference]] });
+    }
     loadRecentTxns();
   } catch (e) {
     showErr('svc-airtime-error', e.message);
@@ -1024,18 +1022,14 @@ async function buyData() {
   setLoading('btn-buy-data', true, 'Processing…');
   try {
     const data = await api('POST', '/api/vtu/data', {network, phone, planCode: selectedDataPlan.code, amount: selectedDataPlan.price});
-    if (data.balance !== undefined) updateBalance(data.balance);
-    closeService('data');
-    showReceipt({
-      title: 'Data activated!',
-      sub: data.message,
-      lines: [
-        ['Network', network],
-        ['Phone', phone],
-        ['Plan', selectedDataPlan.code],
-        ['Amount', fmt(selectedDataPlan.price)],
-      ]
-    });
+    if (data.pending) {
+      closeService('data');
+      showReceipt({ title: 'Data purchase pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+    } else {
+      if (data.balance !== undefined) updateBalance(data.balance);
+      closeService('data');
+      showReceipt({ title: 'Data activated!', sub: data.message, lines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference]] });
+    }
     loadRecentTxns();
   } catch (e) {
     showErr('svc-data-error', e.message);
@@ -1059,19 +1053,14 @@ async function buyElectricity() {
   setLoading('btn-pay-elec', true, 'Processing…');
   try {
     const data = await api('POST', '/api/vtu/electricity', {disco, meterNumber, meterType, amount});
-    if (data.balance !== undefined) updateBalance(data.balance);
-    closeService('electricity');
-    showReceipt({
-      title: 'Electricity paid!',
-      sub: 'Token sent below',
-      token: data.token,
-      lines: [
-        ['Disco', disco],
-        ['Meter', meterNumber],
-        ['Type', meterType],
-        ['Amount', fmt(amount)],
-      ]
-    });
+    if (data.pending) {
+      closeService('electricity');
+      showReceipt({ title: 'Electricity payment pending', sub: data.message, pending: true, lines: [['Disco', disco], ['Meter', meterNumber], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+    } else {
+      if (data.balance !== undefined) updateBalance(data.balance);
+      closeService('electricity');
+      showReceipt({ title: 'Electricity paid!', sub: 'Token sent below', token: data.token, lines: [['Disco', disco], ['Meter', meterNumber], ['Type', meterType], ['Amount', fmt(amount)], ['Reference', data.reference]] });
+    }
     loadRecentTxns();
   } catch (e) {
     showErr('svc-electricity-error', e.message);
@@ -1093,18 +1082,14 @@ async function buyCable() {
   setLoading('btn-pay-cable', true, 'Processing…');
   try {
     const data = await api('POST', '/api/vtu/cable', {provider, smartCardNumber, planCode: selectedCablePlan.code, amount: selectedCablePlan.price});
-    if (data.balance !== undefined) updateBalance(data.balance);
-    closeService('cable');
-    showReceipt({
-      title: `${provider} activated!`,
-      sub: data.message,
-      lines: [
-        ['Provider', provider],
-        ['Card', smartCardNumber],
-        ['Package', selectedCablePlan.code],
-        ['Amount', fmt(selectedCablePlan.price)],
-      ]
-    });
+    if (data.pending) {
+      closeService('cable');
+      showReceipt({ title: `${provider} payment pending`, sub: data.message, pending: true, lines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+    } else {
+      if (data.balance !== undefined) updateBalance(data.balance);
+      closeService('cable');
+      showReceipt({ title: `${provider} activated!`, sub: data.message, lines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference]] });
+    }
     loadRecentTxns();
   } catch (e) {
     showErr('svc-cable-error', e.message);
@@ -1113,10 +1098,12 @@ async function buyCable() {
 }
 
 // ── RECEIPT ───────────────────────────────────────────────────────────────
-function showReceipt({ title, sub, lines, token: elecToken }) {
+function showReceipt({ title, sub, lines, token: elecToken, pending = false }) {
   document.getElementById('receipt-title').textContent = title;
   document.getElementById('receipt-sub').textContent = sub;
   document.getElementById('receipt-check').classList.remove('pop');
+  document.getElementById('receipt-check').classList.toggle('pending', pending);
+  document.getElementById('receipt-check').textContent = pending ? '◷' : '✓';
   document.getElementById('receipt-token').innerHTML = elecToken
     ? `<div class="receipt-token">${elecToken}</div>` : '';
   const linesEl = document.getElementById('receipt-lines');
