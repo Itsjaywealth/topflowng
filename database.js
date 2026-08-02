@@ -2,7 +2,7 @@
 
 /**
  * TopFlowNG — PostgreSQL Database Layer
- * Tables: users, transactions, password_resets, paystack_refs
+ * Tables: users, transactions, password_resets, paystack_refs, vtu_orders
  */
 
 const { Pool } = require('pg');
@@ -61,9 +61,32 @@ async function initDB() {
         created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS vtu_orders (
+        id                    BIGSERIAL PRIMARY KEY,
+        request_id            TEXT UNIQUE NOT NULL,
+        user_id               INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        service_type          TEXT NOT NULL,
+        amount                NUMERIC(12,2) NOT NULL,
+        description           TEXT NOT NULL,
+        provider_order_id     TEXT,
+        provider_status_code  INTEGER,
+        provider_status       TEXT,
+        provider_remark       TEXT,
+        provider_description  TEXT,
+        provider_response     JSONB,
+        status                TEXT NOT NULL DEFAULT 'submitted'
+                              CHECK (status IN ('submitted', 'pending', 'completed', 'failed')),
+        transaction_id        INTEGER REFERENCES transactions(id),
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
       CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_vtu_orders_user_id ON vtu_orders(user_id);
+      CREATE INDEX IF NOT EXISTS idx_vtu_orders_provider_order_id ON vtu_orders(provider_order_id);
+      CREATE INDEX IF NOT EXISTS idx_vtu_orders_status ON vtu_orders(status);
     `);
 
     // Add is_admin column if it doesn't exist (migration safety)
@@ -74,6 +97,8 @@ async function initDB() {
     // Existing production databases may predate the transaction reference field.
     await client.query(`
       ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reference TEXT;
+      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'completed';
+      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS provider_order_id TEXT;
     `);
 
     // Older production databases used `ref` and did not include an id column.
@@ -215,7 +240,7 @@ async function debitWallet(userId, amount, description, reference = null) {
 
 async function getTransactions(userId, limit = 20) {
   const { rows } = await pool.query(
-    `SELECT id, type, amount, description, reference, created_at
+    `SELECT id, type, amount, description, reference, status, provider_order_id, created_at
      FROM transactions WHERE user_id = $1
      ORDER BY created_at DESC LIMIT $2`,
     [userId, limit]
@@ -225,10 +250,173 @@ async function getTransactions(userId, limit = 20) {
 
 async function logFailedTransaction(userId, description, amount) {
   await pool.query(
-    `INSERT INTO transactions (user_id, type, amount, description, reference)
-     VALUES ($1, 'debit', $2, $3, 'FAILED')`,
+    `INSERT INTO transactions (user_id, type, amount, description, reference, status)
+     VALUES ($1, 'debit', $2, $3, 'FAILED', 'failed')`,
     [userId, amount, description]
   ).catch(err => console.error('Failed to log failed transaction:', err.message));
+}
+
+// ── Clubkonnect VTU reconciliation ─────────────────────────────────────────
+// The provider can acknowledge an order before the mobile network has decided
+// its outcome. We therefore keep the provider's order ID and response separate
+// from wallet movement, so uncertain orders never debit a customer.
+async function createVtuAttempt({ requestId, userId, serviceType, amount, description }) {
+  const { rows } = await pool.query(
+    `INSERT INTO vtu_orders (request_id, user_id, service_type, amount, description)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (request_id) DO UPDATE SET updated_at = NOW()
+     RETURNING *`,
+    [requestId, userId, serviceType, amount, description]
+  );
+  return rows[0];
+}
+
+async function recordVtuProviderResponse(requestId, provider) {
+  const { rows } = await pool.query(
+    `UPDATE vtu_orders
+     SET provider_order_id = COALESCE($2, provider_order_id),
+         provider_status_code = $3,
+         provider_status = $4,
+         provider_remark = $5,
+         provider_description = $6,
+         provider_response = $7::jsonb,
+         updated_at = NOW()
+     WHERE request_id = $1
+     RETURNING *`,
+    [
+      requestId,
+      provider.orderId || null,
+      provider.statusCode ?? null,
+      provider.status || null,
+      provider.remark || null,
+      provider.description || null,
+      JSON.stringify(provider.raw || {}),
+    ]
+  );
+  return rows[0] || null;
+}
+
+async function completeVtuOrder(requestId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const orderResult = await client.query(
+      'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
+    );
+    const order = orderResult.rows[0];
+    if (!order) throw new Error(`VTU order ${requestId} not found`);
+
+    if (order.status === 'completed') {
+      const balance = await client.query('SELECT wallet FROM users WHERE id = $1', [order.user_id]);
+      await client.query('COMMIT');
+      return { alreadyCompleted: true, balance: parseFloat(balance.rows[0].wallet), order };
+    }
+    if (order.status === 'pending') throw new Error(`VTU order ${requestId} is pending reconciliation`);
+    if (order.status === 'failed') throw new Error(`VTU order ${requestId} is already failed`);
+
+    const walletResult = await client.query(
+      `UPDATE users SET wallet = wallet - $1
+       WHERE id = $2 AND wallet >= $1
+       RETURNING wallet`,
+      [order.amount, order.user_id]
+    );
+    if (walletResult.rows.length === 0) throw new Error('Insufficient balance');
+
+    const transactionResult = await client.query(
+      `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
+       VALUES ($1, 'debit', $2, $3, $4, 'completed', $5)
+       RETURNING id`,
+      [order.user_id, order.amount, order.description, order.request_id, order.provider_order_id]
+    );
+    await client.query(
+      `UPDATE vtu_orders SET status = 'completed', transaction_id = $2, updated_at = NOW()
+       WHERE id = $1`,
+      [order.id, transactionResult.rows[0].id]
+    );
+    await client.query('COMMIT');
+    return { alreadyCompleted: false, balance: parseFloat(walletResult.rows[0].wallet), order };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function markVtuOrderPending(requestId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const orderResult = await client.query(
+      'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
+    );
+    const order = orderResult.rows[0];
+    if (!order) throw new Error(`VTU order ${requestId} not found`);
+    if (order.status === 'completed' || order.status === 'failed') {
+      await client.query('COMMIT');
+      return order;
+    }
+    let transactionId = order.transaction_id;
+    if (!transactionId) {
+      const transactionResult = await client.query(
+        `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
+         VALUES ($1, 'debit', $2, $3, $4, 'pending', $5)
+         RETURNING id`,
+        [order.user_id, order.amount, `${order.description} — pending provider confirmation`, order.request_id, order.provider_order_id]
+      );
+      transactionId = transactionResult.rows[0].id;
+    }
+    await client.query(
+      `UPDATE vtu_orders SET status = 'pending', transaction_id = $2, updated_at = NOW()
+       WHERE id = $1`,
+      [order.id, transactionId]
+    );
+    await client.query('COMMIT');
+    return order;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function markVtuOrderFailed(requestId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const orderResult = await client.query(
+      'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
+    );
+    const order = orderResult.rows[0];
+    if (!order) throw new Error(`VTU order ${requestId} not found`);
+    if (order.status === 'completed' || order.status === 'pending') {
+      await client.query('COMMIT');
+      return order;
+    }
+    let transactionId = order.transaction_id;
+    if (!transactionId) {
+      const transactionResult = await client.query(
+        `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
+         VALUES ($1, 'debit', $2, $3, $4, 'failed', $5)
+         RETURNING id`,
+        [order.user_id, order.amount, `Failed ${order.description}`, order.request_id, order.provider_order_id]
+      );
+      transactionId = transactionResult.rows[0].id;
+    }
+    await client.query(
+      `UPDATE vtu_orders SET status = 'failed', transaction_id = $2, updated_at = NOW()
+       WHERE id = $1`,
+      [order.id, transactionId]
+    );
+    await client.query('COMMIT');
+    return order;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // ── Password Reset ────────────────────────────────────────────────────────────
@@ -336,7 +524,7 @@ async function getAdminStats() {
       (SELECT COUNT(*) FROM transactions)::int                                    AS total_transactions,
       (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'credit')  AS total_credited,
       (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'debit'
-         AND reference != 'FAILED')                                               AS total_debited
+         AND status = 'completed')                                                 AS total_debited
   `);
   return rows[0];
 }
@@ -344,7 +532,7 @@ async function getAdminStats() {
 async function getAllTransactions(limit = 50, offset = 0) {
   const { rows } = await pool.query(
     `SELECT
-       t.id, t.type, t.amount, t.description, t.reference, t.created_at,
+       t.id, t.type, t.amount, t.description, t.reference, t.status, t.provider_order_id, t.created_at,
        u.full_name AS user_name, u.email AS user_email
      FROM transactions t
      JOIN users u ON u.id = t.user_id
@@ -377,6 +565,11 @@ module.exports = {
   debitWallet,
   getTransactions,
   logFailedTransaction,
+  createVtuAttempt,
+  recordVtuProviderResponse,
+  completeVtuOrder,
+  markVtuOrderPending,
+  markVtuOrderFailed,
   createPasswordReset,
   consumePasswordReset,
   paystackRefExists,
