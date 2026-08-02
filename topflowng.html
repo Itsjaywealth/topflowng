@@ -537,6 +537,19 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   .marketing-trust { padding:var(--space-8) var(--space-12); }
   .marketing-footer { padding:var(--space-6) var(--space-12); }
 }
+
+
+/* ── Design system: Account ─────────────────────────────────────────────── */
+#screen-account { max-width:none; padding:var(--space-8) var(--space-4) calc(100px + env(safe-area-inset-bottom)); }
+#screen-account > * { max-width:680px; margin-left:auto; margin-right:auto; }
+#screen-account>div:first-child { padding:var(--space-8)!important; border-radius:var(--radius-lg)!important; box-shadow:var(--elevation-1); }
+.account-card { margin-top:var(--space-6); border-radius:var(--radius-md); box-shadow:var(--elevation-0); }
+.account-item { min-height:72px; padding:var(--space-4); }
+.btn-logout { min-height:48px; border-radius:var(--radius-sm); }
+@media (min-width:1024px) {
+  #screen-account { padding:var(--space-12); }
+  #screen-account > * { max-width:760px; }
+}
 </style>
 </head>
 <body>
