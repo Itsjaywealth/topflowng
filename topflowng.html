@@ -293,10 +293,60 @@ body{background:var(--mist)}
   .auth-header{padding:0 0 38px}
   .auth-body{min-height:0;border-radius:16px;padding:34px 42px 42px}
 }
+\n
+/* ── Landing — a practical financial front door ──────────────────────────── */
+#marketing{display:none;min-height:100vh;background:var(--white);color:var(--ink);flex-direction:column}
+#marketing.active{display:flex}
+.marketing-nav{display:flex;align-items:center;justify-content:space-between;max-width:1120px;width:100%;margin:0 auto;padding:20px}
+.marketing-brand{font:800 20px/1 var(--display);letter-spacing:-.9px}.marketing-brand span{font-weight:500}
+.marketing-login{padding:9px 0;border:0;background:transparent;color:var(--ink);font:700 13px/1 var(--font);cursor:pointer}
+.marketing-main{display:grid;grid-template-columns:1fr;gap:34px;max-width:1120px;width:100%;margin:auto;padding:42px 20px 48px}
+.marketing-kicker{margin:0 0 15px;color:#A56300;font:700 10px/1.2 var(--font);letter-spacing:.1em;text-transform:uppercase}
+.marketing-copy h1{max-width:700px;font:800 clamp(38px,9vw,72px)/.98 var(--display);letter-spacing:-2.5px}
+.marketing-copy>p:not(.marketing-kicker){max-width:520px;margin:22px 0 0;color:var(--graphite);font:400 16px/1.55 var(--font)}
+.marketing-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+.marketing-primary,.marketing-secondary{min-height:48px;padding:0 16px;border-radius:8px;font:700 13px/1 var(--font);cursor:pointer}
+.marketing-primary{border:0;background:var(--amber);color:var(--ink)}
+.marketing-secondary{border:1px solid #D9DEE6;background:var(--white);color:var(--ink)}
+.marketing-ledger{border-top:1px solid #D9DEE6;border-bottom:1px solid #D9DEE6}
+.ledger-cap{padding:0 0 12px;color:var(--graphite);font:700 10px/1 var(--font);letter-spacing:.08em;text-transform:uppercase}
+.ledger-row{display:flex;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px solid #E8EBEF;font:600 13px/1.35 var(--font)}
+.ledger-row strong{max-width:58%;color:var(--graphite);font-weight:500;text-align:right}
+.ledger-note{padding:15px 0;color:var(--emerald);font:600 12px/1.4 var(--font)}
+.marketing-footer{display:flex;justify-content:space-between;gap:12px;max-width:1120px;width:100%;margin:0 auto;padding:18px 20px;border-top:1px solid #E2E6EC;color:var(--graphite);font:500 11px/1.4 var(--font)}
+@media (min-width:760px){.marketing-nav{padding:26px 32px}.marketing-main{grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);align-items:end;gap:80px;padding:84px 32px 70px}.marketing-footer{padding:20px 32px}.marketing-ledger{padding-top:0}}
 \n</style>
 </head>
 <body>
 <div id="app">
+
+<!-- ── MARKETING LANDING ── -->
+<section id="marketing" aria-label="TopFlowNG introduction">
+  <nav class="marketing-nav">
+    <div class="marketing-brand">TopFlow<span>NG</span></div>
+    <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Log in</button>
+  </nav>
+  <main class="marketing-main">
+    <div class="marketing-copy">
+      <p class="marketing-kicker">Nigeria, sorted one payment at a time</p>
+      <h1>Buy MTN airtime. Pay IKEDC. Keep your wallet clear.</h1>
+      <p>TopFlowNG keeps everyday airtime, data, electricity and TV payments in one readable wallet.</p>
+      <div class="marketing-actions">
+        <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Create your account</button>
+        <button type="button" class="marketing-secondary" onclick="openAuthFromMarketing('login')">Log in to your wallet</button>
+      </div>
+    </div>
+    <aside class="marketing-ledger" aria-label="Example payment summary">
+      <div class="ledger-cap">What you can pay for</div>
+      <div class="ledger-row"><span>MTN airtime</span><strong>From ₦50</strong></div>
+      <div class="ledger-row"><span>Data bundles</span><strong>MTN · Glo · Airtel · 9mobile</strong></div>
+      <div class="ledger-row"><span>Electricity</span><strong>IKEDC · EKEDC · AEDC</strong></div>
+      <div class="ledger-row"><span>TV subscriptions</span><strong>DStv · GOtv · StarTimes</strong></div>
+      <div class="ledger-note">Every purchase stays in your transaction history.</div>
+    </aside>
+  </main>
+  <footer class="marketing-footer"><span>© 2026 TopFlowNG</span><span>Wallet payments in Naira</span></footer>
+</section>
 
 <!-- ── AUTH SCREEN ── -->
 <div id="auth-screen">
@@ -872,6 +922,12 @@ async function handleReset() {
   setLoading('btn-reset', false);
 }
 
+function openAuthFromMarketing(tab = 'login') {
+  document.getElementById('marketing').classList.remove('active');
+  document.getElementById('auth-screen').classList.add('active');
+  showAuthTab(tab);
+}
+
 function logout() {
   localStorage.removeItem('tf_token');
   token = null; user = null;
@@ -897,7 +953,7 @@ async function init() {
   }
 
   if (!token) {
-    document.getElementById('auth-screen').classList.add('active');
+    document.getElementById('marketing').classList.add('active');
     return;
   }
 
