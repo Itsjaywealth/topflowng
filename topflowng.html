@@ -339,7 +339,24 @@ body{background:var(--mist)}
 .txn-status.failed{background:#FEF0F0;color:#B42318}
 .txn-amount.failed{color:#B42318}
 @media(max-width:390px){.txn-status{font-size:8px;padding:3px 4px}}
-\n</style>
+\n
+/* ── Homepage conversion flow ────────────────────────────────────────────── */
+.marketing-copy h1{max-width:760px}
+.preview-top{display:flex;align-items:center;justify-content:space-between;padding:0 0 26px}
+.preview-top strong{font:800 17px/1 var(--display);letter-spacing:-.6px}
+.preview-top button{border:0;border-radius:6px;background:var(--amber);padding:9px 10px;color:var(--ink);font:700 11px/1 var(--font)}
+.preview-label{margin:0 0 8px;color:var(--graphite);font:700 10px/1 var(--font);letter-spacing:.09em;text-transform:uppercase}
+.preview-balance{margin:0 0 28px;color:var(--ink);font:800 36px/.95 var(--display);letter-spacing:-1.4px}
+.preview-credit{color:var(--emerald)!important}
+.marketing-how{max-width:1120px;width:100%;margin:0 auto;padding:52px 20px;border-top:1px solid #E2E6EC}
+.marketing-how h2{max-width:420px;margin:0 0 28px;font:800 clamp(26px,4vw,40px)/1 var(--display);letter-spacing:-1.2px}
+.marketing-how ol{list-style:none;display:grid;gap:0;margin:0;padding:0;border-top:1px solid #E2E6EC}
+.marketing-how li{display:grid;grid-template-columns:minmax(128px,.48fr) minmax(0,1fr);gap:18px;padding:18px 0;border-bottom:1px solid #E2E6EC}
+.marketing-how li strong{font:700 14px/1.35 var(--font)}.marketing-how li span{color:var(--graphite);font:400 13px/1.5 var(--font)}
+.marketing-trust{background:var(--mist);padding:28px 20px}.marketing-trust p{max-width:1120px;margin:0 auto;color:var(--graphite);font:500 14px/1.55 var(--font)}.marketing-trust strong{color:var(--ink)}
+@media(min-width:760px){.marketing-how{padding:82px 32px}.marketing-trust{padding:36px 32px}}
+
+</style>
 </head>
 <body>
 <div id="app">
@@ -352,23 +369,35 @@ body{background:var(--mist)}
   </nav>
   <main class="marketing-main">
     <div class="marketing-copy">
-      <p class="marketing-kicker">Nigeria, sorted one payment at a time</p>
-      <h1>Buy MTN airtime. Pay IKEDC. Keep your wallet clear.</h1>
-      <p>TopFlowNG keeps everyday airtime, data, electricity and TV payments in one readable wallet.</p>
+      <h1>Buy airtime, data, and pay bills — instantly, from one wallet.</h1>
+      <p>Fund your wallet once, then pay for the services you use every day in Naira.</p>
       <div class="marketing-actions">
         <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Create your account</button>
         <button type="button" class="marketing-secondary" onclick="openAuthFromMarketing('login')">Log in to your wallet</button>
       </div>
     </div>
-    <aside class="marketing-ledger" aria-label="Example payment summary">
-      <div class="ledger-cap">What you can pay for</div>
-      <div class="ledger-row"><span>MTN airtime</span><strong>From ₦50</strong></div>
-      <div class="ledger-row"><span>Data bundles</span><strong>MTN · Glo · Airtel · 9mobile</strong></div>
-      <div class="ledger-row"><span>Electricity</span><strong>IKEDC · EKEDC · AEDC</strong></div>
-      <div class="ledger-row"><span>TV subscriptions</span><strong>DStv · GOtv · StarTimes</strong></div>
-      <div class="ledger-note">Every purchase stays in your transaction history.</div>
+    <aside class="marketing-ledger" aria-label="TopFlowNG wallet preview">
+      <div class="preview-top"><strong>TopFlowNG</strong><button type="button">+ Fund wallet</button></div>
+      <div class="preview-label">Available balance</div>
+      <div class="preview-balance">₦24,850.00</div>
+      <div class="ledger-cap">Recent activity</div>
+      <div class="ledger-row"><span>MTN airtime · 0803 123 4567</span><strong>−₦500.00</strong></div>
+      <div class="ledger-row"><span>Wallet funded · Paystack</span><strong class="preview-credit">+₦5,000.00</strong></div>
+      <div class="ledger-row"><span>IKEDC prepaid electricity</span><strong>−₦2,000.00</strong></div>
+      <div class="ledger-note">Completed payments stay in your transaction history.</div>
     </aside>
   </main>
+  <section class="marketing-how" aria-labelledby="how-it-works">
+    <h2 id="how-it-works">Three steps. Your wallet stays clear.</h2>
+    <ol>
+      <li><strong>Fund your wallet</strong><span>Use card, bank transfer, or USSD through Paystack.</span></li>
+      <li><strong>Pick a service</strong><span>Choose MTN, Glo, Airtel, 9mobile, electricity, or TV.</span></li>
+      <li><strong>See the result</strong><span>Your balance and transaction history update in place.</span></li>
+    </ol>
+  </section>
+  <section class="marketing-trust" aria-label="Payments and services">
+    <p><strong>Payments secured by Paystack.</strong> Pay for MTN, Glo, Airtel, 9mobile, IKEDC, EKEDC, AEDC, DStv, GOtv, and StarTimes.</p>
+  </section>
   <footer class="marketing-footer"><span>© 2026 TopFlowNG</span><span>Wallet payments in Naira</span></footer>
 </section>
 
