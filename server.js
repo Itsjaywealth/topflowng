@@ -544,7 +544,7 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'data', amount: cost,
-      description: `${network} data ${planCode} — ${phone}`, endpoint: '/API/Databundle/', params,
+      description: `${network} data ${planCode} — ${phone}`, endpoint: 'https://www.nellobytesystems.com/APIDataBundleV1.asp', params,
     });
     if (result.outcome === 'success') return res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
@@ -579,7 +579,7 @@ app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'cable', amount: cost,
-      description: `${provider} ${planCode} — ${smartCardNumber}`, endpoint: '/API/CableTV/', params,
+      description: `${provider} ${planCode} — ${smartCardNumber}`, endpoint: 'https://www.nellobytesystems.com/APICableTVV1.asp', params,
     });
     if (result.outcome === 'success') return res.json({ success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId });
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
@@ -615,7 +615,7 @@ app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) =>
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
-      description: `${disco} electricity — ${meterNumber}`, endpoint: '/API/Electricity/', params,
+      description: `${disco} electricity — ${meterNumber}`, endpoint: 'https://www.nellobytesystems.com/APIElectricityV1.asp', params,
     });
     if (result.outcome === 'success') return res.json({ success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId });
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
