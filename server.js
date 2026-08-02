@@ -392,6 +392,95 @@ app.post('/api/paystack/webhook', async (req, res) => {
 });
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────
+const CK_PENDING_CODES = new Set([100, 199, 201, 299, 300, 399, 412, 600, 601, 602, 603, 604, 605, 606, 699]);
+
+function normalizeClubkonnectResponse(raw) {
+  const data = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+  const rawCode = data.statusCode ?? data.StatusCode ?? data.statuscode ?? data.Statuscode;
+  const legacyStatus = data.status ?? data.Status;
+  const statusCode = rawCode !== undefined && rawCode !== null && rawCode !== ''
+    ? Number(rawCode)
+    : /^\d+$/.test(String(legacyStatus || '')) ? Number(legacyStatus) : null;
+  const status = String(data.status ?? data.Status ?? '').trim().toUpperCase();
+  const remark = String(data.remark ?? data.Remark ?? '').trim();
+  const description = String(data.description ?? data.Description ?? data.message ?? data.Message ?? '').trim();
+  const orderId = data.orderId ?? data.OrderID ?? data.OrderId ?? null;
+
+  // Clubkonnect documents 200 as the only terminal delivery success. The
+  // legacy API response format sometimes reports it as status: '200'.
+  if (statusCode === 200 || (!statusCode && status === 'SUCCESSFUL')) {
+    return { outcome: 'success', statusCode: 200, status: status || 'ORDER_COMPLETED', remark: remark || 'Success', description, orderId, raw: data };
+  }
+
+  // ORDER_RECEIVED, ORDER_PROCESSED, and ORDER_ONHOLD are non-terminal. This
+  // deliberately includes ambiguity codes such as 199/299/399; no customer is
+  // charged until the provider gives a terminal successful result.
+  if (CK_PENDING_CODES.has(statusCode) || ['ORDER_RECEIVED', 'ORDER_PROCESSED', 'ORDER_ONHOLD'].includes(status) || /network unresponsive|awaiting|on hold|retry/i.test(`${remark} ${description}`)) {
+    return { outcome: 'pending', statusCode, status, remark, description, orderId, raw: data };
+  }
+
+  // All documented ORDER_ERROR and ORDER_CANCELLED responses are terminal.
+  if ((statusCode >= 400 && statusCode <= 599 && statusCode !== 412) || ['ORDER_ERROR', 'ORDER_CANCELLED'].includes(status)) {
+    return { outcome: 'failed', statusCode, status, remark, description, orderId, raw: data };
+  }
+
+  // If the network returned an undocumented shape, preserve it for support and
+  // reconciliation instead of risking an incorrect debit or false failure.
+  return { outcome: 'pending', statusCode, status, remark, description, orderId, raw: data };
+}
+
+async function processClubkonnectPurchase({ userId, requestId, serviceType, amount, description, endpoint, params }) {
+  await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
+
+  let providerRaw;
+  try {
+    const response = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}${endpoint}`, { params, timeout: 30_000 });
+    providerRaw = response.data;
+  } catch (err) {
+    providerRaw = err.response?.data;
+    if (!providerRaw) {
+      // The provider may have received the request even though we timed out.
+      // Hold the order and leave the wallet unchanged until it is reconciled.
+      await db.recordVtuProviderResponse(requestId, {
+        statusCode: null,
+        status: 'UNKNOWN',
+        remark: 'Provider connection unresolved',
+        description: err.message,
+        orderId: null,
+        raw: { error: err.message },
+      });
+      await db.markVtuOrderPending(requestId);
+      console.warn(`Clubkonnect purchase pending reconciliation: ${requestId} (${err.message})`);
+      return { outcome: 'pending', message: 'Your request is pending provider confirmation. Your wallet has not been debited.', requestId, orderId: null };
+    }
+  }
+
+  const provider = normalizeClubkonnectResponse(providerRaw);
+  await db.recordVtuProviderResponse(requestId, provider);
+
+  if (provider.outcome === 'success') {
+    const result = await db.completeVtuOrder(requestId);
+    console.log(`Clubkonnect purchase completed: ${requestId} [${provider.orderId || 'no provider order id'}]`);
+    return { outcome: 'success', balance: result.balance, requestId, orderId: provider.orderId, provider };
+  }
+
+  if (provider.outcome === 'failed') {
+    await db.markVtuOrderFailed(requestId);
+    console.warn(`Clubkonnect purchase failed without wallet debit: ${requestId} [${provider.statusCode || 'unknown'}]`);
+    return { outcome: 'failed', message: provider.description || provider.remark || 'The provider declined this purchase.', requestId, orderId: provider.orderId, provider };
+  }
+
+  await db.markVtuOrderPending(requestId);
+  console.warn(`Clubkonnect purchase pending reconciliation: ${requestId} [${provider.statusCode || 'unknown'} ${provider.remark || ''}]`);
+  return {
+    outcome: 'pending',
+    message: 'Your request is pending provider confirmation. Your wallet has not been debited.',
+    requestId,
+    orderId: provider.orderId,
+    provider,
+  };
+}
+
 app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const { network, phone, amount } = req.body;
@@ -403,7 +492,7 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
 
     const networkMap = { MTN: 'MTN', GLO: 'GLO', AIRTEL: 'AIRTEL', '9MOBILE': '9MOBILE', ETISALAT: '9MOBILE' };
     const ckNetwork  = networkMap[network.toUpperCase()] || network.toUpperCase();
-    const requestId  = `AIR-${Date.now()}`;
+    const requestId  = `AIR-${Date.now()}-${req.user.id}`;
 
     const params = {
       UserID: process.env.CLUBKONNECT_USER_ID,
@@ -415,16 +504,13 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
-    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/Airtime/`, { params });
-    const data  = ckRes.data;
-
-    if (data.status === '200' || data.Status === 'Successful') {
-      const newBalance = await db.debitWallet(req.user.id, cost, `${network} airtime — ${phone}`, requestId);
-      res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: newBalance });
-    } else {
-      await db.logFailedTransaction(req.user.id, `Failed airtime — ${network} ${phone}`, cost);
-      res.status(400).json({ error: data.message || data.Message || 'Airtime purchase failed' });
-    }
+    const result = await processClubkonnectPurchase({
+      userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
+      description: `${network} airtime — ${phone}`, endpoint: '/API/Airtime/', params,
+    });
+    if (result.outcome === 'success') return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
     console.error('Airtime error:', err.message);
     Sentry.captureException(err);
@@ -442,7 +528,7 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    const requestId = `DATA-${Date.now()}`;
+    const requestId = `DATA-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: process.env.CLUBKONNECT_USER_ID,
       APIKey: process.env.CLUBKONNECT_API_KEY,
@@ -453,16 +539,13 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
-    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/Databundle/`, { params });
-    const data  = ckRes.data;
-
-    if (data.status === '200' || data.Status === 'Successful') {
-      const newBalance = await db.debitWallet(req.user.id, cost, `${network} data ${planCode} — ${phone}`, requestId);
-      res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: newBalance });
-    } else {
-      await db.logFailedTransaction(req.user.id, `Failed data — ${network} ${phone}`, cost);
-      res.status(400).json({ error: data.message || data.Message || 'Data purchase failed' });
-    }
+    const result = await processClubkonnectPurchase({
+      userId: req.user.id, requestId, serviceType: 'data', amount: cost,
+      description: `${network} data ${planCode} — ${phone}`, endpoint: '/API/Databundle/', params,
+    });
+    if (result.outcome === 'success') return res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
     console.error('Data error:', err.message);
     Sentry.captureException(err);
@@ -480,7 +563,7 @@ app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    const requestId = `CABLE-${Date.now()}`;
+    const requestId = `CABLE-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: process.env.CLUBKONNECT_USER_ID,
       APIKey: process.env.CLUBKONNECT_API_KEY,
@@ -491,16 +574,13 @@ app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
-    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/CableTV/`, { params });
-    const data  = ckRes.data;
-
-    if (data.status === '200' || data.Status === 'Successful') {
-      const newBalance = await db.debitWallet(req.user.id, cost, `${provider} ${planCode} — ${smartCardNumber}`, requestId);
-      res.json({ success: true, message: `${provider} subscription activated`, balance: newBalance });
-    } else {
-      await db.logFailedTransaction(req.user.id, `Failed cable — ${provider}`, cost);
-      res.status(400).json({ error: data.message || data.Message || 'Cable TV subscription failed' });
-    }
+    const result = await processClubkonnectPurchase({
+      userId: req.user.id, requestId, serviceType: 'cable', amount: cost,
+      description: `${provider} ${planCode} — ${smartCardNumber}`, endpoint: '/API/CableTV/', params,
+    });
+    if (result.outcome === 'success') return res.json({ success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
     console.error('Cable TV error:', err.message);
     Sentry.captureException(err);
@@ -518,7 +598,7 @@ app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) =>
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    const requestId = `ELEC-${Date.now()}`;
+    const requestId = `ELEC-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: process.env.CLUBKONNECT_USER_ID,
       APIKey: process.env.CLUBKONNECT_API_KEY,
@@ -530,16 +610,13 @@ app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) =>
       CallBackURL: '',
     };
 
-    const ckRes = await axios.get(`${process.env.CLUBKONNECT_BASE_URL}/API/Electricity/`, { params });
-    const data  = ckRes.data;
-
-    if (data.status === '200' || data.Status === 'Successful') {
-      const newBalance = await db.debitWallet(req.user.id, cost, `${disco} electricity — ${meterNumber}`, requestId);
-      res.json({ success: true, message: 'Electricity token sent', token: data.token || data.Token || '', balance: newBalance });
-    } else {
-      await db.logFailedTransaction(req.user.id, `Failed electricity — ${disco}`, cost);
-      res.status(400).json({ error: data.message || data.Message || 'Electricity payment failed' });
-    }
+    const result = await processClubkonnectPurchase({
+      userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
+      description: `${disco} electricity — ${meterNumber}`, endpoint: '/API/Electricity/', params,
+    });
+    if (result.outcome === 'success') return res.json({ success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
     console.error('Electricity error:', err.message);
     Sentry.captureException(err);
