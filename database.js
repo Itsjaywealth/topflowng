@@ -296,45 +296,55 @@ async function recordVtuProviderResponse(requestId, provider) {
   return rows[0] || null;
 }
 
-async function completeVtuOrder(requestId) {
+async function completeVtuOrder(requestId, { allowPending = false } = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const orderResult = await client.query(
+    const result = await client.query(
       'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
     );
-    const order = orderResult.rows[0];
+    const order = result.rows[0];
     if (!order) throw new Error(`VTU order ${requestId} not found`);
-
     if (order.status === 'completed') {
       const balance = await client.query('SELECT wallet FROM users WHERE id = $1', [order.user_id]);
       await client.query('COMMIT');
       return { alreadyCompleted: true, balance: parseFloat(balance.rows[0].wallet), order };
     }
-    if (order.status === 'pending') throw new Error(`VTU order ${requestId} is pending reconciliation`);
+    if (order.status === 'pending' && !allowPending) throw new Error(`VTU order ${requestId} is pending reconciliation`);
     if (order.status === 'failed') throw new Error(`VTU order ${requestId} is already failed`);
 
-    const walletResult = await client.query(
-      `UPDATE users SET wallet = wallet - $1
-       WHERE id = $2 AND wallet >= $1
-       RETURNING wallet`,
+    const wallet = await client.query(
+      'UPDATE users SET wallet = wallet - $1 WHERE id = $2 AND wallet >= $1 RETURNING wallet',
       [order.amount, order.user_id]
     );
-    if (walletResult.rows.length === 0) throw new Error('Insufficient balance');
+    if (!wallet.rows.length) throw new Error('Insufficient balance to settle confirmed provider order');
 
-    const transactionResult = await client.query(
-      `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
-       VALUES ($1, 'debit', $2, $3, $4, 'completed', $5)
-       RETURNING id`,
-      [order.user_id, order.amount, order.description, order.request_id, order.provider_order_id]
-    );
+    let transactionId = order.transaction_id;
+    if (transactionId) {
+      await client.query(
+        `UPDATE transactions
+         SET status = 'completed',
+             description = regexp_replace(description, ' — pending provider confirmation$', ''),
+             provider_order_id = COALESCE($2, provider_order_id)
+         WHERE id = $1`,
+        [transactionId, order.provider_order_id]
+      );
+    } else {
+      const txn = await client.query(
+        `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
+         VALUES ($1, 'debit', $2, $3, $4, 'completed', $5)
+         RETURNING id`,
+        [order.user_id, order.amount, order.description, order.request_id, order.provider_order_id]
+      );
+      transactionId = txn.rows[0].id;
+    }
     await client.query(
       `UPDATE vtu_orders SET status = 'completed', transaction_id = $2, updated_at = NOW()
        WHERE id = $1`,
-      [order.id, transactionResult.rows[0].id]
+      [order.id, transactionId]
     );
     await client.query('COMMIT');
-    return { alreadyCompleted: false, balance: parseFloat(walletResult.rows[0].wallet), order };
+    return { alreadyCompleted: false, balance: parseFloat(wallet.rows[0].wallet), order };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
@@ -381,28 +391,36 @@ async function markVtuOrderPending(requestId) {
   }
 }
 
-async function markVtuOrderFailed(requestId) {
+async function markVtuOrderFailed(requestId, { allowPending = false } = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const orderResult = await client.query(
+    const result = await client.query(
       'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
     );
-    const order = orderResult.rows[0];
+    const order = result.rows[0];
     if (!order) throw new Error(`VTU order ${requestId} not found`);
-    if (order.status === 'completed' || order.status === 'pending') {
+    if (order.status === 'completed' || (order.status === 'pending' && !allowPending)) {
       await client.query('COMMIT');
       return order;
     }
     let transactionId = order.transaction_id;
-    if (!transactionId) {
-      const transactionResult = await client.query(
+    if (transactionId) {
+      await client.query(
+        `UPDATE transactions
+         SET status = 'failed',
+             description = regexp_replace(description, ' — pending provider confirmation$', ' — provider declined')
+         WHERE id = $1`,
+        [transactionId]
+      );
+    } else {
+      const txn = await client.query(
         `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
          VALUES ($1, 'debit', $2, $3, $4, 'failed', $5)
          RETURNING id`,
         [order.user_id, order.amount, `Failed ${order.description}`, order.request_id, order.provider_order_id]
       );
-      transactionId = transactionResult.rows[0].id;
+      transactionId = txn.rows[0].id;
     }
     await client.query(
       `UPDATE vtu_orders SET status = 'failed', transaction_id = $2, updated_at = NOW()
@@ -417,6 +435,17 @@ async function markVtuOrderFailed(requestId) {
   } finally {
     client.release();
   }
+}
+
+async function getVtuOrderByRequestId(requestId) {
+  const { rows } = await pool.query(
+    `SELECT request_id, user_id, service_type, amount, description, provider_order_id,
+            provider_status_code, provider_status, provider_remark, provider_description,
+            status, transaction_id, created_at, updated_at
+     FROM vtu_orders WHERE request_id = $1`,
+    [requestId]
+  );
+  return rows[0] || null;
 }
 
 // ── Password Reset ────────────────────────────────────────────────────────────
@@ -570,6 +599,7 @@ module.exports = {
   completeVtuOrder,
   markVtuOrderPending,
   markVtuOrderFailed,
+  getVtuOrderByRequestId,
   createPasswordReset,
   consumePasswordReset,
   paystackRefExists,
