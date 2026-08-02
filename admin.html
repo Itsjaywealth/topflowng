@@ -187,6 +187,22 @@ td{padding:13px 18px;font-size:12px}
 @media(max-width:820px){.sidebar{position:static;width:100%;height:auto;flex-direction:row;align-items:center;padding:14px;overflow-x:auto}.sidebar-logo{padding:0 12px 0 0;border:0;white-space:nowrap}.sidebar-footer{display:none}.nav-item{padding:9px 11px;white-space:nowrap}.main{margin-left:0;padding:24px 16px}.stats-grid{grid-template-columns:repeat(2,1fr)}.section{overflow-x:auto}.page-title{font-size:27px}}
 \n  .reconcile-btn { display:block; margin-top:6px; padding:5px 8px; border:1px solid var(--amber); border-radius:6px; background:#fff; color:var(--navy); font:600 11px/1 Inter, sans-serif; cursor:pointer; white-space:nowrap; }
   .reconcile-btn:hover, .reconcile-btn:focus-visible { background:#fff4dd; outline:2px solid var(--amber); outline-offset:2px; }
+
+/* ── Design system: Admin operations ───────────────────────────────────── */
+:root { --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;--space-12:48px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px; }
+body { font-family:var(--font); }
+button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid rgba(245,166,35,.45); outline-offset:2px; }
+.stat-value,.amount-positive,.amount-negative,td { font-variant-numeric:tabular-nums; }
+.status-pill { display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:4px 7px;border-radius:var(--radius-sm);font:700 12px/16px var(--font);white-space:nowrap; }
+.status-pill svg { width:13px;height:13px;flex:0 0 13px; }
+.status-pill--completed { background:#EAF6EF;color:var(--green); }
+.status-pill--pending { background:#FFF5DE;color:#805200; }
+.status-pill--failed { background:#FEF0F0;color:#B42318; }
+.badge.credit,.badge.debit,.badge.pending { display:none; }
+.main { padding:var(--space-12); }
+.section { border-radius:var(--radius-md); }
+@media (min-width:1280px) { .main { padding:var(--space-12) 56px; } }
+@media (max-width:820px) { .main { padding:var(--space-6) var(--space-4); } .sidebar { padding:var(--space-3); } .nav-item { min-height:44px; } }
 </style>
 </head>
 <body>
@@ -479,6 +495,20 @@ function renderTxns() {
   document.getElementById('txn-next').disabled = txnOffset + PAGE >= filtered.length;
 }
 
+function adminStatusPill(status) {
+  const state = status === 'pending' ? 'pending' : status === 'failed' ? 'failed' : 'completed';
+  const icon = state === 'completed'
+    ? '<path d="m5 12 4 4L19 6"/>'
+    : state === 'pending'
+      ? '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
+      : '<path d="m8 8 8 8M16 8l-8 8"/>';
+  const label = state === 'completed' ? 'Completed' : state === 'pending' ? 'Pending' : 'Failed';
+  return `<span class="status-pill status-pill--${state}" role="status" aria-label="${label}">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
+    <span>${label}</span>
+  </span>`;
+}
+
 function txnRow(t) {
   const amt = parseFloat(t.amount);
   const isCredit = t.type === 'credit';
@@ -491,7 +521,7 @@ function txnRow(t) {
     <td>${esc(t.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(t.user_email||'')}</span></td>
     <td>${esc(t.description||'—')}</td>
     <td class="${isCredit?'amount-positive':'amount-negative'}">${isCredit?'+':'-'}₦${fmt(amt)}</td>
-    <td><span class="badge ${t.status==='pending'?'admin':isCredit?'credit':'debit'}">${esc(t.status || (isCredit?'completed':'completed'))}</span>${action}</td>
+    <td>${adminStatusPill(t.status || 'completed')}${action}</td>
     <td style="color:var(--mid);font-size:12px">${fmtDate(t.created_at)}</td>
   </tr>`;
 }
