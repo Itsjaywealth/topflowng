@@ -432,6 +432,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
 .receipt-title{font:700 17px/1.2 var(--display);color:var(--ink);margin-bottom:4px}
 .receipt-sub{font-size:13px;color:var(--mid);margin-bottom:20px}
 .receipt-done{width:100%;padding:14px;background:var(--amber);color:var(--ink);border:none;border-radius:var(--radius);font:600 15px/1 var(--font);cursor:pointer}
+/* ── Screen management: hide all screens by default, show when active/open ── */
+#auth-screen{display:none;flex-direction:column;min-height:100dvh}
+#auth-screen.active{display:flex}
+#main-app{display:none;flex-direction:column}
+#main-app.active{display:flex}
+.service-screen{display:none;position:fixed;inset:0;z-index:20;flex-direction:column;overflow-y:auto}
+.service-screen.open{display:flex}
+.wallet-overlay,.change-pw-overlay{display:none;position:fixed;inset:0;z-index:30;background:rgba(14,34,53,.55);align-items:flex-end}
+.wallet-overlay.open,.change-pw-overlay.open{display:flex}
 </style>
 </head>
 <body>
