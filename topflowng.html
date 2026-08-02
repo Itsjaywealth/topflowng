@@ -273,6 +273,26 @@ body{background:var(--mist)}
 #screen-history .txn-item{padding:15px 0}
 .load-more{min-height:46px;border-radius:8px;border:1px solid #D9DEE6;background:var(--white);font:700 13px/1 var(--font);color:var(--ink);margin-top:16px}
 @media (min-width:760px){#screen-history{padding:42px 32px 120px}.history-head h1{font-size:34px}}
+\n
+/* ── Authentication — focused and human, not decorative ──────────────────── */
+#auth-screen{background:var(--ink)}
+.auth-header{max-width:560px;width:100%;margin:0 auto;padding:58px 28px 38px;text-align:left}
+.auth-logo{font:800 26px/1 var(--display);letter-spacing:-1.1px;color:var(--white);margin:0 0 12px}
+.auth-logo::first-letter{color:var(--amber)}
+.auth-tagline{max-width:260px;color:rgba(255,255,255,.65);font:400 14px/1.5 var(--font)}
+.auth-body{width:100%;max-width:560px;min-height:calc(100vh - 170px);margin:0 auto;border-radius:18px 18px 0 0;padding:30px 24px 44px}
+.auth-tabs{gap:4px;margin:0 0 28px;padding:4px;background:var(--mist);border:0;border-radius:8px}
+.auth-tab{padding:10px 8px;border:0;border-radius:6px;margin:0;color:var(--graphite);font:700 13px/1 var(--font)}
+.auth-tab.active{border:0;background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(14,34,53,.1)}
+.auth-form{max-width:440px}
+.auth-footer-link{margin-top:20px;text-align:left;font:500 13px/1.4 var(--font)}
+.auth-footer-link a,.auth-link a{color:#A56300;font-weight:700}
+.auth-error,.auth-success{border-radius:8px;font:500 13px/1.45 var(--font)}
+@media (min-width:760px){
+  #auth-screen{align-items:center}
+  .auth-header{padding:0 0 38px}
+  .auth-body{min-height:0;border-radius:16px;padding:34px 42px 42px}
+}
 \n</style>
 </head>
 <body>
@@ -282,7 +302,7 @@ body{background:var(--mist)}
 <div id="auth-screen">
   <div class="auth-header">
     <div class="auth-logo">TopFlowNG</div>
-    <div class="auth-tagline">Airtime, data, bills — sorted.</div>
+    <div class="auth-tagline">Pay for the things you use, with your wallet in view.</div>
   </div>
   <div class="auth-body">
     <div class="auth-tabs" id="auth-tabs-login">
