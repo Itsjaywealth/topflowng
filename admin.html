@@ -185,7 +185,9 @@ body{background:var(--mist);font-family:var(--font)}
 th{padding:11px 18px;background:#F7F8FA;font-size:10px;letter-spacing:.08em}
 td{padding:13px 18px;font-size:12px}
 @media(max-width:820px){.sidebar{position:static;width:100%;height:auto;flex-direction:row;align-items:center;padding:14px;overflow-x:auto}.sidebar-logo{padding:0 12px 0 0;border:0;white-space:nowrap}.sidebar-footer{display:none}.nav-item{padding:9px 11px;white-space:nowrap}.main{margin-left:0;padding:24px 16px}.stats-grid{grid-template-columns:repeat(2,1fr)}.section{overflow-x:auto}.page-title{font-size:27px}}
-\n</style>
+\n  .reconcile-btn { display:block; margin-top:6px; padding:5px 8px; border:1px solid var(--amber); border-radius:6px; background:#fff; color:var(--navy); font:600 11px/1 Inter, sans-serif; cursor:pointer; white-space:nowrap; }
+  .reconcile-btn:hover, .reconcile-btn:focus-visible { background:#fff4dd; outline:2px solid var(--amber); outline-offset:2px; }
+</style>
 </head>
 <body>
 
@@ -480,12 +482,16 @@ function renderTxns() {
 function txnRow(t) {
   const amt = parseFloat(t.amount);
   const isCredit = t.type === 'credit';
+  const canReconcile = t.status === 'pending' && t.provider_order_id && t.reference;
+  const action = canReconcile
+    ? `<button class="reconcile-btn" onclick='reconcileOrder(${JSON.stringify(t.reference)})'>Check status</button>`
+    : '';
   return `<tr>
     <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(t.reference||'—').substring(0,18)}${t.provider_order_id ? `<br><span style="font-size:10px">CK: ${esc(t.provider_order_id)}</span>` : ''}</td>
     <td>${esc(t.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(t.user_email||'')}</span></td>
     <td>${esc(t.description||'—')}</td>
     <td class="${isCredit?'amount-positive':'amount-negative'}">${isCredit?'+':'-'}₦${fmt(amt)}</td>
-    <td><span class="badge ${t.status==='pending'?'admin':isCredit?'credit':'debit'}">${esc(t.status || (isCredit?'completed':'completed'))}</span></td>
+    <td><span class="badge ${t.status==='pending'?'admin':isCredit?'credit':'debit'}">${esc(t.status || (isCredit?'completed':'completed'))}</span>${action}</td>
     <td style="color:var(--mid);font-size:12px">${fmtDate(t.created_at)}</td>
   </tr>`;
 }
@@ -544,6 +550,19 @@ function userRow(u) {
 
 function filterUsers() { userOffset=0; renderUsers(); }
 function userPage(dir) { userOffset = Math.max(0, userOffset + dir*PAGE); renderUsers(); }
+
+// ── VTU reconciliation ──────────────────────────────────────────────────────
+async function reconcileOrder(reference) {
+  if (!confirm('Check Clubkonnect for the latest status of this pending order?')) return;
+  try {
+    const result = await apiFetch(`/api/admin/vtu-orders/${encodeURIComponent(reference)}/reconcile`, { method:'POST' });
+    alert(result.message || 'Provider status checked.');
+    await loadTransactions();
+    await loadOverview();
+  } catch (e) {
+    alert(e.message || 'Unable to check this provider order right now.');
+  }
+}
 
 // ── NAV ────────────────────────────────────────────────────────────────────
 function showTab(tab) {
