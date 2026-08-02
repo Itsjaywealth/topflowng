@@ -358,6 +358,87 @@ body{background:var(--mist)}
 .marketing-trust{background:var(--mist);padding:28px 20px}.marketing-trust p{max-width:1120px;margin:0 auto;color:var(--graphite);font:500 14px/1.55 var(--font)}.marketing-trust strong{color:var(--ink)}
 @media(min-width:760px){.marketing-how{padding:82px 32px}.marketing-trust{padding:36px 32px}}
 
+
+
+/* ── Design system: Dashboard/home ─────────────────────────────────────── */
+:root {
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
+  --elevation-0:0 0 0 1px rgba(14,34,53,.10);
+  --elevation-1:0 2px 8px rgba(14,34,53,.06);
+  --elevation-2:0 16px 40px rgba(14,34,53,.14);
+  --elevation-3:0 24px 64px rgba(14,34,53,.22);
+  --danger:#B42318;
+}
+body,button,input,select,textarea { font-family:var(--font); }
+.amount,.txn-amount,.balance-amount,.glance-balance { font-variant-numeric:tabular-nums; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
+  outline:3px solid rgba(245,166,35,.45); outline-offset:2px;
+}
+#main-app { background:var(--white); }
+.status-pill {
+  display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:4px 7px;
+  border-radius:var(--radius-sm); font:700 12px/16px var(--font); white-space:nowrap;
+}
+.status-pill svg { width:13px; height:13px; flex:0 0 13px; }
+.status-pill--completed { background:#EAF6EF; color:var(--emerald); }
+.status-pill--pending { background:#FFF5DE; color:#805200; }
+.status-pill--failed { background:#FEF0F0; color:var(--danger); }
+.txn-status { display:none; }
+.home-shell { position:relative; }
+.at-a-glance { display:none; }
+.glance-label { display:block; color:var(--graphite); font:700 11px/16px var(--font); letter-spacing:.06em; text-transform:uppercase; }
+.glance-balance { display:block; margin-top:var(--space-2); font:800 28px/32px var(--display); letter-spacing:-1px; color:var(--ink); }
+.glance-block { padding:var(--space-6); border-top:1px solid #E2E6EC; }
+.glance-block:first-of-type { border-top:0; }
+.glance-fund { width:100%; min-height:44px; margin-top:var(--space-4); border:0; border-radius:var(--radius-sm); background:var(--amber); color:var(--ink); font:700 13px/1 var(--font); cursor:pointer; }
+.glance-shortcut { width:100%; min-height:44px; display:flex; align-items:center; justify-content:space-between; padding:0; border:0; border-bottom:1px solid #E8EBEF; background:transparent; color:var(--ink); font:600 13px/1 var(--font); cursor:pointer; text-align:left; }
+.glance-shortcut:last-child { border-bottom:0; }
+.glance-pending { margin:0 var(--space-4) var(--space-4); padding:var(--space-4); border:1px solid #F5C76A; border-radius:var(--radius-sm); background:#FFFAEF; }
+.glance-pending p { margin:var(--space-2) 0 var(--space-3); color:#6D5530; font:500 12px/18px var(--font); }
+.glance-pending button { border:0; padding:0; background:transparent; color:#8A5700; font:700 12px/16px var(--font); cursor:pointer; }
+@media (min-width:1024px) {
+  #main-app { padding-left:236px; }
+  .header { border-bottom:0; }
+  .workspace-header { max-width:none; padding:var(--space-8) var(--space-12) var(--space-6); }
+  .workspace-topline { display:none; }
+  .balance-panel { padding-bottom:var(--space-6); border-bottom:1px solid #E2E6EC; }
+  .balance-label { font-size:12px; line-height:16px; }
+  .balance-amount { font-size:52px; line-height:56px; letter-spacing:-2.5px; }
+  .btn-fund { min-width:142px; min-height:48px; border-radius:var(--radius-sm); }
+  #screen-home { padding:0 var(--space-12) var(--space-12); overflow:auto; }
+  .home-shell { max-width:1440px; grid-template-columns:minmax(0,1fr) 280px; gap:var(--space-12); padding-top:var(--space-8); }
+  .home-services { display:contents; }
+  .home-section-head { grid-column:1; margin-bottom:var(--space-4); }
+  .service-grid { grid-column:1; grid-template-columns:repeat(4,minmax(0,1fr)); border:0; gap:var(--space-3); }
+  .service-tile { min-height:112px; display:flex; flex-direction:column; align-items:flex-start; padding:var(--space-4); border:1px solid #E2E6EC!important; border-radius:var(--radius-md); box-shadow:var(--elevation-0); transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
+  .service-tile:hover { transform:translateY(-2px); box-shadow:var(--elevation-1); border-color:#C9D1DB!important; }
+  .tile-icon { width:36px; height:36px; margin-bottom:var(--space-3); }
+  .home-activity { grid-column:1; margin-top:var(--space-8); border-top:1px solid #E2E6EC; padding-top:var(--space-6); }
+  .txn-item { padding:var(--space-4) 0; }
+  .txn-desc { max-width:64ch; }
+  .at-a-glance { display:block; grid-column:2; grid-row:1 / span 4; align-self:start; border:1px solid #E2E6EC; border-radius:var(--radius-md); box-shadow:var(--elevation-0); overflow:hidden; }
+  .at-a-glance-title { padding:var(--space-4) var(--space-6); color:var(--ink); font:800 15px/20px var(--display); border-bottom:1px solid #E2E6EC; }
+  .bottom-nav { top:0; bottom:0; left:0; transform:none; width:236px; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:var(--space-1); padding:var(--space-8) var(--space-3); border:0; border-right:1px solid #E2E6EC; background:var(--white); }
+  .nav-item { flex:0 0 auto; min-height:44px; flex-direction:row; justify-content:flex-start; gap:var(--space-3); padding:0 var(--space-3); border-radius:var(--radius-sm); font:700 13px/1 var(--font); color:var(--graphite); }
+  .nav-item.active { background:#FFF8E9; color:var(--ink); }
+  .nav-icon { width:20px; font-size:18px; }
+}
+@media (max-width:428px) {
+  .header-actions { gap:var(--space-2); }
+  .btn-fund { padding-left:var(--space-3); padding-right:var(--space-3); font-size:12px; }
+  .balance-amount { letter-spacing:-1.5px; }
+  .txn-meta { flex-wrap:wrap; gap:var(--space-1) var(--space-2); }
+}
+@media (max-width:374px) {
+  .status-pill { padding:4px 6px; font-size:11px; }
+  .status-pill svg { width:12px; height:12px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .service-tile { transition:none; }
+  .service-tile:hover { transform:none; }
+}
 </style>
 </head>
 <body>
@@ -546,6 +627,28 @@ body{background:var(--mist)}
           <div class="txn-empty">Loading activity…</div>
         </div>
       </section>
+      <aside class="at-a-glance" aria-label="At a glance">
+        <div class="at-a-glance-title">At a glance</div>
+        <section class="glance-block">
+          <span class="glance-label">Available balance</span>
+          <strong class="glance-balance" id="at-glance-balance">₦0.00</strong>
+          <button class="glance-fund" type="button" onclick="openFundModal()">Fund wallet</button>
+        </section>
+        <section class="glance-block">
+          <span class="glance-label">Quick access</span>
+          <button class="glance-shortcut" type="button" onclick="openService('airtime')">
+            <span>Buy airtime</span><span aria-hidden="true">→</span>
+          </button>
+          <button class="glance-shortcut" type="button" onclick="openService('data')">
+            <span>Buy data</span><span aria-hidden="true">→</span>
+          </button>
+        </section>
+        <section class="glance-pending" id="glance-pending" hidden>
+          <div class="glance-label">Pending order</div>
+          <p>Your provider is still confirming a purchase. Your wallet has not been debited.</p>
+          <button type="button" onclick="goTab('history')">View order</button>
+        </section>
+      </aside>
     </div>
   </div>
 
@@ -864,15 +967,17 @@ function showSucc(id, msg) {
 
 // ── BALANCE COUNTER ───────────────────────────────────────────────────────
 function animateBalance(from, to) {
-  const el = document.getElementById('balance-display');
+  const targets = ['balance-display', 'at-glance-balance']
+    .map(id => document.getElementById(id)).filter(Boolean);
   const start = performance.now();
   const dur = 350;
   function tick(now) {
     const p = Math.min((now - start) / dur, 1);
     const ease = 1 - Math.pow(1 - p, 3);
-    el.textContent = fmt(from + (to - from) * ease);
+    const value = fmt(from + (to - from) * ease);
+    targets.forEach(el => { el.textContent = value; });
     if (p < 1) requestAnimationFrame(tick);
-    else el.textContent = fmt(to);
+    else targets.forEach(el => { el.textContent = fmt(to); });
   }
   requestAnimationFrame(tick);
 }
@@ -1064,19 +1169,31 @@ function updateBalance(newBal) {
 }
 
 // ── TRANSACTIONS ────────────────────────────────────────────────────────
+function transactionStatusPill(status) {
+  const labels = {
+    completed: ['Completed', '<path d="m5 12 4 4L19 6"/>'],
+    pending: ['Pending provider confirmation', '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],
+    failed: ['Failed — not charged', '<path d="m8 8 8 8M16 8l-8 8"/>']
+  };
+  const [label, path] = labels[status] || labels.completed;
+  return `<span class="status-pill status-pill--${status}" role="status" aria-label="${label}">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
+    <span>${status === 'pending' ? 'Pending' : status === 'failed' ? 'Failed' : 'Completed'}</span>
+  </span>`;
+}
+
 function txnHTML(t) {
   const status = t.status || 'completed';
   const pending = status === 'pending';
   const failed = status === 'failed';
   const icon = t.type === 'credit' ? '↓' : failed ? '×' : pending ? '◷' : '↑';
   const cls  = failed ? 'failed' : t.type;
-  const statusText = failed ? 'Failed — not charged' : pending ? 'Pending provider confirmation' : 'Completed';
   const amountText = failed ? fmt(t.amount) : `${t.type === 'credit' ? '+' : pending ? '' : '-'}${fmt(t.amount)}`;
   return `<div class="txn-item">
-    <div class="txn-icon ${cls}">${icon}</div>
+    <div class="txn-icon ${cls}" aria-hidden="true">${icon}</div>
     <div class="txn-info">
-      <div class="txn-desc">${t.description}</div>
-      <div class="txn-meta"><span class="txn-date">${fmtDate(t.created_at)}</span><span class="txn-status ${status}">${statusText}</span></div>
+      <div class="txn-desc" title="${t.description}">${t.description}</div>
+      <div class="txn-meta"><span class="txn-date">${fmtDate(t.created_at)}</span>${transactionStatusPill(status)}</div>
     </div>
     <div class="txn-amount ${cls}">${amountText}</div>
   </div>`;
