@@ -746,6 +746,179 @@ app.get('/api/admin/users', adminMiddleware, async (req, res) => {
   }
 });
 
+// ── Transaction PIN ──────────────────────────────────────────────────────────
+app.post('/api/auth/set-transaction-pin', authMiddleware, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin || !/^\d{4,6}$/.test(pin)) {
+      return res.status(400).json({ error: 'PIN must be 4–6 digits.' });
+    }
+    await db.setTransactionPin(req.user.id, pin);
+    res.json({ message: 'Transaction PIN set successfully.' });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to set PIN' });
+  }
+});
+
+app.post('/api/auth/verify-transaction-pin', authMiddleware, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) return res.status(400).json({ error: 'PIN is required.' });
+    const valid = await db.verifyTransactionPin(req.user.id, pin);
+    res.json({ valid });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to verify PIN' });
+  }
+});
+
+app.get('/api/auth/pin-status', authMiddleware, async (req, res) => {
+  try {
+    const hasPin = await db.hasTransactionPin(req.user.id);
+    res.json({ hasPin });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to check PIN status' });
+  }
+});
+
+// ── Beneficiaries ─────────────────────────────────────────────────────────────
+app.get('/api/beneficiaries', authMiddleware, async (req, res) => {
+  try {
+    const list = await db.getBeneficiaries(req.user.id);
+    res.json({ beneficiaries: list });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to fetch beneficiaries' });
+  }
+});
+
+app.post('/api/beneficiaries', authMiddleware, async (req, res) => {
+  try {
+    const { type, label, network, identifier } = req.body;
+    if (!type || !label || !identifier) {
+      return res.status(400).json({ error: 'type, label and identifier are required.' });
+    }
+    const b = await db.addBeneficiary(req.user.id, { type, label, network, identifier });
+    res.json({ beneficiary: b });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to save beneficiary' });
+  }
+});
+
+app.delete('/api/beneficiaries/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await db.deleteBeneficiary(req.user.id, parseInt(req.params.id));
+    if (!deleted) return res.status(404).json({ error: 'Beneficiary not found' });
+    res.json({ message: 'Deleted.' });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to delete beneficiary' });
+  }
+});
+
+// ── Referral ──────────────────────────────────────────────────────────────────
+app.get('/api/referral', authMiddleware, async (req, res) => {
+  try {
+    const stats = await db.getReferralStats(req.user.id);
+    res.json(stats);
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to fetch referral info' });
+  }
+});
+
+// ── Analytics Summary ─────────────────────────────────────────────────────────
+app.get('/api/analytics/summary', authMiddleware, async (req, res) => {
+  try {
+    const summary = await db.getAnalyticsSummary(req.user.id);
+    res.json(summary);
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+// ── Exam PIN ──────────────────────────────────────────────────────────────────
+const EXAM_BODY_MAP = { WAEC: 'WAEC', NECO: 'NECO', NABTEB: 'NABTEB', JAMB: 'JAMB' };
+const EXAM_PRICES   = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
+
+app.post('/api/vtu/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const { examBody, quantity = 1 } = req.body;
+    const ckBody = EXAM_BODY_MAP[examBody?.toUpperCase()];
+    if (!ckBody) return res.status(400).json({ error: `Unsupported exam body: ${examBody}` });
+    const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
+    const amount = EXAM_PRICES[ckBody] * qty;
+
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < amount) return res.status(402).json({ error: 'Insufficient wallet balance' });
+
+    const requestId = `EXAM-${Date.now()}-${req.user.id}`;
+    const description = `${ckBody} exam PIN × ${qty}`;
+
+    const result = await processClubkonnectPurchase({
+      userId: req.user.id, requestId, serviceType: 'exam-pin', amount, description,
+      endpoint: 'https://www.nellobytesystems.com/APIExamPins.asp',
+      params: {
+        UserID: process.env.CLUBKONNECT_USER_ID,
+        APIKey: process.env.CLUBKONNECT_API_KEY,
+        ExamBody: ckBody,
+        Quantity: qty,
+        RequestID: requestId,
+      },
+    });
+
+    if (result.outcome === 'success') return res.json({ success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    return res.status(400).json({ error: result.message, reference: requestId });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Exam PIN service error. Please try again.' });
+  }
+});
+
+// ── Recharge Card PIN ─────────────────────────────────────────────────────────
+app.post('/api/vtu/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const { network, amount, quantity = 1 } = req.body;
+    const networkMap2 = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
+    const ckNetwork = networkMap2[network?.toUpperCase()];
+    if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
+    const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
+    const amt = parseFloat(amount);
+    if (!amt || amt < 100) return res.status(400).json({ error: 'Minimum denomination is ₦100.' });
+    const totalAmount = amt * qty;
+
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < totalAmount) return res.status(402).json({ error: 'Insufficient wallet balance' });
+
+    const requestId = `RPIN-${Date.now()}-${req.user.id}`;
+    const description = `${network} recharge card ₦${amt} × ${qty}`;
+
+    const result = await processClubkonnectPurchase({
+      userId: req.user.id, requestId, serviceType: 'recharge-pin', amount: totalAmount, description,
+      endpoint: 'https://www.nellobytesystems.com/APIRechargeCard.asp',
+      params: {
+        UserID: process.env.CLUBKONNECT_USER_ID,
+        APIKey: process.env.CLUBKONNECT_API_KEY,
+        MobileNetwork: ckNetwork,
+        Amount: amt,
+        Quantity: qty,
+        RequestID: requestId,
+      },
+    });
+
+    if (result.outcome === 'success') return res.json({ success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    return res.status(400).json({ error: result.message, reference: requestId });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Recharge PIN service error. Please try again.' });
+  }
+});
+
 // ── SPA Fallback ─────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'topflowng.html'));

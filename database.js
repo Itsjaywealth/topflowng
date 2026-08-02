@@ -129,6 +129,30 @@ async function initDB() {
         ON paystack_refs(reference);
     `);
 
+    // New feature migrations
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_pin TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT;
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)
+      WHERE referral_code IS NOT NULL;
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS beneficiaries (
+        id          SERIAL PRIMARY KEY,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type        TEXT NOT NULL,
+        label       TEXT NOT NULL,
+        network     TEXT,
+        identifier  TEXT NOT NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_beneficiaries_user_id ON beneficiaries(user_id);
+    `);
+
     console.log('Database schema ready');
   } finally {
     client.release();
@@ -581,6 +605,103 @@ async function getAllUsers(limit = 50, offset = 0) {
   return rows;
 }
 
+// ── Transaction PIN ───────────────────────────────────────────────────────────
+async function setTransactionPin(userId, pin) {
+  const hash = await bcrypt.hash(pin, SALT_ROUNDS);
+  await pool.query('UPDATE users SET transaction_pin = $1 WHERE id = $2', [hash, userId]);
+}
+
+async function verifyTransactionPin(userId, pin) {
+  const { rows } = await pool.query('SELECT transaction_pin FROM users WHERE id = $1', [userId]);
+  if (!rows[0] || !rows[0].transaction_pin) return false;
+  return bcrypt.compare(pin, rows[0].transaction_pin);
+}
+
+async function hasTransactionPin(userId) {
+  const { rows } = await pool.query('SELECT transaction_pin IS NOT NULL AS has_pin FROM users WHERE id = $1', [userId]);
+  return rows[0]?.has_pin || false;
+}
+
+// ── Referral ──────────────────────────────────────────────────────────────────
+function generateCode(userId) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'TF';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code + userId;
+}
+
+async function ensureReferralCode(userId) {
+  const { rows } = await pool.query('SELECT referral_code FROM users WHERE id = $1', [userId]);
+  if (rows[0]?.referral_code) return rows[0].referral_code;
+  let code;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    code = generateCode(userId);
+    try {
+      await pool.query('UPDATE users SET referral_code = $1 WHERE id = $2', [code, userId]);
+      return code;
+    } catch { /* duplicate, retry */ }
+  }
+  throw new Error('Could not generate referral code');
+}
+
+async function getReferralStats(userId) {
+  const code = await ensureReferralCode(userId);
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS total, COALESCE(SUM(amount),0) AS earned
+     FROM transactions WHERE user_id = $1 AND description ILIKE 'Referral bonus%'`,
+    [userId]
+  );
+  return { referralCode: code, totalReferrals: parseInt(rows[0].total), totalEarned: parseFloat(rows[0].earned) };
+}
+
+// ── Beneficiaries ─────────────────────────────────────────────────────────────
+async function getBeneficiaries(userId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM beneficiaries WHERE user_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  return rows;
+}
+
+async function addBeneficiary(userId, { type, label, network, identifier }) {
+  const { rows } = await pool.query(
+    `INSERT INTO beneficiaries (user_id, type, label, network, identifier)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [userId, type, label, network || null, identifier]
+  );
+  return rows[0];
+}
+
+async function deleteBeneficiary(userId, beneficiaryId) {
+  const { rowCount } = await pool.query(
+    'DELETE FROM beneficiaries WHERE id = $1 AND user_id = $2',
+    [beneficiaryId, userId]
+  );
+  return rowCount > 0;
+}
+
+// ── Analytics Summary ─────────────────────────────────────────────────────────
+async function getAnalyticsSummary(userId) {
+  const { rows } = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE description ILIKE 'Airtime%') AS airtime_count,
+       COALESCE(SUM(amount) FILTER (WHERE description ILIKE 'Airtime%'),0) AS airtime_total,
+       COUNT(*) FILTER (WHERE description ILIKE 'Data%') AS data_count,
+       COALESCE(SUM(amount) FILTER (WHERE description ILIKE 'Data%'),0) AS data_total,
+       COUNT(*) FILTER (WHERE description ILIKE 'Electricity%') AS electricity_count,
+       COALESCE(SUM(amount) FILTER (WHERE description ILIKE 'Electricity%'),0) AS electricity_total,
+       COUNT(*) FILTER (WHERE description ILIKE '%cable%' OR description ILIKE 'DStv%' OR description ILIKE 'GOtv%' OR description ILIKE 'StarTimes%') AS cable_count,
+       COALESCE(SUM(amount) FILTER (WHERE description ILIKE '%cable%' OR description ILIKE 'DStv%' OR description ILIKE 'GOtv%' OR description ILIKE 'StarTimes%'),0) AS cable_total,
+       COUNT(*) FILTER (WHERE description ILIKE 'Exam%' OR description ILIKE 'WAEC%' OR description ILIKE 'NECO%') AS exam_count,
+       COALESCE(SUM(amount) FILTER (WHERE description ILIKE 'Exam%' OR description ILIKE 'WAEC%' OR description ILIKE 'NECO%'),0) AS exam_total,
+       COUNT(*) FILTER (WHERE type = 'debit') AS total_count,
+       COALESCE(SUM(amount) FILTER (WHERE type = 'debit'),0) AS total_spent
+     FROM transactions WHERE user_id = $1 AND type = 'debit'`,
+    [userId]
+  );
+  return rows[0];
+}
+
 module.exports = {
   initDB,
   findUserByEmail,
@@ -608,4 +729,13 @@ module.exports = {
   getAdminStats,
   getAllTransactions,
   getAllUsers,
+  setTransactionPin,
+  verifyTransactionPin,
+  hasTransactionPin,
+  ensureReferralCode,
+  getReferralStats,
+  getBeneficiaries,
+  addBeneficiary,
+  deleteBeneficiary,
+  getAnalyticsSummary,
 };
