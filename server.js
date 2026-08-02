@@ -418,7 +418,11 @@ function normalizeClubkonnectResponse(raw) {
   }
 
   // All documented ORDER_ERROR and ORDER_CANCELLED responses are terminal.
-  if ((statusCode >= 400 && statusCode <= 599 && statusCode !== 412) || ['ORDER_ERROR', 'ORDER_CANCELLED'].includes(status)) {
+  // Authentication errors are also terminal even when this legacy endpoint
+  // returns a text-only status rather than a numeric statusCode.
+  if ((statusCode >= 400 && statusCode <= 599 && statusCode !== 412)
+    || ['ORDER_ERROR', 'ORDER_CANCELLED'].includes(status)
+    || /AUTHENTICATION_FAILED|INVALID.*(?:KEY|CREDENTIAL|USER)|UNAUTHORIZED/i.test(`${status} ${remark} ${description}`)) {
     return { outcome: 'failed', statusCode, status, remark, description, orderId, raw: data };
   }
 
