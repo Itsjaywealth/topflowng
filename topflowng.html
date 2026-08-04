@@ -621,6 +621,10 @@ crossorigin="anonymous"></script>
         <label>Password</label>
         <input type="password" id="reg-password" placeholder="At least 6 characters" autocomplete="new-password">
       </div>
+      <div class="field">
+        <label>Referral code <span style="color:var(--mid);font-weight:400">(optional)</span></label>
+        <input type="text" id="reg-referral" placeholder="e.g. TFNG-ABCD1234" autocomplete="off" style="text-transform:uppercase">
+      </div>
       <button class="btn-primary" id="btn-register" onclick="handleRegister()">Create account</button>
     </div>
 
@@ -765,6 +769,8 @@ crossorigin="anonymous"></script>
       <div class="filter-chip" onclick="filterTxns('data',this)">Data</div>
       <div class="filter-chip" onclick="filterTxns('electricity',this)">Electricity</div>
       <div class="filter-chip" onclick="filterTxns('cable',this)">Cable TV</div>
+      <div class="filter-chip" onclick="filterTxns('exam-pin',this)">Exam PINs</div>
+      <div class="filter-chip" onclick="filterTxns('recharge-pin',this)">Recharge Cards</div>
       <div class="filter-chip" onclick="filterTxns('credit',this)">Top-ups</div>
     </div>
     <div class="txn-list" id="all-txns">
@@ -886,6 +892,8 @@ crossorigin="anonymous"></script>
       </div>
       <input type="number" id="airtime-amount" placeholder="or enter amount" min="50" max="50000" style="margin-top:0">
     </div>
+    <div class="beneficiary-list" id="bfr-airtime"></div>
+    <label style="display:flex;align-items:center;gap:8px;font:500 12px/1.4 var(--font);color:var(--graphite);margin-bottom:10px"><input type="checkbox" id="save-bfr-airtime"> Save number for next time</label>
     <button class="btn-confirm" id="btn-buy-airtime" onclick="buyAirtime()">Buy airtime</button>
   </div>
 </div>
@@ -912,6 +920,8 @@ crossorigin="anonymous"></script>
     <div class="field"><label>Choose plan</label>
       <div class="data-plans" id="data-plan-list"></div>
     </div>
+    <div class="beneficiary-list" id="bfr-data"></div>
+    <label style="display:flex;align-items:center;gap:8px;font:500 12px/1.4 var(--font);color:var(--graphite);margin-bottom:10px"><input type="checkbox" id="save-bfr-data"> Save number for next time</label>
     <button class="btn-confirm" id="btn-buy-data" onclick="buyData()">Buy data</button>
   </div>
 </div>
@@ -953,6 +963,8 @@ crossorigin="anonymous"></script>
       </div>
       <input type="number" id="elec-amount" placeholder="or enter amount" min="500">
     </div>
+    <div class="beneficiary-list" id="bfr-electricity"></div>
+    <label style="display:flex;align-items:center;gap:8px;font:500 12px/1.4 var(--font);color:var(--graphite);margin-bottom:10px"><input type="checkbox" id="save-bfr-electricity"> Save meter for next time</label>
     <button class="btn-confirm" id="btn-pay-elec" onclick="buyElectricity()">Pay electricity</button>
   </div>
 </div>
@@ -978,6 +990,8 @@ crossorigin="anonymous"></script>
     <div class="field"><label>Package</label>
       <div class="data-plans" id="cable-plan-list"></div>
     </div>
+    <div class="beneficiary-list" id="bfr-cable"></div>
+    <label style="display:flex;align-items:center;gap:8px;font:500 12px/1.4 var(--font);color:var(--graphite);margin-bottom:10px"><input type="checkbox" id="save-bfr-cable"> Save card for next time</label>
     <button class="btn-confirm" id="btn-pay-cable" onclick="buyCable()">Pay subscription</button>
   </div>
 </div>
@@ -1240,14 +1254,17 @@ async function handleRegister() {
   hideErr('register-error');
   const fullName = document.getElementById('reg-name').value.trim();
   const email    = document.getElementById('reg-email').value.trim();
-  const phone    = document.getElementById('reg-phone').value.trim();
-  const password = document.getElementById('reg-password').value;
+  const phone        = document.getElementById('reg-phone').value.trim();
+  const password     = document.getElementById('reg-password').value;
+  const referralCode = (document.getElementById('reg-referral')?.value || '').trim().toUpperCase() || undefined;
   if (!fullName || !email || !phone || !password) return showErr('register-error', 'All fields are required.');
   if (password.length < 6) return showErr('register-error', 'Password must be at least 6 characters.');
   document.getElementById('btn-register').dataset.label = 'Create account';
   setLoading('btn-register', true, 'Creating account…');
   try {
-    const data = await api('POST', '/api/auth/register', { fullName, email, phone, password }, true);
+    const body = { fullName, email, phone, password };
+    if (referralCode) body.referralCode = referralCode;
+    const data = await api('POST', '/api/auth/register', body, true);
     token = data.token;
     user  = data.user;
     localStorage.setItem('tf_token', token);
@@ -1348,6 +1365,21 @@ function launchApp() {
   loadRecentTxns();
   loadDataPlans();
   loadCablePlans();
+  checkPendingOrders();
+  loadPinStatus();
+  loadAllBeneficiaries();
+}
+
+async function checkPendingOrders() {
+  try {
+    const data = await api('GET', '/api/vtu/pending');
+    const widget = document.getElementById('glance-pending');
+    if (data.hasPending) {
+      widget.removeAttribute('hidden');
+    } else {
+      widget.setAttribute('hidden', '');
+    }
+  } catch { /* silent — not critical */ }
 }
 
 function updateUserUI() {
@@ -1596,12 +1628,15 @@ async function buyAirtime() {
   if (!amount || amount < 50) return showErr('svc-airtime-error', 'Minimum airtime is ₦50.');
   if (amount > (user.wallet || 0)) return showErr('svc-airtime-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
+  let pin;
+  try { pin = await requestTransactionPin(); } catch { return; }
+
   const btn = document.getElementById('btn-buy-airtime');
   btn.dataset.label = `Buy ${fmt(amount)} ${network} airtime`;
   btn.textContent = btn.dataset.label;
   setLoading('btn-buy-airtime', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/airtime', {network, phone, amount});
+    const data = await api('POST', '/api/vtu/airtime', {network, phone, amount, pin});
     if (data.pending) {
       closeService('airtime');
       showReceipt({ title: 'Airtime pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -1611,6 +1646,7 @@ async function buyAirtime() {
       showReceipt({ title: 'Airtime sent!', sub: data.message, lines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference]] });
     }
     loadRecentTxns();
+    saveBeneficiaryIfChecked('airtime', phone, network);
   } catch (e) {
     showErr('svc-airtime-error', e.message);
   }
@@ -1627,11 +1663,14 @@ async function buyData() {
   if (!selectedDataPlan) return showErr('svc-data-error', 'Choose a data plan.');
   if (selectedDataPlan.price > (user.wallet || 0)) return showErr('svc-data-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
+  let pin;
+  try { pin = await requestTransactionPin(); } catch { return; }
+
   const btn = document.getElementById('btn-buy-data');
   btn.dataset.label = 'Buy data';
   setLoading('btn-buy-data', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/data', {network, phone, planCode: selectedDataPlan.code, amount: selectedDataPlan.price});
+    const data = await api('POST', '/api/vtu/data', {network, phone, planCode: selectedDataPlan.code, amount: selectedDataPlan.price, pin});
     if (data.pending) {
       closeService('data');
       showReceipt({ title: 'Data purchase pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -1641,6 +1680,7 @@ async function buyData() {
       showReceipt({ title: 'Data activated!', sub: data.message, lines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference]] });
     }
     loadRecentTxns();
+    saveBeneficiaryIfChecked('data', phone, network);
   } catch (e) {
     showErr('svc-data-error', e.message);
   }
@@ -1658,11 +1698,14 @@ async function buyElectricity() {
   if (!amount || amount < 500) return showErr('svc-electricity-error', 'Minimum electricity payment is ₦500.');
   if (amount > (user.wallet || 0)) return showErr('svc-electricity-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
+  let pin;
+  try { pin = await requestTransactionPin(); } catch { return; }
+
   const btn = document.getElementById('btn-pay-elec');
   btn.dataset.label = `Pay ${fmt(amount)} electricity`;
   setLoading('btn-pay-elec', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/electricity', {disco, meterNumber, meterType, amount});
+    const data = await api('POST', '/api/vtu/electricity', {disco, meterNumber, meterType, amount, pin});
     if (data.pending) {
       closeService('electricity');
       showReceipt({ title: 'Electricity payment pending', sub: data.message, pending: true, lines: [['Disco', disco], ['Meter', meterNumber], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -1672,6 +1715,7 @@ async function buyElectricity() {
       showReceipt({ title: 'Electricity paid!', sub: 'Token sent below', token: data.token, lines: [['Disco', disco], ['Meter', meterNumber], ['Type', meterType], ['Amount', fmt(amount)], ['Reference', data.reference]] });
     }
     loadRecentTxns();
+    saveBeneficiaryIfChecked('electricity', meterNumber, disco);
   } catch (e) {
     showErr('svc-electricity-error', e.message);
   }
@@ -1687,11 +1731,14 @@ async function buyCable() {
   if (!selectedCablePlan) return showErr('svc-cable-error', 'Choose a package.');
   if (selectedCablePlan.price > (user.wallet || 0)) return showErr('svc-cable-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
+  let pin;
+  try { pin = await requestTransactionPin(); } catch { return; }
+
   const btn = document.getElementById('btn-pay-cable');
   btn.dataset.label = 'Pay subscription';
   setLoading('btn-pay-cable', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/cable', {provider, smartCardNumber, planCode: selectedCablePlan.code, amount: selectedCablePlan.price});
+    const data = await api('POST', '/api/vtu/cable', {provider, smartCardNumber, planCode: selectedCablePlan.code, amount: selectedCablePlan.price, pin});
     if (data.pending) {
       closeService('cable');
       showReceipt({ title: `${provider} payment pending`, sub: data.message, pending: true, lines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -1701,6 +1748,7 @@ async function buyCable() {
       showReceipt({ title: `${provider} activated!`, sub: data.message, lines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference]] });
     }
     loadRecentTxns();
+    saveBeneficiaryIfChecked('cable', smartCardNumber, provider);
   } catch (e) {
     showErr('svc-cable-error', e.message);
   }
@@ -1855,10 +1903,13 @@ async function buyExamPin() {
   if (!examBody) return showErr('svc-exam-error', 'Select an exam body.');
   const amount = (EXAM_PRICE_MAP[examBody] || 3900) * quantity;
   if (amount > (user.wallet || 0)) return showErr('svc-exam-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  let pin;
+  try { pin = await requestTransactionPin(); } catch { return; }
+
   document.getElementById('btn-buy-exam').dataset.label = 'Purchase Exam PIN';
   setLoading('btn-buy-exam', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/exam-pin', { examBody, quantity });
+    const data = await api('POST', '/api/vtu/exam-pin', { examBody, quantity, pin });
     if (data.pending) {
       closeService('exam');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Exam body', examBody], ['Quantity', quantity], ['Amount', fmt(amount)], ['Reference', data.reference]] });
@@ -1908,10 +1959,13 @@ async function buyRechargePin() {
   if (!amount || amount < 100) return showErr('svc-recharge-error', 'Enter a valid denomination (min ₦100).');
   const total = amount * quantity;
   if (total > (user.wallet || 0)) return showErr('svc-recharge-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  let pin;
+  try { pin = await requestTransactionPin(); } catch { return; }
+
   document.getElementById('btn-buy-recharge').dataset.label = 'Generate Recharge PINs';
   setLoading('btn-buy-recharge', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/recharge-pin', { network, amount, quantity });
+    const data = await api('POST', '/api/vtu/recharge-pin', { network, amount, quantity, pin });
     if (data.pending) {
       closeService('recharge');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Network', network], ['Denomination', fmt(amount)], ['Quantity', quantity], ['Reference', data.reference]] });
@@ -2010,6 +2064,7 @@ function goTab(tab) {
     loadReferral();
     loadAnalytics();
     loadPinStatus();
+    loadAllBeneficiaries();
   }
 }
 
@@ -2020,10 +2075,191 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── TRANSACTION PIN PROMPT ────────────────────────────────────────────────────
+let _pinResolve = null, _pinReject = null;
+let _userHasPin = null; // cached: null = unknown, true/false
+
+async function loadPinStatus() {
+  try {
+    const data = await api('GET', '/api/auth/pin-status');
+    _userHasPin = data.hasPin;
+  } catch { _userHasPin = false; }
+}
+
+async function requestTransactionPin() {
+  if (_userHasPin === null) await loadPinStatus();
+  if (!_userHasPin) return null; // No PIN set — backend will skip check
+
+  return new Promise((resolve, reject) => {
+    _pinResolve = resolve;
+    _pinReject  = reject;
+    const overlay = document.getElementById('pin-prompt-overlay');
+    document.getElementById('pin-prompt-input').value = '';
+    document.getElementById('pin-prompt-error').textContent = '';
+    overlay.classList.add('open');
+    setTimeout(() => document.getElementById('pin-prompt-input').focus(), 80);
+  });
+}
+
+function submitPinPrompt() {
+  const pin = document.getElementById('pin-prompt-input').value.trim();
+  if (!pin || !/^\d{4,6}$/.test(pin)) {
+    document.getElementById('pin-prompt-error').textContent = 'Enter your 4–6 digit PIN.';
+    return;
+  }
+  document.getElementById('pin-prompt-overlay').classList.remove('open');
+  if (_pinResolve) { _pinResolve(pin); _pinResolve = null; }
+}
+
+function cancelPinPrompt() {
+  document.getElementById('pin-prompt-overlay').classList.remove('open');
+  if (_pinReject) { _pinReject(new Error('PIN entry cancelled')); _pinReject = null; }
+}
+
+// Allow Enter key to submit
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('pin-prompt-input');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitPinPrompt(); });
+});
+
+
+// ── BENEFICIARIES ─────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+const BFR_CONFIG = {
+  airtime:     { listId:'bfr-airtime',     checkId:'save-bfr-airtime',     fieldId:'airtime-phone', netSel:'#svc-airtime .network-chips',     reloadFn:null },
+  data:        { listId:'bfr-data',        checkId:'save-bfr-data',        fieldId:'data-phone',    netSel:'#svc-data .network-chips',        reloadFn:'data' },
+  electricity: { listId:'bfr-electricity', checkId:'save-bfr-electricity', fieldId:'elec-meter',    netSel:'#svc-electricity .network-chips', reloadFn:null },
+  cable:       { listId:'bfr-cable',       checkId:'save-bfr-cable',       fieldId:'cable-card',    netSel:'#svc-cable .network-chips',       reloadFn:'cable' },
+};
+
+// Cache keyed by service type; each entry is a DB row: {id, type, label, identifier, network, ...}
+const _bfrCache = {};
+
+async function loadAllBeneficiaries() {
+  // One API call — server returns all; we split by type client-side
+  try {
+    const res = await api('GET', '/api/beneficiaries');
+    const all = res.beneficiaries || [];
+    // Reset caches
+    Object.keys(BFR_CONFIG).forEach(function(svc) { _bfrCache[svc] = []; });
+    all.forEach(function(b) {
+      var t = b.type;
+      if (!_bfrCache[t]) _bfrCache[t] = [];
+      _bfrCache[t].push(b);
+    });
+    Object.keys(BFR_CONFIG).forEach(function(svc) {
+      renderBeneficiaries(svc, _bfrCache[svc] || []);
+    });
+  } catch { /* non-critical */ }
+}
+
+// Per-service reload (used after save/delete)
+function loadBeneficiaries(svc) {
+  renderBeneficiaries(svc, _bfrCache[svc] || []);
+}
+
+function renderBeneficiaries(svc, items) {
+  var cfg = BFR_CONFIG[svc];
+  var el = document.getElementById(cfg.listId);
+  if (!el) return;
+  if (!items.length) { el.innerHTML = ''; return; }
+  el.innerHTML = items.map(function(b) {
+    var s   = escHtml(svc);
+    var id  = b.id;
+    // identifier = the phone/meter/card number; network = carrier/provider
+    var identifier = escHtml(b.identifier || b.label || '');
+    var network    = escHtml(b.network || '');
+    var avatar     = identifier.charAt(0).toUpperCase() || '#';
+    return (
+      '<div class="beneficiary-item" onclick="applyBeneficiary(\'' + s + '\',' + id + ')">' +
+        '<div class="beneficiary-avatar">' + avatar + '</div>' +
+        '<div class="beneficiary-info">' +
+          '<div class="beneficiary-name">' + identifier + '</div>' +
+          '<div class="beneficiary-meta">' + network + '</div>' +
+        '</div>' +
+        '<button class="beneficiary-del" onclick="event.stopPropagation();deleteBeneficiary(' + id + ',\'' + s + '\')" title="Remove">×</button>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function applyBeneficiary(svc, id) {
+  var items = _bfrCache[svc] || [];
+  var b = items.find(function(x) { return x.id === id; });
+  if (!b) return;
+  var cfg = BFR_CONFIG[svc];
+  // Fill the number field with identifier (phone/meter/card)
+  var field = document.getElementById(cfg.fieldId);
+  if (field) { field.value = b.identifier || b.label || ''; field.dispatchEvent(new Event('input')); }
+  // Select the matching network/provider chip
+  document.querySelectorAll(cfg.netSel + ' .network-chip').forEach(function(c) {
+    c.classList.toggle('selected', c.textContent.trim().toUpperCase() === (b.network || '').toUpperCase());
+  });
+  if (cfg.reloadFn === 'data') loadDataPlans();
+  if (cfg.reloadFn === 'cable') loadCablePlans();
+}
+
+async function deleteBeneficiary(id, svc) {
+  try {
+    await api('DELETE', '/api/beneficiaries/' + id);
+    if (_bfrCache[svc]) _bfrCache[svc] = _bfrCache[svc].filter(function(b) { return b.id !== id; });
+    renderBeneficiaries(svc, _bfrCache[svc] || []);
+  } catch { /* silent */ }
+}
+
+async function saveBeneficiaryIfChecked(svc, identifier, network) {
+  var cfg = BFR_CONFIG[svc];
+  if (!cfg) return;
+  var cb = document.getElementById(cfg.checkId);
+  if (!cb || !cb.checked) return;
+  cb.checked = false;
+  if (!identifier) return;
+  // Avoid duplicates: same type + identifier already cached
+  var existing = (_bfrCache[svc] || []).find(function(b) {
+    return (b.identifier || b.label || '') === String(identifier);
+  });
+  if (existing) return;
+  try {
+    // Backend expects: {type, label, identifier, network}
+    var res = await api('POST', '/api/beneficiaries', {
+      type: svc,
+      label: String(identifier),   // label = display name = same as identifier
+      identifier: String(identifier),
+      network: String(network || '')
+    });
+    if (!_bfrCache[svc]) _bfrCache[svc] = [];
+    var nb = res.beneficiary;
+    if (nb && !_bfrCache[svc].find(function(b) { return b.id === nb.id; })) {
+      _bfrCache[svc].push(nb);
+      renderBeneficiaries(svc, _bfrCache[svc]);
+    }
+  } catch { /* non-critical */ }
+}
+
 // Boot
 loadDataPlans();
 loadCablePlans();
 init();
 </script>
+
+<!-- ── PIN PROMPT OVERLAY ── -->
+<div class="receipt-overlay" id="pin-prompt-overlay" style="z-index:60">
+  <div class="receipt-card" style="padding:28px 24px 36px;border-radius:20px 20px 0 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font:800 18px/1 var(--display);letter-spacing:-.4px;color:var(--ink);margin:0">Enter Transaction PIN</h3>
+      <button onclick="cancelPinPrompt()" style="border:0;background:transparent;color:var(--graphite);font-size:22px;cursor:pointer;line-height:1;padding:0">×</button>
+    </div>
+    <p style="font:400 13px/1.5 var(--font);color:var(--graphite);margin:0 0 20px">Enter your 4–6 digit PIN to authorise this purchase.</p>
+    <input type="password" id="pin-prompt-input" inputmode="numeric" pattern="\d{4,6}" maxlength="6"
+      placeholder="••••" autocomplete="one-time-code"
+      style="width:100%;min-height:52px;padding:12px 14px;border:1.5px solid #D9DEE6;border-radius:9px;font:700 20px/1 var(--font);letter-spacing:6px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:10px">
+    <div id="pin-prompt-error" style="min-height:18px;color:var(--red);font:500 12px/1.4 var(--font);margin-bottom:14px"></div>
+    <button onclick="submitPinPrompt()" style="width:100%;min-height:50px;border:0;border-radius:10px;background:var(--green);color:var(--white);font:700 14px/1 var(--font);cursor:pointer">Confirm</button>
+  </div>
+</div>
+
 </body>
 </html>

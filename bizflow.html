@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BizFlow NG — Business Management for Nigerian SMEs</title>
+<meta name="description" content="Invoicing, CRM, Payroll and HR management built for Nigerian businesses.">
+<meta name="theme-color" content="#2563EB">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── BizFlow NG Design System ───────────────────────────────────────────────── */
+:root {
+  --slate:#0F172A; --slate-2:#1E293B; --slate-3:#334155;
+  --cobalt:#2563EB; --cobalt-light:#EFF6FF; --cobalt-dark:#1D4ED8;
+  --lime:#84CC16; --lime-light:#F7FEE7;
+  --white:#FFFFFF; --surface:#F8FAFC; --border:#E2E8F0;
+  --text:#0F172A; --muted:#64748B; --red:#EF4444; --amber:#F59E0B; --green:#10B981;
+  --font:'Plus Jakarta Sans',system-ui,sans-serif;
+  --radius:10px; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -2px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--surface);color:var(--text);min-height:100vh;display:flex}
+
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+#sidebar{width:240px;height:100vh;background:var(--slate);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:10;flex-shrink:0}
+#main{margin-left:240px;flex:1;min-height:100vh}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-wordmark{font:800 18px/1 var(--font);color:var(--white);letter-spacing:-.5px}
+.sidebar-wordmark span{color:var(--lime)}
+.sidebar-tagline{font:400 11px/1 var(--font);color:rgba(255,255,255,.35);margin-top:4px}
+.sidebar-nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-section-label{font:600 10px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:12px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.5);font:600 13px/1 var(--font);border:0;background:transparent;width:100%;text-align:left;transition:all .15s}
+.nav-item:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-item.active{color:var(--white);background:rgba(37,99,235,.3)}
+.nav-item.active .nav-icon{color:var(--cobalt)}
+.nav-icon{width:18px;font-size:16px;flex-shrink:0}
+.sidebar-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sidebar-user{display:flex;align-items:center;gap:10px}
+.sidebar-avatar{width:34px;height:34px;border-radius:8px;background:rgba(37,99,235,.25);color:var(--cobalt);font:700 13px/34px var(--font);text-align:center;flex-shrink:0}
+.sidebar-user-info{min-width:0}
+.sidebar-user-name{font:700 13px/1 var(--font);color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-user-role{font:400 11px/1 var(--font);color:rgba(255,255,255,.35);margin-top:3px}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────────── */
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.topbar-title{font:800 17px/1 var(--font);color:var(--text)}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;min-height:36px;border-radius:8px;font:600 13px/1 var(--font);cursor:pointer;border:0;transition:all .15s}
+.btn-primary{background:var(--cobalt);color:var(--white)}
+.btn-primary:hover{background:var(--cobalt-dark)}
+.btn-outline{background:var(--white);color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{background:var(--surface);border-color:#CBD5E1}
+.btn-ghost{background:transparent;color:var(--muted);border:0}
+.btn-ghost:hover{background:var(--surface);color:var(--text)}
+.btn-danger{background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
+.btn-sm{padding:0 10px;min-height:30px;font-size:12px}
+
+/* ── Page content ─────────────────────────────────────────────────────────────── */
+.page{display:none;padding:24px 28px 80px}
+.page.active{display:block}
+
+/* ── Stats cards ─────────────────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+.stat-label{font:600 11px/1 var(--font);color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+.stat-value{font:800 26px/1 var(--font);color:var(--text);letter-spacing:-.5px}
+.stat-change{font:500 12px/1 var(--font);margin-top:6px}
+.stat-change.up{color:var(--green)}
+.stat-change.down{color:var(--red)}
+.stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px}
+.stat-icon.blue{background:#EFF6FF}
+.stat-icon.green{background:#ECFDF5}
+.stat-icon.amber{background:#FFFBEB}
+.stat-icon.red{background:#FEF2F2}
+
+/* ── Card ─────────────────────────────────────────────────────────────────────── */
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font:700 14px/1 var(--font);color:var(--text)}
+.card-sub{font:400 12px/1 var(--font);color:var(--muted);margin-top:2px}
+.card-body{padding:0}
+
+/* ── Table ─────────────────────────────────────────────────────────────────────── */
+.table{width:100%;border-collapse:collapse}
+.table th{font:600 11px/1 var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface)}
+.table td{padding:13px 16px;border-bottom:1px solid #F1F5F9;font:400 13px/1.3 var(--font);color:var(--text);vertical-align:middle}
+.table tr:last-child td{border-bottom:0}
+.table tr:hover td{background:#FAFBFC}
+.table td strong{font-weight:700}
+
+/* ── Badges ─────────────────────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font:600 11px/1.4 var(--font)}
+.badge-green{background:#ECFDF5;color:#065F46}
+.badge-amber{background:#FFFBEB;color:#92400E}
+.badge-red{background:#FEF2F2;color:#991B1B}
+.badge-blue{background:#EFF6FF;color:#1E40AF}
+.badge-slate{background:#F1F5F9;color:var(--slate-3)}
+
+/* ── Form ─────────────────────────────────────────────────────────────────────── */
+.form-grid{display:grid;gap:14px}
+.form-grid-2{grid-template-columns:1fr 1fr}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr}
+.field-group{display:flex;flex-direction:column;gap:5px}
+.field-label{font:600 12px/1 var(--font);color:var(--text)}
+.field-input{min-height:40px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font:400 13px/1 var(--font);color:var(--text);background:var(--white)}
+.field-input:focus{outline:0;border-color:var(--cobalt);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+textarea.field-input{min-height:80px;padding:10px 12px;resize:vertical;line-height:1.5}
+
+/* ── Modal ─────────────────────────────────────────────────────────────────────── */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:50;align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font:700 16px/1 var(--font);color:var(--text)}
+.modal-close{appearance:none;border:0;background:transparent;font-size:20px;color:var(--muted);cursor:pointer;padding:4px}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+
+/* ── Search bar ─────────────────────────────────────────────────────────────────── */
+.search-bar{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;padding:0 12px;background:var(--white);min-height:36px}
+.search-bar input{border:0;background:transparent;font:400 13px/1 var(--font);color:var(--text);flex:1;min-width:0;outline:0}
+.search-bar input::placeholder{color:var(--muted)}
+
+/* ── Empty state ─────────────────────────────────────────────────────────────────── */
+.empty-state{padding:52px 24px;text-align:center}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-title{font:700 15px/1 var(--font);color:var(--text);margin-bottom:6px}
+.empty-sub{font:400 13px/1.5 var(--font);color:var(--muted);max-width:320px;margin:0 auto 16px}
+
+/* ── Dashboard chart placeholder ─────────────────────────────────────────────── */
+.chart-placeholder{height:200px;background:linear-gradient(180deg,var(--cobalt-light) 0%,var(--white) 100%);border-radius:8px;display:flex;align-items:flex-end;gap:6px;padding:16px;overflow:hidden}
+.chart-bar{flex:1;background:var(--cobalt);border-radius:4px 4px 0 0;opacity:.7;min-height:20px;transition:height .3s}
+.chart-bar:hover{opacity:1}
+
+/* ── Invoice item row ─────────────────────────────────────────────────────────── */
+.invoice-items-table{width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:12px 0}
+.invoice-items-table th{background:var(--surface);padding:8px 12px;font:600 11px/1 var(--font);color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)}
+.invoice-items-table td{padding:8px 12px;border-bottom:1px solid #F1F5F9;font:400 13px/1 var(--font)}
+.invoice-items-table tr:last-child td{border-bottom:0}
+
+/* ── Avatar circle ─────────────────────────────────────────────────────────────── */
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--cobalt-light);color:var(--cobalt);font:700 12px/32px var(--font);text-align:center;display:inline-block;flex-shrink:0}
+
+/* ── Payroll row ─────────────────────────────────────────────────────────────────── */
+.payroll-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.payroll-sum-item{text-align:center}
+.payroll-sum-label{font:500 11px/1 var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.payroll-sum-value{font:800 20px/1 var(--font);color:var(--text);margin-top:4px}
+
+/* ── HR card ─────────────────────────────────────────────────────────────────────── */
+.staff-card{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid #F1F5F9}
+.staff-card:last-child{border-bottom:0}
+.staff-info{flex:1;min-width:0}
+.staff-name{font:700 14px/1 var(--font);color:var(--text)}
+.staff-role{font:400 12px/1 var(--font);color:var(--muted);margin-top:2px}
+.staff-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────────────── */
+@media(max-width:1024px){
+  #sidebar{width:56px;overflow:hidden}
+  #sidebar:hover{width:240px;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+  #main{margin-left:56px}
+  .sidebar-logo,.sidebar-tagline,.nav-section-label,.sidebar-user-info,.sidebar-wordmark{display:none}
+  #sidebar:hover .sidebar-logo,#sidebar:hover .sidebar-tagline,#sidebar:hover .nav-section-label,#sidebar:hover .sidebar-user-info,#sidebar:hover .sidebar-wordmark{display:block}
+  .nav-item{padding:12px;justify-content:center}
+  #sidebar:hover .nav-item{justify-content:flex-start;padding:10px 12px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .form-grid-2,.form-grid-3{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  #sidebar{display:none}
+  #main{margin-left:0}
+  .page{padding:16px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-wordmark">Biz<span>Flow</span> NG</div>
+    <div class="sidebar-tagline">Business Suite</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Overview</div>
+    <button class="nav-item active" onclick="goPage('dashboard')" id="nav-dashboard">
+      <span class="nav-icon">◉</span><span>Dashboard</span>
+    </button>
+    <div class="nav-section-label">Finance</div>
+    <button class="nav-item" onclick="goPage('invoices')" id="nav-invoices">
+      <span class="nav-icon">◧</span><span>Invoices</span>
+    </button>
+    <button class="nav-item" onclick="goPage('payroll')" id="nav-payroll">
+      <span class="nav-icon">◈</span><span>Payroll</span>
+    </button>
+    <div class="nav-section-label">People</div>
+    <button class="nav-item" onclick="goPage('crm')" id="nav-crm">
+      <span class="nav-icon">◎</span><span>CRM / Clients</span>
+    </button>
+    <button class="nav-item" onclick="goPage('hr')" id="nav-hr">
+      <span class="nav-icon">◑</span><span>HR / Staff</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="biz-avatar">JW</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="biz-user-name">Business Owner</div>
+        <div class="sidebar-user-role">Admin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main id="main">
+
+<!-- ── DASHBOARD ── -->
+<div class="page active" id="page-dashboard">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Dashboard</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline btn-sm" onclick="goPage('invoices');openModal('invoice-modal')">+ New Invoice</button>
+      <button class="btn btn-primary btn-sm" onclick="goPage('crm');openModal('client-modal')">+ Add Client</button>
+    </div>
+  </div>
+  <div style="padding:24px 28px 80px">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue">📄</div>
+        <div class="stat-label">Total Invoiced</div>
+        <div class="stat-value" id="dash-invoiced">₦0</div>
+        <div class="stat-change up" id="dash-invoiced-sub">This month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✓</div>
+        <div class="stat-label">Revenue Collected</div>
+        <div class="stat-value" id="dash-collected">₦0</div>
+        <div class="stat-change up" id="dash-collected-sub">Paid invoices</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber">⏳</div>
+        <div class="stat-label">Outstanding</div>
+        <div class="stat-value" id="dash-outstanding">₦0</div>
+        <div class="stat-change down" id="dash-outstanding-sub">Unpaid / overdue</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red">👥</div>
+        <div class="stat-label">Active Clients</div>
+        <div class="stat-value" id="dash-clients">0</div>
+        <div class="stat-change up">Total clients</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Revenue this month</div><div class="card-sub">Daily breakdown</div></div>
+        </div>
+        <div style="padding:16px">
+          <div class="chart-placeholder" id="revenue-chart">
+            <!-- bars rendered by JS -->
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Recent invoices</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="goPage('invoices')">View all →</button>
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <tbody id="dash-recent-invoices">
+              <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px">No invoices yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── INVOICES ── -->
+<div class="page" id="page-invoices">
+  <div class="topbar">
+    <div class="topbar-title">Invoices</div>
+    <div class="topbar-actions">
+      <div class="search-bar" style="width:220px">
+        <span style="color:var(--muted);font-size:14px">🔍</span>
+        <input type="text" placeholder="Search invoices…" oninput="filterInvoices(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="openModal('invoice-modal')">+ New Invoice</button>
+    </div>
+  </div>
+  <div style="padding:24px 28px 80px">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-outline btn-sm active-filter" onclick="filterInvoiceStatus('all',this)">All</button>
+      <button class="btn btn-outline btn-sm" onclick="filterInvoiceStatus('draft',this)">Draft</button>
+      <button class="btn btn-outline btn-sm" onclick="filterInvoiceStatus('sent',this)">Sent</button>
+      <button class="btn btn-outline btn-sm" onclick="filterInvoiceStatus('paid',this)">Paid</button>
+      <button class="btn btn-outline btn-sm" onclick="filterInvoiceStatus('overdue',this)">Overdue</button>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <table class="table">
+          <thead>
+            <tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="invoice-list">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">No invoices yet</div><div class="empty-sub">Create your first invoice to start tracking payments</div><button class="btn btn-primary" onclick="openModal('invoice-modal')">+ New Invoice</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CRM ── -->
+<div class="page" id="page-crm">
+  <div class="topbar">
+    <div class="topbar-title">CRM / Clients</div>
+    <div class="topbar-actions">
+      <div class="search-bar" style="width:220px">
+        <span style="color:var(--muted);font-size:14px">🔍</span>
+        <input type="text" placeholder="Search clients…" oninput="filterClients(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="openModal('client-modal')">+ Add Client</button>
+    </div>
+  </div>
+  <div style="padding:24px 28px 80px">
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:20px">
+      <div class="stat-card"><div class="stat-label">Total Clients</div><div class="stat-value" id="crm-total">0</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" id="crm-active">0</div></div>
+      <div class="stat-card"><div class="stat-label">New this month</div><div class="stat-value" id="crm-new">0</div></div>
+      <div class="stat-card"><div class="stat-label">Total revenue</div><div class="stat-value" id="crm-revenue">₦0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <table class="table">
+          <thead>
+            <tr><th>Client</th><th>Email</th><th>Phone</th><th>Total Billed</th><th>Last Invoice</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="client-list">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No clients yet</div><div class="empty-sub">Add your first client to start managing relationships</div><button class="btn btn-primary" onclick="openModal('client-modal')">+ Add Client</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PAYROLL ── -->
+<div class="page" id="page-payroll">
+  <div class="topbar">
+    <div class="topbar-title">Payroll</div>
+    <div class="topbar-actions">
+      <select class="field-input field-select" id="payroll-month" onchange="renderPayroll()" style="min-height:36px;padding:0 32px 0 10px;font-size:13px">
+        <option>August 2026</option><option>July 2026</option><option>June 2026</option>
+      </select>
+      <button class="btn btn-primary" onclick="runPayroll()">Run Payroll</button>
+    </div>
+  </div>
+  <div style="padding:24px 28px 80px">
+    <div class="card" style="margin-bottom:20px">
+      <div class="payroll-summary">
+        <div class="payroll-sum-item"><div class="payroll-sum-label">Total payroll</div><div class="payroll-sum-value" id="pr-total">₦0</div></div>
+        <div class="payroll-sum-item"><div class="payroll-sum-label">Staff count</div><div class="payroll-sum-value" id="pr-count">0</div></div>
+        <div class="payroll-sum-item"><div class="payroll-sum-label">Status</div><div class="payroll-sum-value" id="pr-status" style="font-size:14px"><span class="badge badge-amber">Pending</span></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Staff payroll this month</div></div>
+      <div class="card-body">
+        <table class="table">
+          <thead><tr><th>Staff</th><th>Role</th><th>Gross</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="payroll-list">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">💰</div><div class="empty-title">No staff added yet</div><div class="empty-sub">Add staff in HR to generate payroll</div><button class="btn btn-primary" onclick="goPage('hr');openModal('staff-modal')">+ Add Staff</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HR ── -->
+<div class="page" id="page-hr">
+  <div class="topbar">
+    <div class="topbar-title">HR / Staff</div>
+    <div class="topbar-actions">
+      <div class="search-bar" style="width:220px">
+        <span style="color:var(--muted);font-size:14px">🔍</span>
+        <input type="text" placeholder="Search staff…" oninput="filterStaff(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="openModal('staff-modal')">+ Add Staff</button>
+    </div>
+  </div>
+  <div style="padding:24px 28px 80px">
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:20px">
+      <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-value" id="hr-total">0</div></div>
+      <div class="stat-card"><div class="stat-label">Full-time</div><div class="stat-value" id="hr-fulltime">0</div></div>
+      <div class="stat-card"><div class="stat-label">Part-time</div><div class="stat-value" id="hr-parttime">0</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly payroll</div><div class="stat-value" id="hr-payroll-total">₦0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Staff directory</div></div>
+      <div id="staff-list-body">
+        <div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">No staff yet</div><div class="empty-sub">Add your first staff member</div><button class="btn btn-primary" onclick="openModal('staff-modal')">+ Add Staff</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ── MODALS ── -->
+
+<!-- Invoice Modal -->
+<div class="modal-backdrop" id="invoice-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="invoice-modal-title">New Invoice</div>
+      <button class="modal-close" onclick="closeModal('invoice-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2" style="margin-bottom:14px">
+        <div class="field-group">
+          <label class="field-label">Client</label>
+          <select class="field-input field-select" id="inv-client">
+            <option value="">Select client…</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Due date</label>
+          <input type="date" class="field-input" id="inv-due">
+        </div>
+      </div>
+
+      <div style="font:600 12px/1 var(--font);color:var(--text);margin-bottom:8px">Line items</div>
+      <table class="invoice-items-table">
+        <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Total</th><th></th></tr></thead>
+        <tbody id="invoice-items-body">
+          <tr>
+            <td><input type="text" class="field-input" placeholder="Item description" style="width:100%;min-height:32px" onchange="calcInvoiceTotal()"></td>
+            <td><input type="number" class="field-input" value="1" min="1" style="width:60px;min-height:32px" onchange="calcInvoiceTotal()"></td>
+            <td><input type="number" class="field-input" placeholder="0" style="width:100px;min-height:32px" onchange="calcInvoiceTotal()"></td>
+            <td style="font-weight:700" class="item-total">₦0</td>
+            <td><button onclick="removeInvoiceRow(this)" style="border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px">×</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <button class="btn btn-ghost btn-sm" onclick="addInvoiceRow()" style="margin-top:4px">+ Add item</button>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:24px">
+        <div style="text-align:right">
+          <div style="font:500 12px/1 var(--font);color:var(--muted);margin-bottom:4px">Subtotal</div>
+          <div style="font:700 18px/1 var(--font)" id="inv-subtotal">₦0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font:500 12px/1 var(--font);color:var(--muted);margin-bottom:4px">VAT (7.5%)</div>
+          <div style="font:700 18px/1 var(--font)" id="inv-vat">₦0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font:600 12px/1 var(--font);color:var(--text);margin-bottom:4px">Total</div>
+          <div style="font:800 22px/1 var(--font);color:var(--cobalt)" id="inv-total">₦0.00</div>
+        </div>
+      </div>
+
+      <div class="field-group" style="margin-top:14px">
+        <label class="field-label">Notes (optional)</label>
+        <textarea class="field-input" id="inv-notes" placeholder="Payment terms, bank details, etc."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="saveInvoice('draft')">Save draft</button>
+      <button class="btn btn-primary" onclick="saveInvoice('sent')">Send invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client Modal -->
+<div class="modal-backdrop" id="client-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Add Client</div>
+      <button class="modal-close" onclick="closeModal('client-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2">
+        <div class="field-group">
+          <label class="field-label">Business / Client name *</label>
+          <input type="text" class="field-input" id="cl-name" placeholder="Acme Corp">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Contact person</label>
+          <input type="text" class="field-input" id="cl-contact" placeholder="John Doe">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <input type="email" class="field-input" id="cl-email" placeholder="hello@acme.com">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Phone</label>
+          <input type="tel" class="field-input" id="cl-phone" placeholder="08031234567">
+        </div>
+        <div class="field-group" style="grid-column:1/-1">
+          <label class="field-label">Address</label>
+          <input type="text" class="field-input" id="cl-address" placeholder="5 Marina Street, Lagos">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Industry</label>
+          <select class="field-input field-select" id="cl-industry">
+            <option>Technology</option><option>Retail</option><option>Construction</option><option>Healthcare</option><option>Education</option><option>Agriculture</option><option>Finance</option><option>Other</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Status</label>
+          <select class="field-input field-select" id="cl-status">
+            <option value="active">Active</option><option value="prospect">Prospect</option><option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('client-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveClient()">Save client</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Modal -->
+<div class="modal-backdrop" id="staff-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Add Staff Member</div>
+      <button class="modal-close" onclick="closeModal('staff-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2">
+        <div class="field-group">
+          <label class="field-label">Full name *</label>
+          <input type="text" class="field-input" id="st-name" placeholder="Ada Okonkwo">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Job title *</label>
+          <input type="text" class="field-input" id="st-role" placeholder="Software Engineer">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <input type="email" class="field-input" id="st-email" placeholder="ada@company.com">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Phone</label>
+          <input type="tel" class="field-input" id="st-phone" placeholder="08031234567">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Employment type</label>
+          <select class="field-input field-select" id="st-type">
+            <option value="full-time">Full-time</option><option value="part-time">Part-time</option><option value="contract">Contract</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Gross monthly salary (₦)</label>
+          <input type="number" class="field-input" id="st-salary" placeholder="150000">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Department</label>
+          <input type="text" class="field-input" id="st-dept" placeholder="Engineering">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Start date</label>
+          <input type="date" class="field-input" id="st-start">
+        </div>
+        <div class="field-group" style="grid-column:1/-1">
+          <label class="field-label">Bank account number</label>
+          <input type="text" class="field-input" id="st-account" placeholder="0123456789 (GTBank)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('staff-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStaff()">Add staff member</button>
+    </div>
+  </div>
+</div>
+
+<!-- Run Payroll Confirm Modal -->
+<div class="modal-backdrop" id="payroll-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Run Payroll</div>
+      <button class="modal-close" onclick="closeModal('payroll-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font:400 14px/1.6 var(--font);color:var(--muted);margin-bottom:16px">You're about to process payroll for <strong id="pr-modal-count">0</strong> staff members totalling <strong id="pr-modal-total">₦0</strong>. This will mark all payments as processed.</p>
+      <div style="background:var(--surface);border-radius:8px;padding:14px">
+        <div id="pr-modal-breakdown"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('payroll-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="processPayroll()">Confirm & process</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let invoices = JSON.parse(localStorage.getItem('bf_invoices') || '[]');
+let clients  = JSON.parse(localStorage.getItem('bf_clients')  || '[]');
+let staff    = JSON.parse(localStorage.getItem('bf_staff')    || '[]');
+let invoiceCounter = parseInt(localStorage.getItem('bf_inv_counter') || '1000');
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const fmtN = n => '₦' + parseFloat(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
+const initials = name => (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const isOverdue = inv => inv.status !== 'paid' && inv.status !== 'draft' && inv.due && new Date(inv.due) < new Date();
+const save = () => {
+  localStorage.setItem('bf_invoices', JSON.stringify(invoices));
+  localStorage.setItem('bf_clients',  JSON.stringify(clients));
+  localStorage.setItem('bf_staff',    JSON.stringify(staff));
+  localStorage.setItem('bf_inv_counter', String(invoiceCounter));
+};
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.getElementById('nav-' + id).classList.add('active');
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'invoices')  renderInvoices();
+  if (id === 'crm')       renderClients();
+  if (id === 'payroll')   renderPayroll();
+  if (id === 'hr')        renderStaff();
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  if (id === 'invoice-modal') populateClientDropdown();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-backdrop').forEach(b => {
+  b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
+});
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const total   = invoices.reduce((s,i) => s + (i.total||0), 0);
+  const paid    = invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.total||0),0);
+  const outstanding = invoices.filter(i=>i.status!=='paid'&&i.status!=='draft').reduce((s,i)=>s+(i.total||0),0);
+  document.getElementById('dash-invoiced').textContent = fmtN(total);
+  document.getElementById('dash-collected').textContent = fmtN(paid);
+  document.getElementById('dash-outstanding').textContent = fmtN(outstanding);
+  document.getElementById('dash-clients').textContent = clients.length;
+
+  // Chart bars (fake monthly distribution)
+  const chart = document.getElementById('revenue-chart');
+  const days = ['M','T','W','T','F','S','S'];
+  chart.innerHTML = days.map((_,i) => {
+    const h = Math.max(15, Math.floor(Math.random()*140)+20);
+    return `<div class="chart-bar" style="height:${h}px" title="Day ${i+1}"></div>`;
+  }).join('');
+
+  // Recent invoices
+  const recent = [...invoices].sort((a,b) => new Date(b.created)-new Date(a.created)).slice(0,5);
+  const tbody = document.getElementById('dash-recent-invoices');
+  tbody.innerHTML = recent.length ? recent.map(inv => `
+    <tr>
+      <td><strong>#${inv.id}</strong></td>
+      <td>${inv.clientName||'—'}</td>
+      <td>${fmtN(inv.total)}</td>
+      <td>${statusBadge(inv)}</td>
+    </tr>`).join('') : `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No invoices yet.</td></tr>`;
+}
+
+// ── INVOICES ──────────────────────────────────────────────────────────────────
+let invoiceFilter = 'all';
+let invoiceSearch = '';
+
+function statusBadge(inv) {
+  if (isOverdue(inv)) return '<span class="badge badge-red">Overdue</span>';
+  const map = { draft:'badge-slate', sent:'badge-blue', paid:'badge-green', overdue:'badge-red' };
+  return `<span class="badge ${map[inv.status]||'badge-slate'}">${(inv.status||'draft').charAt(0).toUpperCase()+inv.status.slice(1)}</span>`;
+}
+
+function filterInvoices(q) { invoiceSearch = q.toLowerCase(); renderInvoices(); }
+function filterInvoiceStatus(s, btn) {
+  invoiceFilter = s;
+  document.querySelectorAll('.active-filter').forEach(b => { b.classList.remove('active-filter'); b.style.background=''; b.style.color=''; });
+  btn.classList.add('active-filter'); btn.style.background='var(--cobalt)'; btn.style.color='#fff';
+  renderInvoices();
+}
+
+function renderInvoices() {
+  let list = invoices;
+  if (invoiceFilter !== 'all') {
+    if (invoiceFilter === 'overdue') list = list.filter(isOverdue);
+    else list = list.filter(i => i.status === invoiceFilter);
+  }
+  if (invoiceSearch) list = list.filter(i => (i.clientName||'').toLowerCase().includes(invoiceSearch) || String(i.id).includes(invoiceSearch));
+  list = [...list].sort((a,b) => new Date(b.created)-new Date(a.created));
+
+  const tbody = document.getElementById('invoice-list');
+  tbody.innerHTML = list.length ? list.map(inv => `
+    <tr>
+      <td><strong>#${inv.id}</strong></td>
+      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${initials(inv.clientName)}</span>${inv.clientName||'—'}</div></td>
+      <td>${fmtDate(inv.created)}</td>
+      <td>${fmtDate(inv.due)}</td>
+      <td><strong>${fmtN(inv.total)}</strong></td>
+      <td>${statusBadge(inv)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          ${inv.status !== 'paid' ? `<button class="btn btn-sm" style="background:#ECFDF5;color:#065F46;border:0" onclick="markPaid('${inv.id}')">Mark paid</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="deleteInvoice('${inv.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('') :
+    `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">No invoices found</div><div class="empty-sub">Create your first invoice</div><button class="btn btn-primary" onclick="openModal('invoice-modal')">+ New Invoice</button></div></td></tr>`;
+}
+
+function populateClientDropdown() {
+  const sel = document.getElementById('inv-client');
+  sel.innerHTML = '<option value="">Select client…</option>' + clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function addInvoiceRow() {
+  const tbody = document.getElementById('invoice-items-body');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input type="text" class="field-input" placeholder="Item description" style="width:100%;min-height:32px" onchange="calcInvoiceTotal()"></td>
+    <td><input type="number" class="field-input" value="1" min="1" style="width:60px;min-height:32px" onchange="calcInvoiceTotal()"></td>
+    <td><input type="number" class="field-input" placeholder="0" style="width:100px;min-height:32px" onchange="calcInvoiceTotal()"></td>
+    <td style="font-weight:700" class="item-total">₦0</td>
+    <td><button onclick="removeInvoiceRow(this)" style="border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px">×</button></td>`;
+  tbody.appendChild(row);
+}
+
+function removeInvoiceRow(btn) {
+  const row = btn.closest('tr');
+  if (document.querySelectorAll('#invoice-items-body tr').length > 1) { row.remove(); calcInvoiceTotal(); }
+}
+
+function calcInvoiceTotal() {
+  let subtotal = 0;
+  document.querySelectorAll('#invoice-items-body tr').forEach(row => {
+    const inputs = row.querySelectorAll('input[type="number"]');
+    const qty = parseFloat(inputs[0]?.value||0);
+    const price = parseFloat(inputs[1]?.value||0);
+    const lineTotal = qty * price;
+    const td = row.querySelector('.item-total');
+    if (td) td.textContent = fmtN(lineTotal);
+    subtotal += lineTotal;
+  });
+  const vat = subtotal * 0.075;
+  document.getElementById('inv-subtotal').textContent = fmtN(subtotal);
+  document.getElementById('inv-vat').textContent = fmtN(vat);
+  document.getElementById('inv-total').textContent = fmtN(subtotal + vat);
+}
+
+function saveInvoice(status) {
+  const clientId = document.getElementById('inv-client').value;
+  const client = clients.find(c => c.id === clientId);
+  if (!clientId) { alert('Please select a client.'); return; }
+  let subtotal = 0;
+  const items = [];
+  document.querySelectorAll('#invoice-items-body tr').forEach(row => {
+    const desc = row.querySelector('input[type="text"]')?.value;
+    const inputs = row.querySelectorAll('input[type="number"]');
+    const qty = parseFloat(inputs[0]?.value||1);
+    const price = parseFloat(inputs[1]?.value||0);
+    if (desc) { items.push({desc,qty,price}); subtotal += qty*price; }
+  });
+  if (!items.length) { alert('Add at least one item.'); return; }
+  const vat = subtotal * 0.075;
+  const inv = {
+    id: ++invoiceCounter,
+    clientId, clientName: client?.name||'Unknown',
+    items, subtotal, vat, total: subtotal+vat,
+    status, notes: document.getElementById('inv-notes').value,
+    due: document.getElementById('inv-due').value,
+    created: new Date().toISOString(),
+  };
+  invoices.push(inv);
+  save();
+  closeModal('invoice-modal');
+  renderInvoices();
+  renderDashboard();
+  // Reset form
+  document.getElementById('invoice-items-body').innerHTML = `<tr><td><input type="text" class="field-input" placeholder="Item description" style="width:100%;min-height:32px" onchange="calcInvoiceTotal()"></td><td><input type="number" class="field-input" value="1" min="1" style="width:60px;min-height:32px" onchange="calcInvoiceTotal()"></td><td><input type="number" class="field-input" placeholder="0" style="width:100px;min-height:32px" onchange="calcInvoiceTotal()"></td><td style="font-weight:700" class="item-total">₦0</td><td><button onclick="removeInvoiceRow(this)" style="border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px">×</button></td></tr>`;
+  document.getElementById('inv-notes').value = '';
+  document.getElementById('inv-due').value = '';
+  calcInvoiceTotal();
+}
+
+function markPaid(id) {
+  const inv = invoices.find(i => String(i.id) === String(id));
+  if (inv) { inv.status = 'paid'; save(); renderInvoices(); renderDashboard(); }
+}
+
+function deleteInvoice(id) {
+  if (!confirm('Delete this invoice?')) return;
+  invoices = invoices.filter(i => String(i.id) !== String(id));
+  save(); renderInvoices(); renderDashboard();
+}
+
+// ── CRM ───────────────────────────────────────────────────────────────────────
+function renderClients() {
+  document.getElementById('crm-total').textContent = clients.length;
+  document.getElementById('crm-active').textContent = clients.filter(c=>c.status==='active').length;
+  document.getElementById('crm-new').textContent = clients.filter(c => {
+    const d = new Date(c.created); const now = new Date();
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).length;
+  const totalRev = clients.reduce((s,c) => s + invoices.filter(i=>i.clientId===c.id&&i.status==='paid').reduce((a,i)=>a+i.total,0), 0);
+  document.getElementById('crm-revenue').textContent = fmtN(totalRev);
+
+  const tbody = document.getElementById('client-list');
+  const list = [...clients].sort((a,b)=>new Date(b.created)-new Date(a.created));
+  tbody.innerHTML = list.length ? list.map(c => {
+    const billed = invoices.filter(i=>i.clientId===c.id).reduce((s,i)=>s+i.total,0);
+    const lastInv = invoices.filter(i=>i.clientId===c.id).sort((a,b)=>new Date(b.created)-new Date(a.created))[0];
+    const smap = {active:'badge-green',prospect:'badge-amber',inactive:'badge-slate'};
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar">${initials(c.name)}</span><div><strong>${c.name}</strong><div style="font:400 11px/1 var(--font);color:var(--muted);margin-top:2px">${c.contact||''}</div></div></div></td>
+      <td>${c.email||'—'}</td><td>${c.phone||'—'}</td>
+      <td><strong>${fmtN(billed)}</strong></td>
+      <td>${lastInv ? fmtDate(lastInv.created) : '—'}</td>
+      <td><span class="badge ${smap[c.status]||'badge-slate'}">${(c.status||'active').charAt(0).toUpperCase()+(c.status||'').slice(1)}</span></td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-outline btn-sm" onclick="invoiceForClient('${c.id}')">Invoice</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteClient('${c.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') :
+    `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No clients yet</div><div class="empty-sub">Add your first client</div><button class="btn btn-primary" onclick="openModal('client-modal')">+ Add Client</button></div></td></tr>`;
+}
+
+function filterClients(q) {
+  const rows = document.querySelectorAll('#client-list tr');
+  rows.forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
+}
+
+function saveClient() {
+  const name = document.getElementById('cl-name').value.trim();
+  if (!name) { alert('Client name is required.'); return; }
+  const c = {
+    id: Date.now().toString(), name,
+    contact: document.getElementById('cl-contact').value,
+    email: document.getElementById('cl-email').value,
+    phone: document.getElementById('cl-phone').value,
+    address: document.getElementById('cl-address').value,
+    industry: document.getElementById('cl-industry').value,
+    status: document.getElementById('cl-status').value,
+    created: new Date().toISOString(),
+  };
+  clients.push(c); save(); closeModal('client-modal'); renderClients();
+  ['cl-name','cl-contact','cl-email','cl-phone','cl-address'].forEach(id => document.getElementById(id).value='');
+}
+
+function deleteClient(id) {
+  if (!confirm('Delete this client?')) return;
+  clients = clients.filter(c => c.id !== id); save(); renderClients();
+}
+
+function invoiceForClient(clientId) {
+  goPage('invoices');
+  openModal('invoice-modal');
+  setTimeout(() => { document.getElementById('inv-client').value = clientId; }, 100);
+}
+
+// ── PAYROLL ───────────────────────────────────────────────────────────────────
+function renderPayroll() {
+  const totalGross = staff.reduce((s,m) => s + (parseFloat(m.salary)||0), 0);
+  const nhf = totalGross * 0.025;     // NHF 2.5%
+  const pension = totalGross * 0.08;  // Pension 8%
+  const deductions = nhf + pension;
+  const netTotal = totalGross - deductions;
+
+  document.getElementById('pr-total').textContent = fmtN(netTotal);
+  document.getElementById('pr-count').textContent = staff.length;
+
+  const tbody = document.getElementById('payroll-list');
+  tbody.innerHTML = staff.length ? staff.map(m => {
+    const gross = parseFloat(m.salary)||0;
+    const ded = gross * 0.105;
+    const net = gross - ded;
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${initials(m.name)}</span><strong>${m.name}</strong></div></td>
+      <td>${m.role||'—'}</td>
+      <td>${fmtN(gross)}</td>
+      <td><span style="color:var(--red)">${fmtN(ded)}</span></td>
+      <td><strong>${fmtN(net)}</strong></td>
+      <td><span class="badge badge-amber">Pending</span></td>
+      <td><button class="btn btn-sm" style="background:#ECFDF5;color:#065F46;border:0" onclick="markStaffPaid(this)">Mark paid</button></td>
+    </tr>`;
+  }).join('') :
+    `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">💰</div><div class="empty-title">No staff yet</div><div class="empty-sub">Add staff in HR to generate payroll</div><button class="btn btn-primary" onclick="goPage('hr');openModal('staff-modal')">+ Add Staff</button></div></td></tr>`;
+}
+
+function markStaffPaid(btn) {
+  const td = btn.closest('td').previousElementSibling;
+  td.innerHTML = '<span class="badge badge-green">Paid</span>';
+  btn.remove();
+}
+
+function runPayroll() {
+  if (!staff.length) { alert('No staff to pay. Add staff members first.'); return; }
+  const total = staff.reduce((s,m) => s + ((parseFloat(m.salary)||0) * 0.895), 0);
+  document.getElementById('pr-modal-count').textContent = staff.length;
+  document.getElementById('pr-modal-total').textContent = fmtN(total);
+  document.getElementById('pr-modal-breakdown').innerHTML = staff.map(m => {
+    const net = (parseFloat(m.salary)||0) * 0.895;
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font:400 13px/1 var(--font)"><span>${m.name}</span><strong>${fmtN(net)}</strong></div>`;
+  }).join('');
+  openModal('payroll-modal');
+}
+
+function processPayroll() {
+  closeModal('payroll-modal');
+  document.getElementById('pr-status').innerHTML = '<span class="badge badge-green">Processed</span>';
+  document.querySelectorAll('#payroll-list .badge-amber').forEach(b => { b.className='badge badge-green'; b.textContent='Paid'; });
+  document.querySelectorAll('#payroll-list button').forEach(b => b.remove());
+}
+
+// ── HR ────────────────────────────────────────────────────────────────────────
+function renderStaff() {
+  document.getElementById('hr-total').textContent = staff.length;
+  document.getElementById('hr-fulltime').textContent = staff.filter(s=>s.type==='full-time').length;
+  document.getElementById('hr-parttime').textContent = staff.filter(s=>s.type!=='full-time').length;
+  document.getElementById('hr-payroll-total').textContent = fmtN(staff.reduce((s,m)=>s+(parseFloat(m.salary)||0),0));
+
+  const container = document.getElementById('staff-list-body');
+  container.innerHTML = staff.length ? staff.map(m => `
+    <div class="staff-card">
+      <span class="avatar" style="width:40px;height:40px;line-height:40px;font-size:14px">${initials(m.name)}</span>
+      <div class="staff-info">
+        <div class="staff-name">${m.name}</div>
+        <div class="staff-role">${m.role||'—'} · ${m.dept||'—'} · <span class="badge badge-slate" style="font-size:10px">${m.type||'full-time'}</span></div>
+      </div>
+      <div class="staff-actions">
+        <div style="text-align:right;margin-right:8px"><div style="font:700 14px/1 var(--font)">${fmtN(m.salary)}</div><div style="font:400 11px/1 var(--font);color:var(--muted)">per month</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="deleteStaff('${m.id}')">🗑</button>
+      </div>
+    </div>`).join('') :
+    `<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">No staff yet</div><div class="empty-sub">Add your first staff member to manage HR</div><button class="btn btn-primary" onclick="openModal('staff-modal')">+ Add Staff</button></div>`;
+}
+
+function filterStaff(q) {
+  document.querySelectorAll('.staff-card').forEach(c => {
+    c.style.display = c.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function saveStaff() {
+  const name = document.getElementById('st-name').value.trim();
+  if (!name) { alert('Staff name is required.'); return; }
+  const m = {
+    id: Date.now().toString(), name,
+    role: document.getElementById('st-role').value,
+    email: document.getElementById('st-email').value,
+    phone: document.getElementById('st-phone').value,
+    type: document.getElementById('st-type').value,
+    salary: document.getElementById('st-salary').value,
+    dept: document.getElementById('st-dept').value,
+    start: document.getElementById('st-start').value,
+    account: document.getElementById('st-account').value,
+    created: new Date().toISOString(),
+  };
+  staff.push(m); save(); closeModal('staff-modal'); renderStaff(); renderPayroll();
+  ['st-name','st-role','st-email','st-phone','st-salary','st-dept','st-start','st-account'].forEach(id => document.getElementById(id).value='');
+}
+
+function deleteStaff(id) {
+  if (!confirm('Remove this staff member?')) return;
+  staff = staff.filter(s => s.id !== id); save(); renderStaff(); renderPayroll();
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+document.getElementById('biz-user-name').textContent = 'Business Owner';
+document.getElementById('biz-avatar').textContent = 'BZ';
+
+// Set today as default due date (+30 days)
+const d = new Date(); d.setDate(d.getDate()+30);
+document.getElementById('inv-due').value = d.toISOString().split('T')[0];
+document.getElementById('st-start').valueAsDate = new Date();
+
+renderDashboard();
+</script>
+</body>
+</html>
