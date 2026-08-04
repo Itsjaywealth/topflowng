@@ -133,6 +133,7 @@ async function initDB() {
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_pin TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
     `);
 
     await client.query(`
@@ -184,15 +185,23 @@ async function findUserById(id) {
   return rows[0] || null;
 }
 
-async function createUser({ fullName, email, phone, password }) {
+async function createUser({ fullName, email, phone, password, referredBy = null }) {
   const hash = await bcrypt.hash(password, SALT_ROUNDS);
   const { rows } = await pool.query(
-    `INSERT INTO users (full_name, email, phone, password)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (full_name, email, phone, password, referred_by)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, full_name, email, phone, wallet, is_admin`,
-    [fullName, email, phone, hash]
+    [fullName, email, phone, hash, referredBy || null]
   );
   return rows[0];
+}
+
+async function findUserByReferralCode(code) {
+  const { rows } = await pool.query(
+    'SELECT id FROM users WHERE referral_code = $1 LIMIT 1',
+    [code]
+  );
+  return rows[0] || null;
 }
 
 async function verifyPassword(user, password) {
@@ -559,6 +568,35 @@ async function creditVerifiedPaystackPayment(reference, userId, amount) {
        VALUES ($1, 'credit', $2, $3, $4)`,
       [userId, amount, 'Wallet top-up via Paystack', reference]
     );
+
+    // ── Referral bonus on first top-up ───────────────────────────────────────
+    // Check if this is the user's first credited top-up and if they were referred.
+    const prevCount = await client.query(
+      `SELECT COUNT(*) FROM paystack_refs WHERE user_id = $1 AND reference != $2`,
+      [userId, reference]
+    );
+    if (parseInt(prevCount.rows[0].count) === 0) {
+      // First top-up — look for a referrer
+      const referrerRow = await client.query(
+        `SELECT referred_by FROM users WHERE id = $1 AND referred_by IS NOT NULL`,
+        [userId]
+      );
+      if (referrerRow.rows.length > 0) {
+        const referrerId = referrerRow.rows[0].referred_by;
+        const REFERRAL_BONUS = 100; // ₦100 per referred user's first top-up
+        await client.query(
+          'UPDATE users SET wallet = wallet + $1 WHERE id = $2',
+          [REFERRAL_BONUS, referrerId]
+        );
+        await client.query(
+          `INSERT INTO transactions (user_id, type, amount, description, reference)
+           VALUES ($1, 'credit', $2, $3, $4)`,
+          [referrerId, REFERRAL_BONUS, `Referral bonus — new user funded`, `REF-${reference}`]
+        );
+        console.log(`Referral bonus ₦${REFERRAL_BONUS} credited to user ${referrerId} for referring user ${userId}`);
+      }
+    }
+
     await client.query('COMMIT');
     return { credited: true, balance: parseFloat(rows[0].wallet) };
   } catch (err) {
@@ -702,12 +740,23 @@ async function getAnalyticsSummary(userId) {
   return rows[0];
 }
 
+async function getPendingVtuOrders(userId) {
+  const { rows } = await pool.query(
+    `SELECT request_id, service_type, amount, description, provider_order_id, created_at
+     FROM vtu_orders WHERE user_id = $1 AND status = 'pending'
+     ORDER BY created_at DESC LIMIT 5`,
+    [userId]
+  );
+  return rows;
+}
+
 module.exports = {
   initDB,
   findUserByEmail,
   findUserByPhone,
   findUserById,
   createUser,
+  findUserByReferralCode,
   verifyPassword,
   updateUserPassword,
   getWalletBalance,
@@ -738,4 +787,5 @@ module.exports = {
   addBeneficiary,
   deleteBeneficiary,
   getAnalyticsSummary,
+  getPendingVtuOrders,
 };

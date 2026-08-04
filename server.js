@@ -55,6 +55,30 @@ async function sendEmail({ to, subject, html }) {
   console.log(`Email accepted by Resend: ${response.data?.data?.id || 'unknown id'}`);
 }
 
+function sendPurchaseEmail(userEmail, userName, { service, description, amount, reference, newBalance }) {
+  const formatted = `₦${parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+  const bal = `₦${parseFloat(newBalance).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+  sendEmail({
+    to: userEmail,
+    subject: `TopFlowNG — ${service} purchase confirmed`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#0E2235">Payment confirmed ✓</h2>
+        <p>Hi ${userName},</p>
+        <p>Your <strong>${service}</strong> purchase was successful.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Details</td><td style="padding:8px 0;font-size:13px;text-align:right">${description}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right">${formatted}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right">${reference}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">New balance</td><td style="padding:8px 0;font-size:13px;color:#1A7A4A;font-weight:600;text-align:right">${bal}</td></tr>
+        </table>
+        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at support@topflowng.com</p>
+        <p style="font-size:12px;color:#9CA3AF">— TopFlowNG</p>
+      </div>
+    `,
+  }).catch(e => console.error('Purchase email error:', e.message));
+}
+
 // ── Security Middleware ──────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -123,6 +147,15 @@ async function adminMiddleware(req, res, next) {
   }
 }
 
+// ── Transaction PIN Check ─────────────────────────────────────────────────────
+async function checkTransactionPin(userId, pin) {
+  const hasPinSet = await db.hasTransactionPin(userId);
+  if (!hasPinSet) return; // No PIN configured — skip verification
+  if (!pin) { const e = new Error('Transaction PIN required'); e.code = 'PIN_REQUIRED'; throw e; }
+  const valid = await db.verifyTransactionPin(userId, pin);
+  if (!valid) { const e = new Error('Incorrect transaction PIN'); e.code = 'PIN_INVALID'; throw e; }
+}
+
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
@@ -131,7 +164,7 @@ app.get('/api/health', (req, res) => {
 // ── Auth Routes ──────────────────────────────────────────────────────────────
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
-    const { fullName, email, phone, password } = req.body;
+    const { fullName, email, phone, password, referralCode } = req.body;
     if (!fullName || !email || !phone || !password)
       return res.status(400).json({ error: 'All fields are required' });
     if (password.length < 6)
@@ -143,7 +176,14 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     const existingPhone = await db.findUserByPhone(phone);
     if (existingPhone) return res.status(409).json({ error: 'Phone already registered' });
 
-    const user  = await db.createUser({ fullName, email, phone, password });
+    // Resolve referrer (optional — invalid codes are silently ignored)
+    let referredBy = null;
+    if (referralCode) {
+      const referrer = await db.findUserByReferralCode(referralCode.trim().toUpperCase());
+      if (referrer) referredBy = referrer.id;
+    }
+
+    const user  = await db.createUser({ fullName, email, phone, password, referredBy });
     const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
@@ -513,14 +553,14 @@ async function processClubkonnectPurchase({ userId, requestId, serviceType, amou
 
 app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { network, phone, amount } = req.body;
+    const { network, phone, amount, pin } = req.body;
     if (!network || !phone || !amount) return res.status(400).json({ error: 'network, phone, amount required' });
+    await checkTransactionPin(req.user.id, pin);
 
     const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
-    // Clubkonnect's MobileNetwork parameter requires numeric provider codes, not network names.
     const networkMap = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
     const ckNetwork  = networkMap[network.toUpperCase()];
     if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
@@ -536,14 +576,21 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
+    const desc = `${network} airtime — ${phone}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
-      description: `${network} airtime — ${phone}`, endpoint: 'https://www.nellobytesystems.com/APIAirtimeV1.asp', params,
+      description: desc, endpoint: 'https://www.nellobytesystems.com/APIAirtimeV1.asp', params,
     });
-    if (result.outcome === 'success') return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'success') {
+      const user = await db.findUserById(req.user.id);
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Airtime', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
+      return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    }
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
     return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
+    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
+    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
     console.error('Airtime error:', err.message);
     Sentry.captureException(err);
     res.status(500).json({ error: 'Airtime service unavailable' });
@@ -553,8 +600,9 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
 // ── VTU — Data Bundle ────────────────────────────────────────────────────────
 app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { network, phone, planCode, amount } = req.body;
+    const { network, phone, planCode, amount, pin } = req.body;
     if (!network || !phone || !planCode || !amount) return res.status(400).json({ error: 'network, phone, planCode, amount required' });
+    await checkTransactionPin(req.user.id, pin);
 
     const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
@@ -575,14 +623,21 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
+    const desc = `${network} data ${planCode} — ${phone}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'data', amount: cost,
-      description: `${network} data ${planCode} — ${phone}`, endpoint: 'https://www.nellobytesystems.com/APIDataBundleV1.asp', params,
+      description: desc, endpoint: 'https://www.nellobytesystems.com/APIDataBundleV1.asp', params,
     });
-    if (result.outcome === 'success') return res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'success') {
+      const user = await db.findUserById(req.user.id);
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Data', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
+      return res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    }
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
     return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
+    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
+    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
     console.error('Data error:', err.message);
     Sentry.captureException(err);
     res.status(500).json({ error: 'Data service unavailable' });
@@ -592,8 +647,9 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
 // ── VTU — Cable TV ───────────────────────────────────────────────────────────
 app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { provider, smartCardNumber, planCode, amount } = req.body;
+    const { provider, smartCardNumber, planCode, amount, pin } = req.body;
     if (!provider || !smartCardNumber || !planCode || !amount) return res.status(400).json({ error: 'provider, smartCardNumber, planCode, amount required' });
+    await checkTransactionPin(req.user.id, pin);
 
     const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
@@ -610,14 +666,21 @@ app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
+    const desc = `${provider} ${planCode} — ${smartCardNumber}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'cable', amount: cost,
-      description: `${provider} ${planCode} — ${smartCardNumber}`, endpoint: 'https://www.nellobytesystems.com/APICableTVV1.asp', params,
+      description: desc, endpoint: 'https://www.nellobytesystems.com/APICableTVV1.asp', params,
     });
-    if (result.outcome === 'success') return res.json({ success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'success') {
+      const user = await db.findUserById(req.user.id);
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Cable TV', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
+      return res.json({ success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId });
+    }
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
     return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
+    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
+    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
     console.error('Cable TV error:', err.message);
     Sentry.captureException(err);
     res.status(500).json({ error: 'Cable TV service unavailable' });
@@ -627,8 +690,9 @@ app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
 // ── VTU — Electricity ────────────────────────────────────────────────────────
 app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { disco, meterNumber, meterType, amount } = req.body;
+    const { disco, meterNumber, meterType, amount, pin } = req.body;
     if (!disco || !meterNumber || !meterType || !amount) return res.status(400).json({ error: 'disco, meterNumber, meterType, amount required' });
+    await checkTransactionPin(req.user.id, pin);
 
     const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
@@ -646,14 +710,21 @@ app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) =>
       CallBackURL: '',
     };
 
+    const desc = `${disco} electricity — ${meterNumber}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
-      description: `${disco} electricity — ${meterNumber}`, endpoint: 'https://www.nellobytesystems.com/APIElectricityV1.asp', params,
+      description: desc, endpoint: 'https://www.nellobytesystems.com/APIElectricityV1.asp', params,
     });
-    if (result.outcome === 'success') return res.json({ success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'success') {
+      const user = await db.findUserById(req.user.id);
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Electricity', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
+      return res.json({ success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId });
+    }
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
     return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
   } catch (err) {
+    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
+    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
     console.error('Electricity error:', err.message);
     Sentry.captureException(err);
     res.status(500).json({ error: 'Electricity service unavailable' });
@@ -829,6 +900,17 @@ app.get('/api/referral', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Pending VTU Orders ───────────────────────────────────────────────────────
+app.get('/api/vtu/pending', authMiddleware, async (req, res) => {
+  try {
+    const orders = await db.getPendingVtuOrders(req.user.id);
+    res.json({ hasPending: orders.length > 0, orders });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Failed to check pending orders' });
+  }
+});
+
 // ── Analytics Summary ─────────────────────────────────────────────────────────
 app.get('/api/analytics/summary', authMiddleware, async (req, res) => {
   try {
@@ -846,9 +928,10 @@ const EXAM_PRICES   = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
 
 app.post('/api/vtu/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { examBody, quantity = 1 } = req.body;
+    const { examBody, quantity = 1, pin } = req.body;
     const ckBody = EXAM_BODY_MAP[examBody?.toUpperCase()];
     if (!ckBody) return res.status(400).json({ error: `Unsupported exam body: ${examBody}` });
+    await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
     const amount = EXAM_PRICES[ckBody] * qty;
 
@@ -870,10 +953,16 @@ app.post('/api/vtu/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
       },
     });
 
-    if (result.outcome === 'success') return res.json({ success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+    if (result.outcome === 'success') {
+      const user = await db.findUserById(req.user.id);
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Exam PIN', description, amount, reference: requestId, newBalance: result.balance });
+      return res.json({ success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+    }
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
     return res.status(400).json({ error: result.message, reference: requestId });
   } catch (err) {
+    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
+    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
     Sentry.captureException(err);
     res.status(500).json({ error: 'Exam PIN service error. Please try again.' });
   }
@@ -882,10 +971,11 @@ app.post('/api/vtu/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
 // ── Recharge Card PIN ─────────────────────────────────────────────────────────
 app.post('/api/vtu/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { network, amount, quantity = 1 } = req.body;
+    const { network, amount, quantity = 1, pin } = req.body;
     const networkMap2 = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
     const ckNetwork = networkMap2[network?.toUpperCase()];
     if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
+    await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
     const amt = parseFloat(amount);
     if (!amt || amt < 100) return res.status(400).json({ error: 'Minimum denomination is ₦100.' });
@@ -910,10 +1000,16 @@ app.post('/api/vtu/recharge-pin', authMiddleware, apiLimiter, async (req, res) =
       },
     });
 
-    if (result.outcome === 'success') return res.json({ success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+    if (result.outcome === 'success') {
+      const user = await db.findUserById(req.user.id);
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Recharge Card', description, amount: totalAmount, reference: requestId, newBalance: result.balance });
+      return res.json({ success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+    }
     if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
     return res.status(400).json({ error: result.message, reference: requestId });
   } catch (err) {
+    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
+    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
     Sentry.captureException(err);
     res.status(500).json({ error: 'Recharge PIN service error. Please try again.' });
   }
