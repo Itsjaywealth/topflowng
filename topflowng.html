@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TopFlowNG — Fast Utility Payments</title>
 <meta name="description" content="Buy airtime, data, pay electricity and TV subscriptions instantly. Fast, secure, reliable.">
 <meta name="theme-color" content="#00B67A">
@@ -520,15 +520,187 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
 /* PIN display on receipt */
 .receipt-pins{margin:12px 0;background:var(--mist);border-radius:10px;padding:14px;font:600 13px/1.6 var(--font);color:var(--ink);word-break:break-all}
 .copy-pins-btn{appearance:none;border:1px solid var(--green);background:transparent;color:var(--green);font:600 12px/1 var(--font);border-radius:6px;padding:6px 14px;cursor:pointer;margin-top:8px}
-</style>523 </style>
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Phase 5 — Base component styles, accessibility & polish.
+   Restores missing component styles, adds skeleton/toast systems, keyboard
+   affordances, stronger focus & link contrast, reduced-motion and print rules.
+   All existing IDs, classes, handlers and data contracts are preserved.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --focus-ring:3px solid rgba(245,166,35,.55);
+  --link-strong:#7A4E00;                 /* darker amber: AA contrast on white */
+  --skeleton-base:#EDF1F5;
+  --skeleton-shine:rgba(255,255,255,.72);
+  --toast-bg:#1C2531; --toast-success:#059669; --toast-error:#DC2626;
+}
+button,select{font-family:inherit}
+button{appearance:none}
+
+/* Primary / secondary / tertiary buttons (base layer) */
+.btn-primary{
+  min-height:52px;border:0;border-radius:10px;width:100%;cursor:pointer;
+  background:linear-gradient(180deg,var(--green) 0%,var(--green-dark) 100%);
+  color:var(--white);font:700 15px/1 var(--font);
+  box-shadow:0 8px 20px rgba(0,182,122,.28);
+  transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;
+}
+.btn-primary:hover{filter:brightness(1.04);box-shadow:0 10px 26px rgba(0,182,122,.34)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+.btn-cancel{
+  min-height:48px;border:1px solid #D9DEE6;border-radius:10px;width:100%;
+  background:var(--white);color:var(--ink);font:700 13px/1 var(--font);cursor:pointer;margin-top:10px;
+}
+.btn-cancel:hover{background:#F8FAFB}
+
+/* Loading spinner */
+.spinner{
+  display:inline-block;width:18px;height:18px;vertical-align:-3px;margin-right:8px;
+  border:2.5px solid rgba(255,255,255,.35);border-top-color:currentColor;
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Error / success regions (hidden until .show) */
+.auth-error,.auth-success,.svc-error,.svc-success,.modal-error{display:none;border-radius:8px}
+.auth-error.show,.auth-success.show,.svc-error.show,.svc-success.show,.modal-error.show{display:block}
+.auth-error,.svc-error,.modal-error{background:#FEF2F2;color:#B42318;padding:12px 14px;font:500 13px/1.45 var(--font)}
+.auth-success,.svc-success{background:#EAF6EF;color:#065F46;padding:12px 14px;font:500 13px/1.45 var(--font)}
+
+/* Bottom-sheet dialogs (fund wallet / change password) */
+.modal-card,.panel-card{
+  background:var(--white);width:100%;max-width:440px;margin:0 auto;
+  border-radius:18px 18px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom));
+  box-shadow:0 -12px 48px rgba(13,17,23,.18);
+}
+.modal-title,.panel-title{font:800 20px/1.15 var(--display);letter-spacing:-.5px;color:var(--ink);margin:0 0 6px}
+.modal-sub{font:400 13px/1.5 var(--font);color:var(--graphite);margin:0 0 18px}
+.modal-error{margin:0 0 14px}
+@media (min-width:768px){
+  .modal-card,.panel-card{border-radius:16px;padding:28px;margin:0 auto;max-width:460px}
+}
+
+/* Receipt details */
+.receipt-dots{display:flex;justify-content:center;margin:0 0 18px}
+.receipt-dots::before{
+  content:'';width:6px;height:6px;border-radius:50%;background:#D9DEE6;
+  box-shadow:10px 0 0 #D9DEE6,20px 0 0 #D9DEE6,30px 0 0 #D9DEE6,40px 0 0 #D9DEE6,50px 0 0 #D9DEE6;
+}
+.receipt-line{
+  display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-top:1px dashed #E8EBEF;
+  opacity:0;transform:translateY(4px);transition:opacity .3s ease,transform .3s ease;
+}
+.receipt-line.show{opacity:1;transform:none}
+.receipt-line-label{font:500 13px/1.4 var(--font);color:var(--graphite)}
+.receipt-line-value{font:700 13px/1.4 var(--font);color:var(--ink);text-align:right;word-break:break-word}
+.btn-close-receipt{
+  appearance:none;width:100%;min-height:50px;margin-top:18px;border:0;border-radius:10px;
+  background:var(--ink);color:var(--white);font:700 14px/1 var(--font);cursor:pointer;
+}
+.btn-close-receipt:hover{background:var(--ink-2)}
+.receipt-actions{display:flex;gap:8px;margin-top:14px}
+.receipt-actions button{
+  flex:1;min-height:44px;border:1px solid #D9DEE6;border-radius:10px;background:var(--white);
+  color:var(--ink);font:700 12px/1 var(--font);cursor:pointer;
+}
+.receipt-actions button:hover{background:#F8FAFB}
+
+/* Stronger link contrast on light surfaces */
+.section-link,.marketing-kicker{color:var(--link-strong)}
+.auth-footer-link a,.auth-link a{color:var(--link-strong)}
+
+/* Keyboard affordance for chip/preset/plan/filter controls */
+.network-chip,.amount-preset,.data-plan,.filter-chip{appearance:none}
+.network-chip:focus-visible,.amount-preset:focus-visible,.data-plan:focus-visible,
+.filter-chip:focus-visible,[role="button"]:focus-visible{outline:var(--focus-ring);outline-offset:2px}
+
+/* Skeleton loaders */
+.skeleton-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #EEF1F4}
+.skeleton{position:relative;overflow:hidden;background:var(--skeleton-base);border-radius:8px}
+.skeleton::after{
+  content:'';position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,var(--skeleton-shine),transparent);
+  animation:skeleton-shine 1.4s infinite;
+}
+.skeleton.sk-ic{width:34px;height:34px;border-radius:50%;flex-shrink:0}
+.skeleton.sk-line{height:14px;flex:1}
+.skeleton.sk-line.sk-w60{flex:0 0 60%}
+.skeleton.sk-line.sk-w30{flex:0 0 30%}
+@keyframes skeleton-shine{to{transform:translateX(100%)}}
+
+/* Toasts */
+#toast-root{
+  position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;
+  align-items:center;pointer-events:none;width:min(92vw,400px);
+}
+.toast{
+  max-width:100%;padding:12px 16px;border-radius:12px;background:var(--toast-bg);color:#fff;
+  font:600 13px/1.4 var(--font);box-shadow:0 12px 32px rgba(13,17,23,.24);
+  opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;
+}
+.toast.show{opacity:1;transform:none}
+.toast.success{background:var(--toast-success)}
+.toast.error{background:var(--toast-error)}
+
+/* Base bottom navigation (mobile dock). Desktop sidebar variant in design-system
+   media query still applies — this only supplies the fixed dock + base look. */
+@media (max-width:1023px){
+  .bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;align-items:stretch;
+    justify-content:space-around;min-height:calc(62px + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:56px;border:0;background:none;color:var(--graphite);cursor:pointer;
+  }
+  .nav-item.active{color:var(--green)}
+  .nav-icon{font-size:19px;line-height:1;display:block}
+}
+
+
+/* Tablet-only fix: the 760px two-column home grid overflows below 1024px
+   (min 430px activity column + 270px services + 72px gap > 768px viewport).
+   Keep services/activity stacked until the desktop layout takes over. */
+@media (min-width:760px) and (max-width:1023px){
+  .home-shell{display:block;padding-top:42px}
+  .home-activity{margin-top:36px}
+  .service-grid{grid-template-columns:1fr}
+  .service-tile{grid-template-columns:36px minmax(0,1fr);min-height:76px;padding:13px 0;border-right:0!important;border-bottom:1px solid #E2E6EC!important}
+  .service-tile:last-child{border-bottom:0!important}
+  .service-tile:nth-child(odd){border-right:0!important}
+  .service-tile:nth-child(-n+4){border-bottom:1px solid #E2E6EC!important}
+}
+
+/* Responsive refinements */
+@media (max-width:374px){
+  .marketing-actions .marketing-primary,.marketing-actions .marketing-secondary{width:100%}
+  .balance-amount{font-size:clamp(30px,9vw,36px)}
+}
+
+/* Reduced motion: flatten animations & transitions */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+  .receipt-line{opacity:1;transform:none}
+  .skeleton::after{animation:none}
+}
+
+/* Receipt printing / sharing */
+@media print{
+  body>*:not(#receipt-overlay){display:none!important}
+  #receipt-overlay{position:static;display:block;background:#fff}
+  .receipt-card{box-shadow:none;border-radius:0;padding:24px}
+  .receipt-line{opacity:1;transform:none}
+}
+</style>
 
 <!-- Google AdSense -->
 <script async
 src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8577457293875916"
 crossorigin="anonymous"></script>
 
-524 </head>
-525 <body>
 </head>
 <body>
 <div id="app">
@@ -587,13 +759,13 @@ crossorigin="anonymous"></script>
 
     <!-- Login -->
     <div class="auth-form active" id="form-login">
-      <div id="login-error" class="auth-error"></div>
+      <div id="login-error" class="auth-error" role="alert"></div>
       <div class="field">
-        <label>Email</label>
+        <label for="login-email">Email</label>
         <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
       </div>
       <div class="field">
-        <label>Password</label>
+        <label for="login-password">Password</label>
         <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button class="btn-primary" id="btn-login" onclick="handleLogin()">Log in</button>
@@ -604,25 +776,25 @@ crossorigin="anonymous"></script>
 
     <!-- Register -->
     <div class="auth-form" id="form-register">
-      <div id="register-error" class="auth-error"></div>
+      <div id="register-error" class="auth-error" role="alert"></div>
       <div class="field">
-        <label>Full name</label>
+        <label for="reg-name">Full name</label>
         <input type="text" id="reg-name" placeholder="Tunde Adeyemi" autocomplete="name">
       </div>
       <div class="field">
-        <label>Email</label>
+        <label for="reg-email">Email</label>
         <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
       </div>
       <div class="field">
-        <label>Phone</label>
+        <label for="reg-phone">Phone</label>
         <input type="tel" id="reg-phone" placeholder="08012345678" autocomplete="tel">
       </div>
       <div class="field">
-        <label>Password</label>
+        <label for="reg-password">Password</label>
         <input type="password" id="reg-password" placeholder="At least 6 characters" autocomplete="new-password">
       </div>
       <div class="field">
-        <label>Referral code <span style="color:var(--mid);font-weight:400">(optional)</span></label>
+        <label for="reg-referral">Referral code <span style="color:var(--mid);font-weight:400">(optional)</span></label>
         <input type="text" id="reg-referral" placeholder="e.g. TFNG-ABCD1234" autocomplete="off" style="text-transform:uppercase">
       </div>
       <button class="btn-primary" id="btn-register" onclick="handleRegister()">Create account</button>
@@ -630,11 +802,11 @@ crossorigin="anonymous"></script>
 
     <!-- Forgot Password -->
     <div class="auth-form" id="form-forgot">
-      <div id="forgot-error" class="auth-error"></div>
-      <div id="forgot-success" class="auth-success"></div>
+      <div id="forgot-error" class="auth-error" role="alert"></div>
+      <div id="forgot-success" class="auth-success" role="status" aria-live="polite"></div>
       <p style="font-size:14px;color:var(--mid);margin-bottom:20px;">Enter your email and we'll send you a reset link.</p>
       <div class="field">
-        <label>Email</label>
+        <label for="forgot-email">Email</label>
         <input type="email" id="forgot-email" placeholder="you@example.com">
       </div>
       <button class="btn-primary" id="btn-forgot" onclick="handleForgot()">Send reset link</button>
@@ -645,11 +817,11 @@ crossorigin="anonymous"></script>
 
     <!-- Reset Password -->
     <div class="auth-form" id="form-reset">
-      <div id="reset-error" class="auth-error"></div>
-      <div id="reset-success" class="auth-success"></div>
+      <div id="reset-error" class="auth-error" role="alert"></div>
+      <div id="reset-success" class="auth-success" role="status" aria-live="polite"></div>
       <div class="field">
-        <label>New password</label>
-        <input type="password" id="reset-password" placeholder="At least 6 characters">
+        <label for="reset-password">New password</label>
+        <input type="password" id="reset-password" placeholder="At least 6 characters" minlength="6" autocomplete="new-password">
       </div>
       <button class="btn-primary" id="btn-reset" onclick="handleReset()">Set new password</button>
     </div>
@@ -764,14 +936,14 @@ crossorigin="anonymous"></script>
       <button class="history-refresh" type="button" onclick="loadAllTxns(true)">Refresh</button>
     </div>
     <div class="filter-chips">
-      <div class="filter-chip active" onclick="filterTxns('all',this)">All</div>
-      <div class="filter-chip" onclick="filterTxns('airtime',this)">Airtime</div>
-      <div class="filter-chip" onclick="filterTxns('data',this)">Data</div>
-      <div class="filter-chip" onclick="filterTxns('electricity',this)">Electricity</div>
-      <div class="filter-chip" onclick="filterTxns('cable',this)">Cable TV</div>
-      <div class="filter-chip" onclick="filterTxns('exam-pin',this)">Exam PINs</div>
-      <div class="filter-chip" onclick="filterTxns('recharge-pin',this)">Recharge Cards</div>
-      <div class="filter-chip" onclick="filterTxns('credit',this)">Top-ups</div>
+      <div role="button" tabindex="0" class="filter-chip active" onclick="filterTxns('all',this)">All</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('airtime',this)">Airtime</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('data',this)">Data</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('electricity',this)">Electricity</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('cable',this)">Cable TV</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('exam-pin',this)">Exam PINs</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('recharge-pin',this)">Recharge Cards</div>
+      <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('credit',this)">Top-ups</div>
     </div>
     <div class="txn-list" id="all-txns">
       <div class="txn-empty">Loading...</div>
@@ -869,26 +1041,26 @@ crossorigin="anonymous"></script>
     <div class="svc-title">Buy airtime</div>
   </div>
   <div class="svc-body">
-    <div id="svc-airtime-error" class="svc-error"></div>
+    <div id="svc-airtime-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Network</label>
       <div class="network-chips">
-        <div class="network-chip selected" onclick="selectNet(this,'airtime')">MTN</div>
-        <div class="network-chip" onclick="selectNet(this,'airtime')">Glo</div>
-        <div class="network-chip" onclick="selectNet(this,'airtime')">Airtel</div>
-        <div class="network-chip" onclick="selectNet(this,'airtime')">9mobile</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'airtime')">MTN</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'airtime')">Glo</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'airtime')">Airtel</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'airtime')">9mobile</div>
       </div>
     </div>
-    <div class="field"><label>Phone number</label>
+    <div class="field"><label for="airtime-phone">Phone number</label>
       <input type="tel" id="airtime-phone" placeholder="08031234567" maxlength="11">
     </div>
-    <div class="field"><label>Amount</label>
+    <div class="field"><label for="airtime-amount">Amount</label>
       <div class="amount-presets">
-        <div class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦100</div>
-        <div class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦200</div>
-        <div class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦500</div>
-        <div class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦1,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦2,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦5,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦100</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦200</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦500</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦1,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦2,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'airtime-amount')">₦5,000</div>
       </div>
       <input type="number" id="airtime-amount" placeholder="or enter amount" min="50" max="50000" style="margin-top:0">
     </div>
@@ -905,16 +1077,16 @@ crossorigin="anonymous"></script>
     <div class="svc-title">Buy data</div>
   </div>
   <div class="svc-body">
-    <div id="svc-data-error" class="svc-error"></div>
+    <div id="svc-data-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Network</label>
       <div class="network-chips">
-        <div class="network-chip selected" onclick="selectNet(this,'data');loadDataPlans()">MTN</div>
-        <div class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">Glo</div>
-        <div class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">Airtel</div>
-        <div class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">9mobile</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'data');loadDataPlans()">MTN</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">Glo</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">Airtel</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">9mobile</div>
       </div>
     </div>
-    <div class="field"><label>Phone number</label>
+    <div class="field"><label for="data-phone">Phone number</label>
       <input type="tel" id="data-phone" placeholder="08031234567" maxlength="11">
     </div>
     <div class="field"><label>Choose plan</label>
@@ -933,33 +1105,33 @@ crossorigin="anonymous"></script>
     <div class="svc-title">Pay electricity</div>
   </div>
   <div class="svc-body">
-    <div id="svc-electricity-error" class="svc-error"></div>
+    <div id="svc-electricity-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Disco</label>
       <div class="network-chips" style="flex-wrap:wrap">
-        <div class="network-chip selected" onclick="selectNet(this,'electricity')">IKEDC</div>
-        <div class="network-chip" onclick="selectNet(this,'electricity')">EKEDC</div>
-        <div class="network-chip" onclick="selectNet(this,'electricity')">AEDC</div>
-        <div class="network-chip" onclick="selectNet(this,'electricity')">EEDC</div>
-        <div class="network-chip" onclick="selectNet(this,'electricity')">PHEDC</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'electricity')">IKEDC</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">EKEDC</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">AEDC</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">EEDC</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">PHEDC</div>
       </div>
     </div>
     <div class="field"><label>Meter type</label>
       <div class="network-chips">
-        <div class="network-chip selected" onclick="selectNet(this,'meter-type')">Prepaid</div>
-        <div class="network-chip" onclick="selectNet(this,'meter-type')">Postpaid</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'meter-type')">Prepaid</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'meter-type')">Postpaid</div>
       </div>
     </div>
-    <div class="field"><label>Meter number</label>
+    <div class="field"><label for="elec-meter">Meter number</label>
       <input type="text" id="elec-meter" placeholder="12345678901">
     </div>
-    <div class="field"><label>Amount</label>
+    <div class="field"><label for="elec-amount">Amount</label>
       <div class="amount-presets">
-        <div class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦1,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦2,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦5,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦10,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦20,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦50,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦1,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦2,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦5,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦10,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦20,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'elec-amount')">₦50,000</div>
       </div>
       <input type="number" id="elec-amount" placeholder="or enter amount" min="500">
     </div>
@@ -976,15 +1148,15 @@ crossorigin="anonymous"></script>
     <div class="svc-title">Pay cable TV</div>
   </div>
   <div class="svc-body">
-    <div id="svc-cable-error" class="svc-error"></div>
+    <div id="svc-cable-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Provider</label>
       <div class="network-chips">
-        <div class="network-chip selected" onclick="selectNet(this,'cable');loadCablePlans()">DStv</div>
-        <div class="network-chip" onclick="selectNet(this,'cable');loadCablePlans()">GOtv</div>
-        <div class="network-chip" onclick="selectNet(this,'cable');loadCablePlans()">StarTimes</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'cable');loadCablePlans()">DStv</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'cable');loadCablePlans()">GOtv</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'cable');loadCablePlans()">StarTimes</div>
       </div>
     </div>
-    <div class="field"><label>Smart card / IUC number</label>
+    <div class="field"><label for="cable-card">Smart card / IUC number</label>
       <input type="text" id="cable-card" placeholder="1234567890">
     </div>
     <div class="field"><label>Package</label>
@@ -1003,13 +1175,13 @@ crossorigin="anonymous"></script>
     <div class="svc-title">Buy Exam PINs</div>
   </div>
   <div class="svc-body">
-    <div id="svc-exam-error" class="svc-error"></div>
+    <div id="svc-exam-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Exam body</label>
       <div class="network-chips exam-body-chips">
-        <div class="network-chip selected" onclick="selectNet(this,'exam-body');updateExamPrice()">WAEC</div>
-        <div class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">NECO</div>
-        <div class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">NABTEB</div>
-        <div class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">JAMB</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'exam-body');updateExamPrice()">WAEC</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">NECO</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">NABTEB</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">JAMB</div>
       </div>
     </div>
     <div class="field">
@@ -1035,21 +1207,21 @@ crossorigin="anonymous"></script>
     <div class="svc-title">Recharge Cards</div>
   </div>
   <div class="svc-body">
-    <div id="svc-recharge-error" class="svc-error"></div>
+    <div id="svc-recharge-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Network</label>
       <div class="network-chips">
-        <div class="network-chip selected" onclick="selectNet(this,'recharge-net')">MTN</div>
-        <div class="network-chip" onclick="selectNet(this,'recharge-net')">Glo</div>
-        <div class="network-chip" onclick="selectNet(this,'recharge-net')">Airtel</div>
-        <div class="network-chip" onclick="selectNet(this,'recharge-net')">9mobile</div>
+        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'recharge-net')">MTN</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'recharge-net')">Glo</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'recharge-net')">Airtel</div>
+        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'recharge-net')">9mobile</div>
       </div>
     </div>
-    <div class="field"><label>Denomination</label>
+    <div class="field"><label for="recharge-amount">Denomination</label>
       <div class="amount-presets">
-        <div class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦100</div>
-        <div class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦200</div>
-        <div class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦500</div>
-        <div class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦1,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦100</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦200</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦500</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'recharge-amount')">₦1,000</div>
       </div>
       <input type="number" id="recharge-amount" placeholder="or enter denomination" min="100">
     </div>
@@ -1066,7 +1238,7 @@ crossorigin="anonymous"></script>
 </div>
 
 <!-- ── RECEIPT OVERLAY ── -->
-<div class="receipt-overlay" id="receipt-overlay">
+<div class="receipt-overlay" id="receipt-overlay" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
   <div class="receipt-card">
     <div class="receipt-dots"></div>
     <div class="receipt-check" id="receipt-check">✓</div>
@@ -1079,20 +1251,20 @@ crossorigin="anonymous"></script>
 </div>
 
 <!-- ── FUND WALLET MODAL ── -->
-<div class="modal-overlay" id="fund-modal">
+<div class="modal-overlay" id="fund-modal" role="dialog" aria-modal="true" aria-labelledby="fund-modal-title">
   <div class="modal-card">
-    <div class="modal-title">Fund your wallet</div>
+    <div class="modal-title" id="fund-modal-title">Fund your wallet</div>
     <div class="modal-sub">Pay with card, bank transfer, or USSD via Paystack.</div>
-    <div id="fund-modal-error" class="modal-error"></div>
+    <div id="fund-modal-error" class="modal-error" role="alert"></div>
     <div class="field">
-      <label>Amount (₦)</label>
+      <label for="fund-amount">Amount (₦)</label>
       <div class="amount-presets" style="margin-bottom:12px">
-        <div class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦500</div>
-        <div class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦1,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦2,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦5,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦10,000</div>
-        <div class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦20,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦500</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦1,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦2,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦5,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦10,000</div>
+        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦20,000</div>
       </div>
       <input type="number" id="fund-amount" placeholder="or enter amount" min="100">
     </div>
@@ -1102,15 +1274,15 @@ crossorigin="anonymous"></script>
 </div>
 
 <!-- ── CHANGE PASSWORD PANEL ── -->
-<div class="panel-overlay" id="change-pass-panel">
+<div class="panel-overlay" id="change-pass-panel" role="dialog" aria-modal="true" aria-labelledby="cp-panel-title">
   <div class="panel-card">
-    <div class="panel-title">Change password</div>
-    <div id="cp-error" class="auth-error"></div>
-    <div id="cp-success" class="auth-success"></div>
-    <div class="field"><label>Current password</label>
+    <div class="panel-title" id="cp-panel-title">Change password</div>
+    <div id="cp-error" class="auth-error" role="alert"></div>
+    <div id="cp-success" class="auth-success" role="status" aria-live="polite"></div>
+    <div class="field"><label for="cp-current">Current password</label>
       <input type="password" id="cp-current" placeholder="••••••••">
     </div>
-    <div class="field"><label>New password</label>
+    <div class="field"><label for="cp-new">New password</label>
       <input type="password" id="cp-new" placeholder="At least 6 characters">
     </div>
     <button class="btn-primary" id="btn-cp" onclick="handleChangePassword()">Update password</button>
@@ -1493,7 +1665,7 @@ function filterTxns(f, el) {
 function loadMoreTxns() { loadAllTxns(false); }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────
-function goTab(tab) {
+ function _goTab(tab) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('screen-'+tab).classList.add('active');
@@ -1591,7 +1763,7 @@ function loadDataPlans() {
   const plans = DATA_PLANS[net] || [];
   selectedDataPlan = null;
   document.getElementById('data-plan-list').innerHTML = plans.map((p,i) =>
-    `<div class="data-plan" onclick="selectPlan(this,'data','${p.code}',${p.price})">
+    `<div role="button" tabindex="0" class="data-plan" onclick="selectPlan(this,'data','${p.code}',${p.price})">
       <div class="plan-name">${p.name}</div>
       <div class="plan-price">${fmt(p.price)}</div>
     </div>`
@@ -1603,7 +1775,7 @@ function loadCablePlans() {
   const plans = CABLE_PLANS[prov] || [];
   selectedCablePlan = null;
   document.getElementById('cable-plan-list').innerHTML = plans.map(p =>
-    `<div class="data-plan" onclick="selectPlan(this,'cable','${p.code}',${p.price})">
+    `<div role="button" tabindex="0" class="data-plan" onclick="selectPlan(this,'cable','${p.code}',${p.price})">
       <div class="plan-name">${p.name}</div>
       <div class="plan-price">${fmt(p.price)}</div>
     </div>`
@@ -2057,7 +2229,6 @@ async function setTransactionPin() {
 }
 
 // Override goTab to load account data on account tab
-const _goTab = goTab;
 function goTab(tab) {
   _goTab(tab);
   if (tab === 'account') {
@@ -2246,10 +2417,10 @@ init();
 </script>
 
 <!-- ── PIN PROMPT OVERLAY ── -->
-<div class="receipt-overlay" id="pin-prompt-overlay" style="z-index:60">
+<div class="receipt-overlay" id="pin-prompt-overlay" style="z-index:60" role="dialog" aria-modal="true" aria-labelledby="pin-prompt-title">
   <div class="receipt-card" style="padding:28px 24px 36px;border-radius:20px 20px 0 0">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <h3 style="font:800 18px/1 var(--display);letter-spacing:-.4px;color:var(--ink);margin:0">Enter Transaction PIN</h3>
+      <h3 id="pin-prompt-title" style="font:800 18px/1 var(--display);letter-spacing:-.4px;color:var(--ink);margin:0">Enter Transaction PIN</h3>
       <button onclick="cancelPinPrompt()" style="border:0;background:transparent;color:var(--graphite);font-size:22px;cursor:pointer;line-height:1;padding:0">×</button>
     </div>
     <p style="font:400 13px/1.5 var(--font);color:var(--graphite);margin:0 0 20px">Enter your 4–6 digit PIN to authorise this purchase.</p>

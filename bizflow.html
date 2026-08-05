@@ -26,7 +26,7 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);min-hei
 
 /* ── Layout ─────────────────────────────────────────────────────────────────── */
 #sidebar{width:240px;height:100vh;background:var(--slate);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:10;flex-shrink:0}
-#main{margin-left:240px;flex:1;min-height:100vh}
+#main{margin-left:240px;flex:1;min-height:100vh;min-width:0}
 .sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
 .sidebar-wordmark{font:800 18px/1 var(--font);color:var(--white);letter-spacing:-.5px}
 .sidebar-wordmark span{color:var(--lime)}
@@ -183,6 +183,20 @@ textarea.field-input{min-height:80px;padding:10px 12px;resize:vertical;line-heig
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:2px}
+
+/* ── Phase 5 polish: a11y + responsive hardening ─────────────────────────── */
+/* Keyboard affordance for focusable controls */
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+textarea:focus-visible,[role="button"]:focus-visible{
+  outline:3px solid rgba(37,99,235,.45);outline-offset:2px;
+}
+/* Keep tables/wide content inside their card; the card scrolls instead of the page */
+.card,.card-body{min-width:0}
+.card-body{overflow-x:auto}
+.table{min-width:560px}
+@media(max-width:640px){.table{min-width:480px}}
+/* Grids never overflow on small screens */
+.form-grid-2,.form-grid-3{min-width:0}
 </style>
 </head>
 <body>

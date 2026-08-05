@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="TopFlowNG Admin — manage users, transactions, and wallet services.">
 <title>TopFlowNG Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,9 +38,13 @@ a{color:inherit;text-decoration:none}
 .field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
 .field input{
   width:100%;padding:10px 14px;border:1.5px solid #D1D5DB;border-radius:8px;
-  font-size:15px;outline:none;transition:border-color .15s;
+  font-size:15px;outline:none;transition:border-color .15s,box-shadow .15s;
 }
-.field input:focus{border-color:var(--ink)}
+.field input:focus{border-color:var(--ink);box-shadow:0 0 0 3px rgba(245,166,35,.35)}
+a:focus-visible,.nav-item:focus-visible,.btn:focus-visible,input:focus-visible,.page-btn:focus-visible,.logout-btn:focus-visible{
+  outline:3px solid rgba(245,166,35,.5);outline-offset:2px;
+}
+.nav-item:focus-visible{outline-color:rgba(245,166,35,.7)}
 .btn{
   width:100%;padding:12px;background:var(--ink);color:var(--white);
   border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;
@@ -217,15 +222,15 @@ button:focus-visible,input:focus-visible,select:focus-visible { outline:3px soli
     <h1>TopFlowNG <span style="color:var(--amber)">Admin</span></h1>
     <p>Sign in with your admin account</p>
     <div class="field">
-      <label>Email</label>
+      <label for="admin-email">Email</label>
       <input type="email" id="admin-email" placeholder="admin@topflowng.com" autocomplete="email">
     </div>
     <div class="field">
-      <label>Password</label>
+      <label for="admin-password">Password</label>
       <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn" id="login-btn" onclick="adminLogin()">Sign in</button>
-    <p class="error-msg" id="login-error"></p>
+    <button type="button" class="btn" id="login-btn" onclick="adminLogin()">Sign in</button>
+    <p class="error-msg" id="login-error" role="alert"></p>
   </div>
 </div>
 
@@ -234,15 +239,15 @@ button:focus-visible,input:focus-visible,select:focus-visible { outline:3px soli
   <aside class="sidebar">
     <div class="sidebar-logo">Top<span>Flow</span>NG</div>
     <nav style="margin-top:16px">
-      <div class="nav-item active" onclick="showTab('overview')" id="nav-overview">
+      <div class="nav-item active" onclick="showTab('overview')" id="nav-overview" role="button" tabindex="0">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Overview
       </div>
-      <div class="nav-item" onclick="showTab('transactions')" id="nav-transactions">
+      <div class="nav-item" onclick="showTab('transactions')" id="nav-transactions" role="button" tabindex="0">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
         Transactions
       </div>
-      <div class="nav-item" onclick="showTab('users')" id="nav-users">
+      <div class="nav-item" onclick="showTab('users')" id="nav-users" role="button" tabindex="0">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Users
       </div>
@@ -411,8 +416,7 @@ function showErr(msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 
-function adminLogout() {
-  const t = TOKEN;
+function adminLogout() {  const t = TOKEN;
   TOKEN = ''; localStorage.removeItem('admin_token');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -616,6 +620,15 @@ function showTab(tab) {
     document.getElementById('nav-'+t).classList.toggle('active', t===tab);
   });
 }
+
+// Keyboard activation for roving nav-items (role=button + tabindex)
+document.addEventListener('keydown', (e) => {
+  const el = e.target.closest('.nav-item');
+  if (el && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    el.click();
+  }
+});
 
 // ── UTILS ──────────────────────────────────────────────────────────────────
 function fmt(n) { return Number(n).toLocaleString('en-NG', { minimumFractionDigits:2, maximumFractionDigits:2 }); }

@@ -465,3 +465,74 @@ shared `topflowng_test` DB untouched by migrations; all provider/email layers mo
 external calls); all DBs throwaway.
 
 **Phase 4E complete at checkpoint — UNCOMMITTED. Do not commit, push, deploy, or begin Phase 5.**
+
+---
+
+## Phase 5 - World-Class UI/UX Redesign (UI & accessibility pass)
+
+**Status: COMPLETE at checkpoint - UNCOMMITTED. Do not commit, push, deploy, or begin Phase 6.**
+
+Backend untouched: database.js, auth, wallet, VTU lifecycle, Paystack, migrations, AI, and
+business rules were not modified. Frontend files changed only:
+topflowng.html, admin.html, bizflow.html (no new files; public/ already allow-listed and
+nothing added there; manifest.json/sw.js/icons/ unchanged).
+
+### Audit summary (before)
+- Missing base component CSS (UA-default buttons/inputs), malformed markup (duplicated
+  </head>/<body>, stray </style> numeric literals), maximum-scale=1.0 viewport,
+  no <meta name="description">, unlabeled inputs, chips/presets not keyboard-focusable,
+  .bottom-nav base fixed-dock rule absent, tablet 2-column home grid overflowed below 1024px,
+  bizflow.html #main had no min-width:0 (overflowed at 320px), dead skeleton/badge/toast
+  styles, link contrast below AA.
+
+### Changes made
+topflowng.html:
+- Fixed malformed head markup (</head>/<body> deduplicated, stray </style> literal removed).
+- Removed maximum-scale=1.0 from viewport meta (a11y).
+- Added Phase 5 CSS block: tokens (--focus-ring, --link-strong, skeleton/toast palette),
+  base .btn-primary/.btn-cancel, .spinner, error/success display toggles, .modal-card/
+  .panel-card dialogs, receipt-dots/lines, skeleton loaders, toast root, focus-visible
+  affordances for chips/presets/plans/filters, stronger link contrast, prefers-reduced-motion
+  and print rules, tablet 760-1023px home-grid fix, and a mobile base .bottom-nav fixed dock
+  (scoped <=1023px so the desktop sidebar variant is untouched).
+- Added role="button" tabindex="0" to all 58 chip/preset/filter/plan controls.
+- Added for attributes tying every label to its input (login/register/forgot/reset + all six
+  service screens + fund modal + change-password panel) - 19 labelled inputs.
+- Added role="dialog" aria-modal="true" aria-labelledby to receipt/fund/change-password/PIN
+  overlays and role="alert"/aria-live to error/success regions.
+- Fixed pre-existing bug: the password-reset form contained a Phone number field (#data-phone)
+  while handleReset() reads #reset-password - reset would throw. Replaced with a labelled
+  New password input.
+- Fixed pre-existing critical bug: two "function goTab" declarations plus const _goTab = goTab
+  caused the wrapper to alias itself (infinite recursion, "Maximum call stack size exceeded") -
+  every tab switch/navigation broke and both auth+main screens rendered at once. Renamed the
+  base impl to _goTab and dropped the alias; navigation now works at every width.
+
+admin.html:
+- Added <meta name="description">, label for attributes, role="alert" on login error,
+  type="button" on the sign-in button, focus-visible ring, keyboard activation (Enter/Space)
+  for sidebar nav-items.
+
+bizflow.html:
+- Added focus-visible styling, #main{min-width:0} (fixes 320px horizontal overflow from the
+  flex child refusing to shrink), card-level overflow-x:auto so wide tables scroll inside
+  their card, and a .table min-width floor. Existing responsive sidebar verified intact.
+
+### Verification (all PASS)
+- Backend suite: node --test --test-timeout=60000 test/{auth,smoke,webhook,migrations,idempotency,lifecycle}.test.js -> 77/77 pass, 0 fail (backend untouched).
+- Static allow-list (HTTP 200): /, /topflowng.html, /admin.html, /bizflow.html, /manifest.json,
+  /sw.js, /icons/icon-192.png, /icons/icon-512.png.
+- Private paths return 404 (source/env blocked); /migrations, /test, /INTERNAL-PLAN.md return
+  only the SPA shell (no source content leaked).
+- All 6 purchase flows via mocked provider (airtime, data, electricity, cable, exam-pin,
+  recharge-pin): each HTTP 200, correct message, wallet balance decremented, reference returned.
+- Auth: non-admin /api/admin/stats -> 403; no token -> 401; admin login -> 200 isAdmin:true;
+  admin stats/transactions/users -> 200.
+- Responsive (Playwright, 320/375/768/1024/1440): no horizontal overflow on landing, dashboard,
+  admin, or bizflow at any width; touch targets >=24px; nav is a fixed dock on mobile and the
+  ink sidebar on desktop; focus ring solid 3px amber; 0 unlabeled inputs, 0 empty-name buttons;
+  aria-live + dialog roles present.
+- PWA/API/key preservation: all IDs, API paths, event handlers, tf_token/admin_token
+  localStorage keys, and the static allow-list are unchanged.
+
+**Phase 5 complete at checkpoint - UNCOMMITTED. Stop before Phase 6.**
