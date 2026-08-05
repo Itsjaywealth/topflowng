@@ -1,0 +1,86 @@
+/**
+ * TopFlowNG — Phase 1 & 2 regression smoke tests.
+ *
+ * Confirms the public contracts that Phase 3 must not break:
+ * - /api/health shape
+ * - static allow-list serves the SPA, denies source/env/backups
+ * - error responses stay { error: string }-shaped
+ * - login response stays { token, user }-shaped
+ */
+
+'use strict';
+
+const { test, before, after } = require('node:test');
+const assert = require('node:assert');
+
+const h = require('./helpers/load-app');
+
+const { mockDb } = h;
+
+before(async () => {
+  mockDb.__reset();
+  await h.waitForServer();
+});
+
+after(() => {
+  h.closeServer();
+});
+
+test('health: returns ok with timestamp', async () => {
+  const res = await fetch(h.BASE_URL + '/api/health');
+  assert.strictEqual(res.status, 200);
+  const data = await res.json();
+  assert.strictEqual(data.status, 'ok');
+  assert.ok(data.ts);
+});
+
+test('static: whitelisted SPA shell is served', async () => {
+  const res = await fetch(h.BASE_URL + '/topflowng.html');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('<!DOCTYPE html>'));
+});
+
+test('static: admin page is served', async () => {
+  const res = await fetch(h.BASE_URL + '/admin.html');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('TopFlowNG Admin'));
+});
+
+test('static: server.js source is not exposed', async () => {
+  const res = await fetch(h.BASE_URL + '/server.js');
+  assert.strictEqual(res.status, 404);
+});
+
+test('static: .env is not exposed', async () => {
+  const res = await fetch(h.BASE_URL + '/.env');
+  assert.strictEqual(res.status, 404);
+});
+
+test('static: backup files are not exposed', async () => {
+  const res = await fetch(h.BASE_URL + '/server.js.backup-20260804-114736');
+  assert.strictEqual(res.status, 404);
+});
+
+test('error contract: unknown API route returns { error } JSON (SPA fallback excluded)', async () => {
+  // /api/* falls through to the SPA fallback in the current contract, so we
+  // assert the documented error shape on an authenticated-route rejection.
+  const res = await fetch(h.BASE_URL + '/api/user/profile');
+  assert.strictEqual(res.status, 401);
+  const data = await res.json();
+  assert.deepStrictEqual(Object.keys(data), ['error']);
+  assert.strictEqual(typeof data.error, 'string');
+});
+
+test('login contract: success returns { token, user }', async () => {
+  mockDb.__reset();
+  await h.createUserViaDb({ fullName: 'Ada', email: 'smoke@example.com', phone: '08166666666', password: 'secret123' });
+  const r = await h.login('smoke@example.com', 'secret123');
+  assert.strictEqual(r.status, 200);
+  assert.ok(r.data.token);
+  assert.ok(r.data.user);
+  assert.strictEqual(typeof r.data.user.id, 'number');
+  assert.strictEqual(typeof r.data.user.wallet, 'number');
+  assert.strictEqual(typeof r.data.user.isAdmin, 'boolean');
+});

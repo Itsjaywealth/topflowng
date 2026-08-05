@@ -28,16 +28,21 @@ const helmet = require('helmet');
 const path = require('path');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const axios = require('axios');
 
 const db = require('./database');
 const logger = require('./lib/logger');
+const security = require('./services/security');
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 const { authLimiter, apiLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
 const { queryClubkonnectOrder } = require('./services/clubkonnect');
 const { sendEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
+const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
+
+const DUMMY_BCRYPT_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEeO7BmW2g8K7P3XyZGkN6QqKxE6y1yJ2eC';
 
 const app = express();
 app.set('trust proxy', config.trustProxy ? 1 : 0); // Trust proxy for rate limiting
@@ -117,15 +122,20 @@ app.get('/api/health', (req, res) => {
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { fullName, email, phone, password, referralCode } = req.body;
-    if (!fullName || !email || !phone || !password)
+    const normalizedEmail = normalizeEmail(email);
+    if (!fullName || !normalizedEmail || !phone || !password)
       return sendError(res, 400, 'All fields are required');
+    if (!isValidEmail(normalizedEmail))
+      return sendError(res, 400, 'Enter a valid email address');
+    if (!isValidPhone(phone))
+      return sendError(res, 400, 'Enter a valid phone number');
     if (password.length < 6)
       return sendError(res, 400, 'Password must be at least 6 characters');
 
-    const existing = await db.findUserByEmail(email);
+    const existing = await db.findUserByEmail(normalizedEmail);
     if (existing) return sendError(res, 409, 'Email already registered');
 
-    const existingPhone = await db.findUserByPhone(phone);
+    const existingPhone = await db.findUserByPhone(phone.trim());
     if (existingPhone) return sendError(res, 409, 'Phone already registered');
 
     // Resolve referrer (optional — invalid codes are silently ignored)
@@ -135,7 +145,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       if (referrer) referredBy = referrer.id;
     }
 
-    const user  = await db.createUser({ fullName, email, phone, password, referredBy });
+    const user  = await db.createUser({ fullName, email: normalizedEmail, phone: phone.trim(), password, referredBy });
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.status(201).json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
@@ -149,15 +159,27 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || !password)
       return sendError(res, 400, 'Email and password required');
 
-    const user = await db.findUserByEmail(email);
-    if (!user) return sendError(res, 401, 'Invalid credentials');
+    if (security.isLockedOut(normalizedEmail)) {
+      return sendError(res, 429, 'Too many failed attempts. Please try again in a few minutes.');
+    }
+
+    const user = await db.findUserByEmail(normalizedEmail);
+    if (!user) {
+      await security.recordLoginFailure(normalizedEmail);
+      return sendError(res, 401, 'Invalid credentials');
+    }
 
     const ok = await db.verifyPassword(user, password);
-    if (!ok) return sendError(res, 401, 'Invalid credentials');
+    if (!ok) {
+      await security.recordLoginFailure(normalizedEmail);
+      return sendError(res, 401, 'Invalid credentials');
+    }
 
+    security.resetLoginFailures(normalizedEmail);
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
@@ -169,12 +191,16 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
 app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
     if (!email) return sendError(res, 400, 'Email is required');
 
     const user = await db.findUserByEmail(email);
     // Always respond 200 to prevent user enumeration
-    if (!user) return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    if (!user) {
+      // Burn a work factor matching the real-path to blunt timing leaks.
+      await new Promise((resolve) => bcrypt.compare('x', DUMMY_BCRYPT_HASH).then(resolve));
+      return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    }
 
     const token     = crypto.randomBytes(32).toString('hex');
     const resetUrl  = `${config.appUrl}/?reset=${token}`;
@@ -235,6 +261,11 @@ app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to change password');
   }
+});
+
+app.post('/api/auth/logout', authMiddleware, async (req, res) => {
+  security.revokeToken(req.token);
+  res.json({ message: 'Logged out successfully.' });
 });
 
 // ── User Profile & Wallet ────────────────────────────────────────────────────

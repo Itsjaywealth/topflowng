@@ -56,6 +56,13 @@ const config = {
     apiMax: num(process.env.API_RATE_MAX, 60),
   },
 
+  auth: {
+    // Repeated login failures within the window trigger a temporary lockout.
+    loginMaxFailures: num(process.env.AUTH_LOCKOUT_MAX_FAILURES, 5),
+    lockoutWindowMs: num(process.env.AUTH_LOCKOUT_WINDOW_MS, 15 * 60 * 1000),
+    lockoutDurationMs: num(process.env.AUTH_LOCKOUT_DURATION_MS, 15 * 60 * 1000),
+  },
+
   sentry: {
     dsn: str(process.env.SENTRY_DSN, null),
     tracesSampleRate: num(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.2),

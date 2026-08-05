@@ -1,8 +1,9 @@
 /**
  * TopFlowNG — Auth + authorization middleware.
  *
- * Extracted from server.js without behaviour change. JWT payload is verified
- * with the configured secret; admin guard loads the real user from the DB.
+ * JWT payload is verified with the configured secret; revoked tokens are
+ * rejected; admin guard loads the real user from the DB. Continuous with the
+ * Phase 2 extraction — behaviour of protected routes is unchanged.
  */
 
 'use strict';
@@ -11,7 +12,8 @@ const jwt = require('jsonwebtoken');
 
 const config = require('../config');
 const db = require('../database');
-const { sendError, unauthorized, forbidden } = require('../lib/errors');
+const security = require('../services/security');
+const { sendError } = require('../lib/errors');
 
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
@@ -19,8 +21,12 @@ function authMiddleware(req, res, next) {
   if (!token) {
     return sendError(res, 401, 'No token provided');
   }
+  if (security.isTokenRevoked(token)) {
+    return sendError(res, 401, 'Invalid or expired token');
+  }
   try {
     req.user = jwt.verify(token, config.jwt.secret);
+    req.token = token;
     return next();
   } catch {
     return sendError(res, 401, 'Invalid or expired token');
@@ -32,6 +38,9 @@ async function adminMiddleware(req, res, next) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) {
     return sendError(res, 401, 'No token provided');
+  }
+  if (security.isTokenRevoked(token)) {
+    return sendError(res, 401, 'Invalid or expired token');
   }
   try {
     const payload = jwt.verify(token, config.jwt.secret);
