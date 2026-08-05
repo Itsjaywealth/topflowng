@@ -7,3 +7,9 @@ topflowng.db
 # Local backups — never commit or deploy these
 *.backup-*
 *.bak
+
+# Test / CI artifacts
+test-results/
+playwright-report/
+coverage/
+.nyc_output/

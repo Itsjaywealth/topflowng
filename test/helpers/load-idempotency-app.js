@@ -12,19 +12,16 @@
 
 const path = require('path');
 const { execFileSync } = require('node:child_process');
-const { Pool } = require('pg');
 
+const pgHelper = require('./pg');
 const ROOT = path.resolve(__dirname, '..', '..');
 
-const PG_HOST = process.env.PG_HOST || '127.0.0.1';
-const PG_PORT = Number(process.env.PG_PORT || 55432);
-const PG_USER = process.env.PG_USER || 'postgres';
-const ADMIN_DB = 'postgres';
-const DB_NAME = `topflowng_idem_${process.pid}`;
-
-const DATABASE_URL = `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${DB_NAME}`;
+const DB_PREFIX = 'topflowng_idem';
 const TEST_PORT = String(Number(process.pid) % 50000 + 10000);
-const PSQL = '/opt/homebrew/bin/psql';
+
+// Create the throwaway DB synchronously BEFORE server.js is required (it
+// connects on boot). No psql binary needed — uses only the `pg` package.
+const DATABASE_URL = pgHelper.createDatabaseSync(DB_PREFIX);
 
 // ── Environment (set before config.js / database.js are required) ──────────
 process.env.NODE_ENV = 'test';
@@ -40,19 +37,6 @@ process.env.SENTRY_DSN = '';
 process.env.PAYSTACK_WEBHOOK_SECRET = 'test-webhook-secret';
 process.env.PAYSTACK_SECRET_KEY = 'test-secret-key';
 process.env.DATABASE_URL = DATABASE_URL;
-
-function psql(db, sql) {
-  return execFileSync(PSQL, ['-h', PG_HOST, '-p', String(PG_PORT), '-U', PG_USER, '-d', db, '-tA', '-c', sql], {
-    env: { ...process.env, PGPASSWORD: '' },
-    encoding: 'utf8',
-  }).trim();
-}
-
-// Create the throwaway DB BEFORE server.js is required (server.js connects on
-// boot). initDB (base schema) runs when the server boots; migrations (001
-// idempotency schema) are applied by the test in before() via applyMigrations.
-psql(ADMIN_DB, `DROP DATABASE IF EXISTS ${DB_NAME}`);
-psql(ADMIN_DB, `CREATE DATABASE ${DB_NAME}`);
 
 // ── Mock provider (never dials Clubkonnect) ─────────────────────────────────
 const providerState = {
@@ -193,15 +177,7 @@ async function cleanup() {
     const db = require(path.join(ROOT, 'database.js'));
     if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
   } catch { /* best effort */ }
-  try {
-    const admin = new Pool({ connectionString: `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${ADMIN_DB}`, max: 2 });
-    await admin.query(`DROP DATABASE IF EXISTS ${DB_NAME} WITH (FORCE)`);
-    await admin.end();
-  } catch {
-    try {
-      psql(ADMIN_DB, `DROP DATABASE IF EXISTS ${DB_NAME}`);
-    } catch { /* best effort */ }
-  }
+  await pgHelper.dropDatabase(DB_PREFIX);
 }
 
 module.exports = {

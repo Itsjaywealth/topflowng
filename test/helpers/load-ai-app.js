@@ -13,19 +13,15 @@
 
 const path = require('path');
 const { execFileSync } = require('node:child_process');
-const { Pool } = require('pg');
 
+const pgHelper = require('./pg');
 const ROOT = path.resolve(__dirname, '..', '..');
 
-const PG_HOST = process.env.PG_HOST || '127.0.0.1';
-const PG_PORT = Number(process.env.PG_PORT || 55432);
-const PG_USER = process.env.PG_USER || 'postgres';
-const ADMIN_DB = 'postgres';
-const DB_NAME = `topflowng_ai_${process.pid}`;
-
-const DATABASE_URL = `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${DB_NAME}`;
+const DB_PREFIX = 'topflowng_ai';
 const TEST_PORT = String((Number(process.pid) % 40000) + 20000);
-const PSQL = '/opt/homebrew/bin/psql';
+
+// Create the throwaway DB synchronously BEFORE server.js is required.
+const DATABASE_URL = pgHelper.createDatabaseSync(DB_PREFIX);
 
 // Provide distinct dummy models so tests can detect primary vs fallback.
 const PRIMARY_MODEL = 'deepseek/deepseek-v4-flash';
@@ -63,16 +59,6 @@ process.env.AI_RATE_WINDOW_MS = '60000';
 process.env.AI_DAILY_REQUEST_CEILING = '1000000';
 process.env.AI_DAILY_COST_CEILING = '0';
 process.env.AI_MODEL_ALLOWLIST = 'extra/allowed-model';
-
-function psql(db, sql) {
-  return execFileSync(PSQL, ['-h', PG_HOST, '-p', String(PG_PORT), '-U', PG_USER, '-d', db, '-tA', '-c', sql], {
-    env: { ...process.env, PGPASSWORD: '' },
-    encoding: 'utf8',
-  }).trim();
-}
-
-psql(ADMIN_DB, `DROP DATABASE IF EXISTS ${DB_NAME}`);
-psql(ADMIN_DB, `CREATE DATABASE ${DB_NAME}`);
 
 function installMock(relPath, exports) {
   const abs = path.join(ROOT, relPath);
@@ -188,15 +174,7 @@ async function cleanup() {
     const db = require(path.join(ROOT, 'database.js'));
     if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
   } catch { /* best effort */ }
-  try {
-    const admin = new Pool({ connectionString: `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${ADMIN_DB}`, max: 2 });
-    await admin.query(`DROP DATABASE IF EXISTS ${DB_NAME} WITH (FORCE)`);
-    await admin.end();
-  } catch {
-    try {
-      psql(ADMIN_DB, `DROP DATABASE IF EXISTS ${DB_NAME}`);
-    } catch { /* best effort */ }
-  }
+  await pgHelper.dropDatabase(DB_PREFIX);
 }
 
 module.exports = {

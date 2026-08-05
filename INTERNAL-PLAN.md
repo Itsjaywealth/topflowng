@@ -672,3 +672,74 @@ logic changed. No real providers contacted. Do not commit / push / deploy.**
 - No outbound provider/AI call in harness logs.
 
 **Phase 7 complete at checkpoint - UNCOMMITTED. Stop before Phase 8 (no commit).**
+
+---
+
+## Phase 8 — Testing / CI checkpoint (COMPLETE — UNCOMMITTED)
+
+**Scope: automated quality gates only. No production behaviour, API contract,
+business logic, storage key, database semantics, migration history or deploy
+environment changed. No real providers contacted. Do not commit / push / deploy.**
+
+### Notes / deviations from the earlier Phase 8 sketch
+- Kept the existing Node `node:test` runner (already used by all suites) — no
+  Vitest/Supertest/nock additions, avoids churn and keeps coverage built-in.
+- Provider/Paystack/OpenRouter are already mocked by the harnesses; Playwright
+  was added only for the browser suite and Chromium is never committed.
+
+### New / changed files
+- `package.json` — scripts (`test`, `test:unit`, `test:integration`,
+  `test:migrations`, `test:syntax`, `test:frontend`, `test:browser`,
+  `test:browser:install`, `test:coverage`, `test:ci`, `audit:prod`);
+  devDependency `@playwright/test@1.62.1` (exact).
+- `test/helpers/pg.js` — portable throwaway-Postgres create/drop via `pg` (no
+  `psql` binary, no hardcoded path); `createDatabaseSync` used by sync harnesses.
+- `test/helpers/load-idempotency-app.js`, `load-ai-app.js` — refactored to use
+  `pg.js` (removed hardcoded `/opt/homebrew/bin/psql`).
+- `scripts/syntax-check.cjs` — `node --check` over all repo JS/CJS/MJS (skips
+  node_modules/artifacts).
+- `test/static/static-checks.mjs` — 30 static checks (inline-script syntax,
+  SEO/canonical/OG/Twitter/JSON-LD parsing, robots/sitemap directive + validity,
+  manifest, SW `/api` never-cache + admin/bizflow exclusion + skipWaiting/claim,
+  admin `noindex`, AI-safe `textContent` rendering, aria-live).
+- `playwright.config.js` + `test/browser/harness.cjs` (webServer on a throwaway
+  DB with mocked provider/email/OpenRouter) + `test/browser/tests/ui.spec.js`
+  (32 browser checks) + `test/browser/global-teardown.cjs` (deterministic
+  throwaway-DB sweep after the run).
+- Browser-DB leak fix: Playwright SIGKILLs its webServer, so no in-process
+  handler can finish the async `DROP`; fixed by adding a `globalTeardown` step
+  that drops leftover `topflowng_ui_%` DBs in the main process, plus a sync
+  `dropDatabaseSync` on the harness `exit` hook for graceful kills. Verified:
+  after `npm run test:browser`, only `topflowng_test` remains.
+- `.github/workflows/ci.yml` — PR + push-to-main; Node 18/20/22 matrix with
+  postgres:16 service (trust auth); `test` job runs `test:ci`
+  (syntax + frontend + suite with coverage); `browser` job installs Chromium and
+  runs UI checks (uploads report on failure); `audit` job is informational
+  (`continue-on-error`). No deploy.
+- `.gitignore` — `test-results/`, `playwright-report/`, `coverage/`, `.nyc_output/`.
+- `.env.example` — optional Tests section (`PG_HOST/PG_PORT/PG_USER/PG_PASSWORD/
+  PG_ADMIN_DB/PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`).
+- `TESTING.md` — env vars, local commands, architecture/isolation, CI behaviour,
+  debugging, coverage, audit, no-real-providers.
+
+### Verification (all PASS)
+- `npm run test:syntax` — 37 files, 0 failures.
+- `npm run test:frontend` — 30/30 static checks.
+- Full suite `node --test test/*.test.js` — 102/102 (smoke 8, auth 28,
+  idempotency 12, migrations 8, lifecycle 13, webhook 8, ai 25) after the pg.js
+  refactor (removed psql-binary dependency: idempotency 12, lifecycle 13, ai 25
+  re-run green).
+- `npm run test:browser` — 32/32 (responsive 320/375/768/1024/1440 no overflow
+  on landing + dashboard, labeled inputs, no empty accessible names, essential
+  nav, six service forms open/back, admin login renders, AI renders model text
+  as plain text, all PWA/static assets 200); after the run only `topflowng_test`
+  remains (global-teardown sweep verified).
+- `.github/workflows/ci.yml` — YAML parses (ruby psych); jobs: test/browser/
+  audit; concurrency + cancel-in-progress; minimal `contents: read`; no deploy.
+- Local CI simulation (`npm run test:ci`) — syntax + frontend + 102 with coverage.
+- Zero outbound: OpenRouter base is unreachable loopback + module mocked;
+  Clubkonnect/email mocked in every harness.
+- Throwaway DBs created/dropped per process (PIDs); no shared `topflowng_test`.
+- Dependency audit: 19 moderate via @sentry/node→@opentelemetry/* (informational).
+
+**Phase 8 complete at checkpoint - UNCOMMITTED. Stop before Phase 9 (no commit).**
