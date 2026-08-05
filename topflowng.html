@@ -694,6 +694,50 @@ button{appearance:none}
   .receipt-card{box-shadow:none;border-radius:0;padding:24px}
   .receipt-line{opacity:1;transform:none}
 }
+
+/* ══ AI ASSISTANT ═════════════════════════════════════════════ */
+/* Only shown to logged-in customers (when the main app is active) */
+#main-app:not(.active) ~ .ai-fab,
+#main-app:not(.active) ~ .ai-panel{display:none!important}
+.ai-fab{
+  position:fixed;right:16px;bottom:16px;z-index:70;
+  width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
+  background:linear-gradient(135deg,var(--green, #00C48C),#0AA47A);color:#fff;
+  font:700 15px/1 var(--display,inherit);letter-spacing:.5px;
+  box-shadow:0 8px 22px rgba(10,20,40,.28);display:flex;align-items:center;justify-content:center;
+}
+.ai-fab:focus-visible{outline:3px solid var(--focus-ring,#F5A623);outline-offset:2px}
+@media(max-width:1023px){.ai-fab{bottom:86px}} /* clear the mobile bottom-nav dock */
+.ai-panel{
+  position:fixed;right:16px;bottom:84px;z-index:80;
+  width:min(384px,calc(100vw - 20px));
+  max-height:min(540px,72vh);
+  display:flex;flex-direction:column;
+  background:#fff;border:1px solid #E3E7EE;border-radius:18px;
+  box-shadow:0 18px 50px rgba(13,20,40,.25);overflow:hidden;
+}
+.ai-panel[hidden]{display:none!important}
+@media(max-width:1023px){.ai-panel{bottom:146px;right:12px;width:calc(100vw - 24px);border-radius:18px 18px 0 0}}
+.ai-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;background:linear-gradient(135deg,#0E2235,#142E49);color:#fff}
+.ai-title{font:800 15px/1.2 var(--display);letter-spacing:-.3px}
+.ai-sub{font:400 11px/1.4 var(--font);color:#CFE0EE;margin-top:2px}
+.ai-close{border:0;background:transparent;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 2px}
+.ai-close:focus-visible{outline:3px solid var(--focus-ring,#F5A623);outline-offset:2px}
+.ai-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+  -webkit-overflow-scrolling:touch;background:#F6F8FB}
+.ai-bubble{max-width:86%;padding:9px 12px;border-radius:12px;font:400 13px/1.5 var(--font);white-space:pre-wrap;word-break:break-word}
+.ai-bot{background:#fff;border:1px solid #E6EAF1;color:var(--ink,#0E2235);align-self:flex-start;border-bottom-left-radius:4px}
+.ai-user{background:var(--green,#00C48C);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-bubble.ai-loading{color:#5B6B7F;font-style:italic}
+.ai-compose{display:flex;gap:8px;padding:10px;border-top:1px solid #E3E7EE;background:#fff}
+.ai-compose input{flex:1;min-width:0;min-height:42px;padding:0 12px;border:1.5px solid #D9DEE6;border-radius:9px;
+  font:400 13px/1 var(--font);color:var(--ink,#0E2235);outline:none}
+.ai-compose input:focus{border-color:var(--focus-ring,#F5A623)}
+.ai-compose #ai-send{min-height:42px;border:0;border-radius:9px;background:var(--green,#00C48C);color:#fff;
+  font:700 13px/1 var(--font);cursor:pointer;padding:0 16px}
+.ai-compose #ai-send:disabled{opacity:.6;cursor:not-allowed}
+.ai-note{padding:8px 14px 12px;font:400 10.5px/1.5 var(--font);color:var(--graphite,#5A6A7A);background:#fff;border-top:1px solid #EEF1F6}
 </style>
 
 <!-- Google AdSense -->
@@ -2410,11 +2454,129 @@ async function saveBeneficiaryIfChecked(svc, identifier, network) {
   } catch { /* non-critical */ }
 }
 
+// ── AI ASSISTANT ─────────────────────────────────────────────────────────
+let aiOpen = false;
+
+function aiEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function toggleAiChat() { if (aiOpen) closeAiChat(); else openAiChat(); }
+
+function openAiChat() {
+  const panel = document.getElementById('ai-panel');
+  if (!panel) return;
+  panel.hidden = false;
+  aiOpen = true;
+  const box = document.getElementById('ai-messages');
+  if (box && !box.childElementCount) {
+    const firstName = user && user.fullName ? String(user.fullName).split(' ')[0] : 'there';
+    const m = document.createElement('div');
+    m.className = 'ai-bubble ai-bot';
+    // all text, including the user's own name, is inserted as text — never HTML
+    m.textContent = 'Hi ' + firstName + '! I can help you choose a service, check balances, understand transaction statuses, or draft a support message. I am read-only and advisory.';
+    box.appendChild(m);
+  }
+  setTimeout(() => { const i = document.getElementById('ai-input'); if (i) i.focus(); }, 60);
+}
+
+function closeAiChat() {
+  const panel = document.getElementById('ai-panel');
+  if (panel) panel.hidden = true;
+  aiOpen = false;
+}
+
+function aiScrollBottom() {
+  const box = document.getElementById('ai-messages');
+  if (box) box.scrollTop = box.scrollHeight;
+}
+
+function aiAppendText(role, text) {
+  const box = document.getElementById('ai-messages');
+  if (!box) return;
+  const m = document.createElement('div');
+  m.className = 'ai-bubble ' + (role === 'user' ? 'ai-user' : 'ai-bot');
+  m.textContent = String(text == null ? '' : text); // model text is NEVER HTML
+  box.appendChild(m);
+  aiScrollBottom();
+}
+
+function aiAppendLoading() {
+  const box = document.getElementById('ai-messages');
+  if (!box) return;
+  const d = document.createElement('div');
+  d.className = 'ai-bubble ai-bot ai-loading';
+  d.textContent = 'Thinking…';
+  d.id = 'ai-loading';
+  box.appendChild(d);
+  aiScrollBottom();
+}
+
+function aiRemoveLoading() {
+  const l = document.getElementById('ai-loading');
+  if (l) l.remove();
+}
+
+async function sendAiMessage() {
+  const inp = document.getElementById('ai-input');
+  if (!inp) return;
+  const msg = inp.value.trim();
+  if (!msg) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    aiAppendText('bot', 'You appear to be offline. Please reconnect and try again.');
+    return;
+  }
+  inp.value = '';
+  const send = document.getElementById('ai-send');
+  if (send) send.disabled = true;
+  aiAppendText('user', msg);
+  aiAppendLoading();
+  try {
+    const data = await api('POST', '/api/ai/chat', { message: msg });
+    aiRemoveLoading();
+    aiAppendText('bot', data.text || 'No response was returned.');
+  } catch (e) {
+    aiRemoveLoading();
+    aiAppendText('bot', 'Sorry, I could not complete that request. ' + ((e && e.message) || 'Please try again.'));
+  }
+  if (send) send.disabled = false;
+  const i = document.getElementById('ai-input'); if (i) i.focus();
+}
+
+document.addEventListener('keydown', function (e) {
+  if (!aiOpen) return;
+  if (e.key === 'Escape') closeAiChat();
+  if (e.key === 'Enter') {
+    const t = e.target && e.target.id;
+    if (t === 'ai-input') { e.preventDefault(); sendAiMessage(); }
+  }
+});
+
 // Boot
 loadDataPlans();
 loadCablePlans();
 init();
 </script>
+
+<!-- ── AI ASSISTANT ── -->
+<button type="button" class="ai-fab" id="ai-fab" role="button" tabindex="0" aria-label="Open AI assistant" onclick="toggleAiChat()">AI</button>
+<div class="ai-panel" id="ai-panel" role="dialog" aria-modal="true" aria-labelledby="ai-panel-title" hidden>
+  <div class="ai-head">
+    <div>
+      <div class="ai-title" id="ai-panel-title">TopFlow Assistant</div>
+      <div class="ai-sub">Read-only guidance — never changes balances or order status</div>
+    </div>
+    <button type="button" class="ai-close" onclick="closeAiChat()" aria-label="Close AI assistant">×</button>
+  </div>
+  <div class="ai-messages" id="ai-messages" aria-live="polite"></div>
+  <div class="ai-compose">
+    <input type="text" id="ai-input" maxlength="2000" autocomplete="off" placeholder="Ask about a service, balance, or order…">
+    <button type="button" id="ai-send" onclick="sendAiMessage()">Send</button>
+  </div>
+  <p class="ai-note">Responses may be imperfect. AI answers do not override your balance or transaction/payment status — always confirm in the app.</p>
+</div>
 
 <!-- ── PIN PROMPT OVERLAY ── -->
 <div class="receipt-overlay" id="pin-prompt-overlay" style="z-index:60" role="dialog" aria-modal="true" aria-labelledby="pin-prompt-title">

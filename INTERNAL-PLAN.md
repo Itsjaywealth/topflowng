@@ -536,3 +536,78 @@ bizflow.html:
   localStorage keys, and the static allow-list are unchanged.
 
 **Phase 5 complete at checkpoint - UNCOMMITTED. Stop before Phase 6.**
+
+---
+
+## Phase 6 - Secure AI Integration with OpenRouter (read-only, advisory)
+
+**Status: COMPLETE at checkpoint - UNCOMMITTED. Do not commit, push, deploy, or begin Phase 7.**
+
+Scope guard: the AI layer is strictly read-only and advisory. It can NEVER debit a
+wallet, complete/reverse a purchase, verify a payment, change a password/PIN, or perform
+any admin or irreversible action. Existing wallet, VTU, Paystack, migrations, and
+authentication contracts are unchanged (no changes to database.js, the migration files,
+payment, or purchase-flow logic).
+
+### Configuration (config.js + .env.example)
+New env vars (all optional; safe dev/test defaults):
+  OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_PRIMARY_MODEL
+  (deepseek/deepseek-v4-flash), OPENROUTER_FALLBACK_MODEL (hermes), OPENROUTER_APP_URL,
+  OPENROUTER_APP_NAME, AI_MODEL_ALLOWLIST, AI_TIMEOUT_MS, AI_MAX_INPUT_LENGTH,
+  AI_MAX_OUTPUT_TOKENS, AI_RATE_WINDOW_MS, AI_RATE_MAX, AI_DAILY_REQUEST_CEILING,
+  AI_DAILY_COST_CEILING.
+Model IDs are validated through config; the allow-list derives from the configured primary,
+fallback, and AI_MODEL_ALLOWLIST - never hardcoded in business logic.
+
+### Server-side service (new)
+- services/openrouter.js - the ONLY module that contacts OpenRouter (shared axios,
+  Authorization + X-Title/X-App-Url/Referer app headers, timeout, returns a normalized
+  {content, model, usage} envelope). Upstream error bodies are discarded and replaced with
+  generic messages. Isolated so tests can mock this one file.
+- services/ai.js - orchestration + safe tool layer + prompt-injection protection:
+  builds the hardened system prompt; resolves models against the allow-list in
+  primary->fallback order; executes ONLY 5 allow-listed read-only tools scoped to the
+  authenticated user (getServiceInformation, getUserWalletSummary, getRecentTransactions,
+  getTransactionStatus, createSupportTicketDraft); output secret-redaction guard;
+  per-day request/cost ceilings; logs only {code, model} - never prompts, responses,
+  tokens, keys, or upstream bodies.
+
+### Endpoint
+POST /api/ai/chat (mounted in server.js). Requires authMiddleware (JWT); per-user rate
+limiter (keyGenerator on req.user.id); input validation (JSON body, message required and
+<= AI_MAX_INPUT_LENGTH, only role "user", model in allow-list); consistent { error: string }
+JSON errors; timeout/fallback handled; only safe token-count usage metadata returned.
+
+### Frontend (topflowng.html)
+Added a lightweight customer-only assistant: launcher FAB shown only when main-app is
+active (logged in); dialog with loading/error/empty/offline states; keyboard accessible
+(Esc close, Enter send); mobile responsive; all model/user text rendered via textContent
+(NEVER innerHTML); a disclaimer that answers are advisory and do not override balance or
+transaction/payment status. admin.html untouched (no AI controls added).
+
+### Prompt-injection protection
+All user + tool output treated as untrusted data; system prompt forbids secret disclosure,
+account actions, and rule overrides; tool names/schemas allow-listed server-side; tool
+identity ALWAYS from req.user (ignores any client-supplied userId); unknown tools rejected;
+defense-in-depth output redaction strips known secrets even from a misbehaving model.
+
+### Tests (new test/ai.test.js + harness load-ai-app.js, real Postgres; only
+OpenRouter/email/provider mocked)
+25 tests: auth required, malformed/oversized input, per-user rate limiting (429), primary
+success, primary failure -> fallback success, both models fail (502, no leak), timeout ->
+fallback, model allow-list enforcement, tool allow-list + input validation, tool
+authorization, no cross-user data access, prompt-injection cannot exfiltrate secrets or
+env names, zero real OpenRouter calls (mocked at require boundary).
+
+### Verification (all PASS)
+- Syntax: node --check on all new/changed JS + inline topg.html JS (1 inline script OK).
+- AI suite: 25/25 pass.
+- Full existing suite: 77/77 pass; combined with AI = 102/102 pass.
+- Live HTTP (real DB, mocked provider/email, OpenRouter at loopback:9 so NO real call):
+  23/23 - six purchase flows all 200, non-admin 403, admin login/stats/transactions/users,
+  logout -> 401 after, no-token 401, customer profile, AI no-token 401, bad model 400,
+  non-user role 400, oversized 400, both-models-fail 502 generic with no detailed leak.
+- Frontend scan: no OPENROUTER/sk-or- strings in any HTML file; AI output rendered as
+  text only.
+
+**Phase 6 complete at checkpoint - UNCOMMITTED. Stop before Phase 7.**

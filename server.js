@@ -37,6 +37,7 @@ const security = require('./services/security');
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 const { authLimiter, apiLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
+const aiRouter = require('./routes/ai').router;
 const { queryClubkonnectOrder } = require('./services/clubkonnect');
 const { sendEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
@@ -429,6 +430,9 @@ app.post('/api/paystack/webhook', async (req, res) => {
 
 // ── VTU Routes (mounted /api/vtu/*) ──────────────────────────────────────────
 app.use('/api/vtu', vtuRouter);
+
+// ── AI Assistant (mounted /api/ai/*) — read-only, advisory ─────────────────
+app.use('/api/ai', aiRouter);
 
 // ── Clubkonnect VTU Reconciliation ──────────────────────────────────────────
 // Manual, admin-only resolution. It uses the provider's documented Query API and

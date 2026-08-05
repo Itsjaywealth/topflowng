@@ -82,6 +82,29 @@ const config = {
     timeoutMs: num(process.env.PAYSTACK_TIMEOUT_MS, 30_000),
   },
 
+  // Secure, read-only AI assistant (OpenRouter). Model IDs come from the
+  // environment, never hardcoded below the defaults; the allow-list is derived
+  // from these variables so operators control which models are reachable.
+  ai: {
+    openRouterApiKey: str(process.env.OPENROUTER_API_KEY, null),
+    baseUrl: str(process.env.OPENROUTER_BASE_URL, 'https://openrouter.ai/api/v1'),
+    primaryModel: str(process.env.OPENROUTER_PRIMARY_MODEL, 'deepseek/deepseek-v4-flash'),
+    fallbackModel: str(process.env.OPENROUTER_FALLBACK_MODEL, 'hermes'),
+    appUrl: str(process.env.OPENROUTER_APP_URL, str(process.env.APP_URL, 'https://topflowng.com')),
+    appName: str(process.env.OPENROUTER_APP_NAME, 'TopFlowNG'),
+    timeoutMs: num(process.env.AI_TIMEOUT_MS, 30_000),
+    maxInputLength: num(process.env.AI_MAX_INPUT_LENGTH, 2_000),
+    maxOutputTokens: num(process.env.AI_MAX_OUTPUT_TOKENS, 1_024),
+    requestLimitWindowMs: num(process.env.AI_RATE_WINDOW_MS, 60 * 60 * 1000),
+    requestLimitMax: num(process.env.AI_RATE_MAX, 20),
+    dailyRequestCeiling: num(process.env.AI_DAILY_REQUEST_CEILING, 1_000),
+    dailyCostCeiling: num(process.env.AI_DAILY_COST_CEILING, 0),
+    modelAllowlist: String(process.env.AI_MODEL_ALLOWLIST || '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean),
+  },
+
   clubkonnect: {
     userId: str(process.env.CLUBKONNECT_USER_ID, null),
     apiKey: str(process.env.CLUBKONNECT_API_KEY, null),
