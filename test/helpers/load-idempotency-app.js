@@ -1,0 +1,197 @@
+/**
+ * TopFlowNG — Phase 4D idempotency test harness.
+ *
+ * Boots the REAL server against a DEDICATED throwaway PostgreSQL database
+ * (created, migrated, and dropped here) with only the provider (Clubkonnect)
+ * and email layers mocked. The real `database.js` (real transactions, row
+ * locks, wallet debits) and the real VTU routes + idempotency service are
+ * exercised end-to-end over HTTP. No real external service is ever contacted.
+ */
+
+'use strict';
+
+const path = require('path');
+const { execFileSync } = require('node:child_process');
+const { Pool } = require('pg');
+
+const ROOT = path.resolve(__dirname, '..', '..');
+
+const PG_HOST = process.env.PG_HOST || '127.0.0.1';
+const PG_PORT = Number(process.env.PG_PORT || 55432);
+const PG_USER = process.env.PG_USER || 'postgres';
+const ADMIN_DB = 'postgres';
+const DB_NAME = `topflowng_idem_${process.pid}`;
+
+const DATABASE_URL = `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${DB_NAME}`;
+const TEST_PORT = String(Number(process.pid) % 50000 + 10000);
+const PSQL = '/opt/homebrew/bin/psql';
+
+// ── Environment (set before config.js / database.js are required) ──────────
+process.env.NODE_ENV = 'test';
+process.env.PORT = TEST_PORT;
+process.env.TRUST_PROXY = '0';
+process.env.JWT_SECRET = 'test-jwt-secret-do-not-use-in-prod';
+process.env.AUTH_RATE_MAX = '100000';
+process.env.API_RATE_MAX = '100000';
+process.env.AUTH_LOCKOUT_MAX_FAILURES = '3';
+process.env.AUTH_LOCKOUT_WINDOW_MS = '600000';
+process.env.AUTH_LOCKOUT_DURATION_MS = '600000';
+process.env.SENTRY_DSN = '';
+process.env.PAYSTACK_WEBHOOK_SECRET = 'test-webhook-secret';
+process.env.PAYSTACK_SECRET_KEY = 'test-secret-key';
+process.env.DATABASE_URL = DATABASE_URL;
+
+function psql(db, sql) {
+  return execFileSync(PSQL, ['-h', PG_HOST, '-p', String(PG_PORT), '-U', PG_USER, '-d', db, '-tA', '-c', sql], {
+    env: { ...process.env, PGPASSWORD: '' },
+    encoding: 'utf8',
+  }).trim();
+}
+
+// Create the throwaway DB BEFORE server.js is required (server.js connects on
+// boot). initDB (base schema) runs when the server boots; migrations (001
+// idempotency schema) are applied by the test in before() via applyMigrations.
+psql(ADMIN_DB, `DROP DATABASE IF EXISTS ${DB_NAME}`);
+psql(ADMIN_DB, `CREATE DATABASE ${DB_NAME}`);
+
+// ── Mock provider (never dials Clubkonnect) ─────────────────────────────────
+const providerState = {
+  calls: 0,
+  outcome: 'success', // 'success' | 'pending' | 'failed'
+  async reset() {
+    providerState.calls = 0;
+    providerState.outcome = 'success';
+  },
+};
+
+const mockProvider = {
+  MAX_PURCHASE_AMOUNT: 1000000,
+  parseValidatedAmount: (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  },
+  CK_PENDING_CODES: new Set([100, 199, 299]),
+  normalizeClubkonnectResponse: (raw) => ({ ...raw }),
+  queryClubkonnectOrder: async () => ({ outcome: 'pending' }),
+  async processClubkonnectPurchase({ requestId, userId, serviceType, amount, description }) {
+    const db = require(path.join(ROOT, 'database.js'));
+    providerState.calls += 1;
+    await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
+
+    const orderId = `PRV-${providerState.calls}`;
+    if (providerState.outcome === 'success') {
+      await db.recordVtuProviderResponse(requestId, {
+        orderId, statusCode: 200, status: 'ORDER_COMPLETED',
+        remark: 'Success', description: 'Delivered', raw: { token: 'ELEC-TOKEN-001' },
+      });
+      const result = await db.completeVtuOrder(requestId);
+      return { outcome: 'success', balance: result.balance, requestId, orderId, provider: { raw: { token: 'ELEC-TOKEN-001' } } };
+    }
+    if (providerState.outcome === 'failed') {
+      await db.recordVtuProviderResponse(requestId, {
+        orderId, statusCode: 400, status: 'ORDER_ERROR',
+        remark: 'Declined', description: 'Provider declined', raw: {},
+      });
+      await db.markVtuOrderFailed(requestId);
+      return { outcome: 'failed', message: 'Provider declined', requestId, orderId, provider: { raw: {} } };
+    }
+    await db.recordVtuProviderResponse(requestId, {
+      orderId, statusCode: 199, status: 'ORDER_RECEIVED',
+      remark: 'On hold', description: 'Pending', raw: {},
+    });
+    await db.markVtuOrderPending(requestId);
+    return {
+      outcome: 'pending',
+      message: 'Your request is pending provider confirmation. Your wallet has not been debited.',
+      requestId, orderId, provider: { raw: {} },
+    };
+  },
+};
+
+function installMock(relPath, exports) {
+  const abs = path.join(ROOT, relPath);
+  require.cache[abs] = { id: abs, filename: abs, loaded: true, exports };
+}
+
+installMock('services/clubkonnect.js', mockProvider);
+installMock('services/email.js', {
+  async sendEmail() {},
+  async sendPurchaseEmail() {},
+});
+
+// ── Boot the real app ────────────────────────────────────────────────────────
+const http = require('http');
+let capturedServer = null;
+const origCreateServer = http.createServer;
+http.createServer = function (...args) {
+  const srv = origCreateServer.apply(this, args);
+  capturedServer = srv;
+  return srv;
+};
+
+require(path.join(ROOT, 'server.js'));
+
+const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
+
+async function waitForServer(timeoutMs = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/health`);
+      if (res.ok) return;
+    } catch { /* not up yet */ }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('Server did not become healthy in time');
+}
+
+function applyMigrations() {
+  execFileSync('node', [path.join(ROOT, 'migrations', 'migrate.js')], {
+    env: { ...process.env, DATABASE_URL },
+    encoding: 'utf8',
+  });
+}
+
+async function api(method, pathname, { body, token, idempotencyKey } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (idempotencyKey !== undefined) headers['Idempotency-Key'] = idempotencyKey;
+  const res = await fetch(BASE_URL + pathname, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  return { status: res.status, data };
+}
+
+async function cleanup() {
+  if (capturedServer && typeof capturedServer.close === 'function') {
+    await new Promise((resolve) => capturedServer.close(resolve));
+    capturedServer = null;
+  }
+  try {
+    const db = require(path.join(ROOT, 'database.js'));
+    if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
+  } catch { /* best effort */ }
+  try {
+    const admin = new Pool({ connectionString: `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${ADMIN_DB}`, max: 2 });
+    await admin.query(`DROP DATABASE IF EXISTS ${DB_NAME} WITH (FORCE)`);
+    await admin.end();
+  } catch {
+    try {
+      psql(ADMIN_DB, `DROP DATABASE IF EXISTS ${DB_NAME}`);
+    } catch { /* best effort */ }
+  }
+}
+
+module.exports = {
+  DATABASE_URL,
+  BASE_URL,
+  waitForServer,
+  applyMigrations,
+  api,
+  providerState,
+  mockProvider,
+  cleanup,
+};

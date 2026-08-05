@@ -17,6 +17,7 @@ const { authMiddleware, checkTransactionPin } = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rate-limit');
 const { processClubkonnectPurchase, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/clubkonnect');
 const { sendPurchaseEmail } = require('../services/email');
+const { resolveRequest, recordRequest } = require('../services/idempotency');
 const { sendError } = require('../lib/errors');
 const Sentry = require('@sentry/node');
 
@@ -52,12 +53,22 @@ router.post('/airtime', authMiddleware, apiLimiter, async (req, res) => {
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
-
     const ckNetwork = NETWORK_MAP[network.toUpperCase()];
     if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
-    const requestId = `AIR-${Date.now()}-${req.user.id}`;
+    const desc = `${network} airtime — ${phone}`;
+
+    const resolved = await resolveRequest({
+      req, res, userId: req.user.id, serviceType: 'airtime',
+      payload: { network: ckNetwork, phone, amount: cost },
+      amount: cost, description: desc,
+    });
+    if (resolved.kind === 'error' || resolved.kind === 'replay'
+      || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
+    const isIdempotent = resolved.kind === 'proceed';
+    const requestId = isIdempotent ? resolved.requestId : `AIR-${Date.now()}-${req.user.id}`;
+
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
     const params = {
       UserID: config.clubkonnect.userId,
@@ -69,7 +80,6 @@ router.post('/airtime', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
-    const desc = `${network} airtime — ${phone}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
       description: desc, endpoint: config.clubkonnect.airtimeUrl, params,
@@ -77,9 +87,17 @@ router.post('/airtime', authMiddleware, apiLimiter, async (req, res) => {
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Airtime', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+      const body = { success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
+      return res.json(body);
     }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') {
+      const body = { pending: true, message: result.message, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 202, body, isIdempotent });
+      return res.status(202).json(body);
+    }
+    const body = { error: result.message, reference: requestId, orderId: result.orderId };
+    await recordRequest({ requestId, statusCode: 400, body, isIdempotent });
     return sendError(res, 400, result.message, { reference: requestId, orderId: result.orderId });
   } catch (err) {
     if (pinErrorResponse(err, res)) return;
@@ -97,13 +115,23 @@ router.post('/data', authMiddleware, apiLimiter, async (req, res) => {
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
+    const ckNetwork = NETWORK_MAP[network.toUpperCase()];
+    if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
+    const desc = `${network} data ${planCode} — ${phone}`;
+
+    const resolved = await resolveRequest({
+      req, res, userId: req.user.id, serviceType: 'data',
+      payload: { network: ckNetwork, planCode, phone, amount: cost },
+      amount: cost, description: desc,
+    });
+    if (resolved.kind === 'error' || resolved.kind === 'replay'
+      || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
+    const isIdempotent = resolved.kind === 'proceed';
+    const requestId = isIdempotent ? resolved.requestId : `DATA-${Date.now()}-${req.user.id}`;
+
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const ckNetwork = NETWORK_MAP[network.toUpperCase()];
-    if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
-
-    const requestId = `DATA-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: config.clubkonnect.userId,
       APIKey: config.clubkonnect.apiKey,
@@ -114,7 +142,6 @@ router.post('/data', authMiddleware, apiLimiter, async (req, res) => {
       CallBackURL: '',
     };
 
-    const desc = `${network} data ${planCode} — ${phone}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'data', amount: cost,
       description: desc, endpoint: config.clubkonnect.dataUrl, params,
@@ -122,9 +149,17 @@ router.post('/data', authMiddleware, apiLimiter, async (req, res) => {
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Data', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
+      const body = { success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
+      return res.json(body);
     }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') {
+      const body = { pending: true, message: result.message, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 202, body, isIdempotent });
+      return res.status(202).json(body);
+    }
+    const body = { error: result.message, reference: requestId, orderId: result.orderId };
+    await recordRequest({ requestId, statusCode: 400, body, isIdempotent });
     return sendError(res, 400, result.message, { reference: requestId, orderId: result.orderId });
   } catch (err) {
     if (pinErrorResponse(err, res)) return;
@@ -142,21 +177,32 @@ router.post('/cable', authMiddleware, apiLimiter, async (req, res) => {
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
+    const ckProvider = provider.toUpperCase();
+    const desc = `${provider} ${planCode} — ${smartCardNumber}`;
+
+    const resolved = await resolveRequest({
+      req, res, userId: req.user.id, serviceType: 'cable',
+      payload: { provider: ckProvider, planCode, smartCardNumber, amount: cost },
+      amount: cost, description: desc,
+    });
+    if (resolved.kind === 'error' || resolved.kind === 'replay'
+      || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
+    const isIdempotent = resolved.kind === 'proceed';
+    const requestId = isIdempotent ? resolved.requestId : `CABLE-${Date.now()}-${req.user.id}`;
+
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const requestId = `CABLE-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: config.clubkonnect.userId,
       APIKey: config.clubkonnect.apiKey,
-      CableTV: provider.toUpperCase(),
+      CableTV: ckProvider,
       Package: planCode,
       SmartCardNo: smartCardNumber,
       RequestID: requestId,
       CallBackURL: '',
     };
 
-    const desc = `${provider} ${planCode} — ${smartCardNumber}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'cable', amount: cost,
       description: desc, endpoint: config.clubkonnect.cableUrl, params,
@@ -164,9 +210,17 @@ router.post('/cable', authMiddleware, apiLimiter, async (req, res) => {
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Cable TV', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId });
+      const body = { success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
+      return res.json(body);
     }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') {
+      const body = { pending: true, message: result.message, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 202, body, isIdempotent });
+      return res.status(202).json(body);
+    }
+    const body = { error: result.message, reference: requestId, orderId: result.orderId };
+    await recordRequest({ requestId, statusCode: 400, body, isIdempotent });
     return sendError(res, 400, result.message, { reference: requestId, orderId: result.orderId });
   } catch (err) {
     if (pinErrorResponse(err, res)) return;
@@ -184,22 +238,34 @@ router.post('/electricity', authMiddleware, apiLimiter, async (req, res) => {
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
+    const ckDisco = disco.toUpperCase();
+    const ckMeterType = meterType.toUpperCase();
+    const desc = `${disco} electricity — ${meterNumber}`;
+
+    const resolved = await resolveRequest({
+      req, res, userId: req.user.id, serviceType: 'electricity',
+      payload: { disco: ckDisco, meterNumber, meterType: ckMeterType, amount: cost },
+      amount: cost, description: desc,
+    });
+    if (resolved.kind === 'error' || resolved.kind === 'replay'
+      || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
+    const isIdempotent = resolved.kind === 'proceed';
+    const requestId = isIdempotent ? resolved.requestId : `ELEC-${Date.now()}-${req.user.id}`;
+
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const requestId = `ELEC-${Date.now()}-${req.user.id}`;
     const params = {
       UserID: config.clubkonnect.userId,
       APIKey: config.clubkonnect.apiKey,
-      ElectricCompany: disco.toUpperCase(),
-      MeterType: meterType.toUpperCase(),
+      ElectricCompany: ckDisco,
+      MeterType: ckMeterType,
       MeterNumber: meterNumber,
       Amount: cost,
       RequestID: requestId,
       CallBackURL: '',
     };
 
-    const desc = `${disco} electricity — ${meterNumber}`;
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
       description: desc, endpoint: config.clubkonnect.electricityUrl, params,
@@ -207,9 +273,17 @@ router.post('/electricity', authMiddleware, apiLimiter, async (req, res) => {
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Electricity', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId });
+      const body = { success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
+      return res.json(body);
     }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') {
+      const body = { pending: true, message: result.message, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 202, body, isIdempotent });
+      return res.status(202).json(body);
+    }
+    const body = { error: result.message, reference: requestId, orderId: result.orderId };
+    await recordRequest({ requestId, statusCode: 400, body, isIdempotent });
     return sendError(res, 400, result.message, { reference: requestId, orderId: result.orderId });
   } catch (err) {
     if (pinErrorResponse(err, res)) return;
@@ -227,12 +301,20 @@ router.post('/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
     const amount = EXAM_PRICES[ckBody] * qty;
+    const description = `${ckBody} exam PIN × ${qty}`;
+
+    const resolved = await resolveRequest({
+      req, res, userId: req.user.id, serviceType: 'exam-pin',
+      payload: { examBody: ckBody, quantity: qty, amount },
+      amount, description,
+    });
+    if (resolved.kind === 'error' || resolved.kind === 'replay'
+      || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
+    const isIdempotent = resolved.kind === 'proceed';
+    const requestId = isIdempotent ? resolved.requestId : `EXAM-${Date.now()}-${req.user.id}`;
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < amount) return sendError(res, 402, 'Insufficient wallet balance');
-
-    const requestId = `EXAM-${Date.now()}-${req.user.id}`;
-    const description = `${ckBody} exam PIN × ${qty}`;
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'exam-pin', amount, description,
@@ -249,9 +331,17 @@ router.post('/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Exam PIN', description, amount, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+      const body = { success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId };
+      await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
+      return res.json(body);
     }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') {
+      const body = { pending: true, message: result.message, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 202, body, isIdempotent });
+      return res.status(202).json(body);
+    }
+    const body = { error: result.message, reference: requestId };
+    await recordRequest({ requestId, statusCode: 400, body, isIdempotent });
     return sendError(res, 400, result.message, { reference: requestId });
   } catch (err) {
     if (pinErrorResponse(err, res)) return;
@@ -271,12 +361,20 @@ router.post('/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
     const amt = parseValidatedAmount(amount);
     if (!amt || amt < 100) return sendError(res, 400, 'Amount must be a positive number of at least ₦100.');
     const totalAmount = amt * qty;
+    const description = `${network} recharge card ₦${amt} × ${qty}`;
+
+    const resolved = await resolveRequest({
+      req, res, userId: req.user.id, serviceType: 'recharge-pin',
+      payload: { network: ckNetwork, amount: amt, quantity: qty, totalAmount },
+      amount: totalAmount, description,
+    });
+    if (resolved.kind === 'error' || resolved.kind === 'replay'
+      || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
+    const isIdempotent = resolved.kind === 'proceed';
+    const requestId = isIdempotent ? resolved.requestId : `RPIN-${Date.now()}-${req.user.id}`;
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < totalAmount) return sendError(res, 402, 'Insufficient wallet balance');
-
-    const requestId = `RPIN-${Date.now()}-${req.user.id}`;
-    const description = `${network} recharge card ₦${amt} × ${qty}`;
 
     const result = await processClubkonnectPurchase({
       userId: req.user.id, requestId, serviceType: 'recharge-pin', amount: totalAmount, description,
@@ -294,9 +392,17 @@ router.post('/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Recharge Card', description, amount: totalAmount, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
+      const body = { success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId };
+      await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
+      return res.json(body);
     }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
+    if (result.outcome === 'pending') {
+      const body = { pending: true, message: result.message, reference: requestId, orderId: result.orderId };
+      await recordRequest({ requestId, statusCode: 202, body, isIdempotent });
+      return res.status(202).json(body);
+    }
+    const body = { error: result.message, reference: requestId };
+    await recordRequest({ requestId, statusCode: 400, body, isIdempotent });
     return sendError(res, 400, result.message, { reference: requestId });
   } catch (err) {
     if (pinErrorResponse(err, res)) return;

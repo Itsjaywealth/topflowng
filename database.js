@@ -160,6 +160,11 @@ async function initDB() {
   }
 }
 
+// Close the connection pool. Used by automated tests so process exits cleanly.
+async function closePool() {
+  await pool.end();
+}
+
 // ── User Queries ──────────────────────────────────────────────────────────────
 async function findUserByEmail(email) {
   const { rows } = await pool.query(
@@ -302,6 +307,56 @@ async function createVtuAttempt({ requestId, userId, serviceType, amount, descri
     [requestId, userId, serviceType, amount, description]
   );
   return rows[0];
+}
+
+async function acquireVtuIdempotency({ requestId, userId, serviceType, amount, description, idempotencyKey, requestFingerprint }) {
+  // Atomically reserve an idempotency slot on vtu_orders using the partial unique
+  // index (user_id, idempotency_key) from migration 001. Rows without a key are
+  // exempt; only the first request for a given (user_id, key) is created here;
+  // every subsequent/concurrent request for the same key blocks on the index until the
+  // first commits, then returns the existing row for the caller to resolve.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const inserted = await client.query(
+      `INSERT INTO vtu_orders
+         (request_id, user_id, service_type, amount, description, idempotency_key,
+          request_fingerprint, idempotency_key_created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       ON CONFLICT (request_id) DO NOTHING
+       RETURNING request_id`,
+      [requestId, userId, serviceType, amount, description, idempotencyKey, requestFingerprint]
+    );
+    const claimed = inserted.rows[0] ? true : false;
+    let order = null;
+    if (!claimed) {
+      const existing = await client.query(
+        `SELECT request_fingerprint, status, response_snapshot, provider_order_id
+         FROM vtu_orders
+         WHERE user_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [userId, idempotencyKey]
+      );
+      order = existing.rows[0] || null;
+    }
+    await client.query('COMMIT');
+    return { claimed, order: order || null };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function recordVtuIdempotencyResult(requestId, response) {
+  await pool.query(
+    `UPDATE vtu_orders
+     SET response_snapshot = $2::jsonb,
+         idempotency_key_last_used_at = NOW()
+     WHERE request_id = $1`,
+    [requestId, JSON.stringify(response)]
+  );
 }
 
 async function recordVtuProviderResponse(requestId, provider) {
@@ -474,7 +529,9 @@ async function getVtuOrderByRequestId(requestId) {
   const { rows } = await pool.query(
     `SELECT request_id, user_id, service_type, amount, description, provider_order_id,
             provider_status_code, provider_status, provider_remark, provider_description,
-            status, transaction_id, created_at, updated_at
+            status, transaction_id, created_at, updated_at,
+            idempotency_key, request_fingerprint, response_snapshot,
+            idempotency_key_created_at, idempotency_key_last_used_at
      FROM vtu_orders WHERE request_id = $1`,
     [requestId]
   );
@@ -752,6 +809,7 @@ async function getPendingVtuOrders(userId) {
 
 module.exports = {
   initDB,
+  closePool,
   findUserByEmail,
   findUserByPhone,
   findUserById,
@@ -765,6 +823,8 @@ module.exports = {
   getTransactions,
   logFailedTransaction,
   createVtuAttempt,
+  acquireVtuIdempotency,
+  recordVtuIdempotencyResult,
   recordVtuProviderResponse,
   completeVtuOrder,
   markVtuOrderPending,
