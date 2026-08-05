@@ -611,3 +611,64 @@ env names, zero real OpenRouter calls (mocked at require boundary).
   text only.
 
 **Phase 6 complete at checkpoint - UNCOMMITTED. Stop before Phase 7.**
+
+---
+
+## Phase 7 — SEO / Performance / A11y checkpoint (COMPLETE — UNCOMMITTED)
+
+**Scope: metadata, semantic landmarks, PWA/SW cache tuning, privacy retention.
+No API contract, storage key, auth, payment, VTU, database, migration, or AI
+logic changed. No real providers contacted. Do not commit / push / deploy.**
+
+### Changes (files)
+- `topflowng.html`
+  - Head: precise title/description, `robots: index,follow`, `theme-color`,
+    canonical `https://topflowng.com/`, OG + Twitter meta (`og:image`/tw:image use
+    the deployed `/icons/icon-512.png`), JSON-LD `@graph` (Organization +
+    WebSite + SoftwareApplication), `manifest`/`icon`/`apple-touch-icon` links, font
+    preconnect, Paystack inline.js **deferred** (was render-blocking).
+  - A11y: app-shell header now a semantic `<header role="banner">`; the three
+    `.screen` panels wrapped in `<main class="app-landmark" role="main">`; the
+    `<main>` wrapper uses `display:contents` so the flex/overflow layout is
+    **byte-for-byte unchanged** (verified: home + airtime screen stay active, no
+    reflow at any width). Bottom nav got `aria-label="Primary"`.
+  - Tap target: `.section-link` ("View all") padded to a 24px hit area.
+  - Cleaned duplicate `:root` alias redefinitions (`--amber/--graphite/
+    --emerald` now defined once each).
+  - Note: two `<h1>` exist in the DOM (marketing + `screen-history) but only one
+    is visible per login state, so heading hierarchy is correct for each view.
+- `admin.html`: `robots: noindex, nofollow` (sensitive/admin); theme-color added.
+- `bizflow.html`: removed `maximum-scale=1.0` viewport; added canonical/OG/
+  Twitter/JSON-LD (SoftwareApplication), robots index.
+- `manifest.json`: added `id`, `lang`, `scope`, `description`, categories,
+  display_override, purpose split (any + maskable) for icons.
+- `sw.js`: bumped to `topflowng-v2`; keep network-first for `/api/` (503 JSON when
+  offline, never caches tokens/balances), shell-first nav, explicit cache-first
+  static, cross-origin passthrough, robots/sitemap/admin/bizflow never cached.
+- `server.js`: `ROOT_ASSET_PATHS` now also serves `/robots.txt`, `/sitemap.xml`;
+  new cache-control middleware (`no-store` for `/api/`, immutable for static
+  icons/manifest/sw).
+- `robots.txt`: allow all except `/api/`, `/admin.html`, `/icons/`, with sitemap.
+- `sitemap.xml`: `https://topflowng.com/` + `https://topflowng.com/bizflow.html`.
+
+### Verification (all PASS)
+- Backend suite re-run after server.js cache middleware (fixed a transient
+  `req.pathname` bug): **102/102** (smoke 8, auth 28, idempotency 12, migrations 8,
+  lifecycle 13, webhook 8, ai 25).
+- Inline JS: `node --check` valid for all inline blocks in all three HTML files.
+- Live HTTP on throwaway PG + mocked provider/email/OpenRouter (OpenRouter at
+  loopback:9 => zero outbound): **23/23** — six purchase flows 200, non-admin 403,
+  admin login/stats/transactions/users, logout→401, no-token 401, customer
+  profile, AI guards (no-token/bad-model/non-user/oversized/both-fail 502 no-leak).
+- Playwright (Chromium, cached build): landing + dashboard at 320/375/768/1024/1440
+  — **no horizontal overflow, no issues**; headings/CTAs present; focus ring 3px
+  amber solid; all inputs labeled; dashboard home + service screen + history open;
+  the `display:contents` main wrapper preserved layout (home/service active).
+- New assets served 200 with correct content-type: robots.txt, sitemap.xml,
+  manifest.json, sw.js, both icon PNGs. `Cache-Control`: `/api/*`=no-store,
+  static icons=immutable. Helmet headers intact (HSTS, X-Content-Type-Options,
+  X-Frame-Options SAMEORIGIN, Referrer-Policy). Private paths (server.js,
+  database.js, .env, auth.js, package.json) all 404.
+- No outbound provider/AI call in harness logs.
+
+**Phase 7 complete at checkpoint - UNCOMMITTED. Stop before Phase 8 (no commit).**

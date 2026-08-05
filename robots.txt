@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Keep private and dynamic resources out of search results
+Disallow: /api/
+Disallow: /admin.html
+Disallow: /icons/
+
+Sitemap: https://topflowng.com/sitemap.xml

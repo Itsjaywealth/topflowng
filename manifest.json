@@ -1,16 +1,22 @@
 {
-  "name": "TopFlowNG",
+  "name": "TopFlowNG — Buy Airtime, Data & Pay Bills",
   "short_name": "TopFlow",
-  "description": "Fast utility payments — airtime, data, electricity, TV and more",
+  "description": "Buy airtime and data, and pay electricity and cable TV bills instantly from one wallet.",
+  "lang": "en",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#0D1117",
   "theme_color": "#00B67A",
   "orientation": "portrait-primary",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "categories": ["finance", "utilities"],
+  "categories": ["finance", "utilities", "shopping"],
   "screenshots": []
 }

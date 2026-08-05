@@ -78,7 +78,25 @@ const ROOT_ASSET_PATHS = new Set([
   '/bizflow.html',
   '/manifest.json',
   '/sw.js',
+  '/robots.txt',
+  '/sitemap.xml',
 ]);
+
+// Far-future caching is reserved for inspect/versioned image assets only. The
+// HTML shell, manifest and service worker are deliberately NOT immutable-cached
+// (browsers must be able to re-fetch them to pick up revisions); API + private
+// routes stay no-store so tokens/balances are never served stale.
+app.use((req, res, next) => {
+  const p = req.path;
+  if (p.endsWith('.png') || p.endsWith('.jpg')
+      || p.endsWith('.jpeg') || p.endsWith('.svg')
+      || p.endsWith('.webp')) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  } else if (p.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
 
 app.use('/icons/:file', (req, res) => {
   const name = req.params.file;

@@ -3,15 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TopFlowNG — Fast Utility Payments</title>
-<meta name="description" content="Buy airtime, data, pay electricity and TV subscriptions instantly. Fast, secure, reliable.">
+<title>TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Subscriptions in Nigeria</title>
+<meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and 9mobile airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
+<meta name="robots" content="index, follow">
 <meta name="theme-color" content="#00B67A">
+<link rel="canonical" href="https://topflowng.com/">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TopFlowNG">
+<meta property="og:title" content="TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Bills">
+<meta property="og:description" content="Buy airtime and data, and pay electricity and cable bills instantly from one wallet. Secure payments in Naira.">
+<meta property="og:url" content="https://topflowng.com/">
+<meta property="og:image" content="https://topflowng.com/icons/icon-512.png">
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@topflowng">
+<meta name="twitter:title" content="TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Bills">
+<meta name="twitter:description" content="Buy airtime and data, renew electricity and TV bills instantly from one wallet in Naira.">
+<meta name="twitter:image" content="https://topflowng.com/icons/icon-512.png">
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "name": "TopFlowNG",
+      "url": "https://topflowng.com/",
+      "logo": "https://topflowng.com/icons/icon-512.png",
+      "description": "A Nigerian platform for airtime, data, electricity and cable TV payments."
+    },
+    {
+      "@type": "WebSite",
+      "name": "TopFlowNG",
+      "url": "https://topflowng.com/",
+      "inLanguage": "en-NG"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "TopFlowNG",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "url": "https://topflowng.com/"
+    }
+  ]
+}
+</script>
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://js.paystack.co/v1/inline.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<script defer src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 /* ── TopFlowNG Design System v2 ─────────────────────────────────────────── */
 :root{
@@ -26,9 +70,9 @@
   --font:'Plus Jakarta Sans',system-ui,sans-serif;
   /* Misc */
   --radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
-  /* Backward compat aliases */
-  --amber:#F59E0B;--graphite:#6B7280;--emerald:#059669
 }
+/* Semantic <main> landmark added without affecting layout */
+main.app-landmark{display:contents}
 body{background:var(--mist)}
 #main-app{background:var(--white)}
 .header{padding:0;background:var(--ink);border-bottom:none}
@@ -53,7 +97,7 @@ body{background:var(--mist)}
 .home-services{margin-bottom:34px}
 .home-section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
 .section-title{font:700 14px/1.2 var(--display);letter-spacing:-.25px;color:var(--ink);text-transform:none;margin:0}
-.section-link{appearance:none;background:transparent;border:0;padding:0;color:#B46F00;font:600 12px/1 var(--font);cursor:pointer}
+.section-link{appearance:none;background:transparent;border:0;padding:6px 2px;margin:-6px -2px;color:#B46F00;font:600 12px/1 var(--font);cursor:pointer}
 .service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:0}
 .service-tile{min-height:102px;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;align-content:center;padding:16px 4px;background:transparent;border:0;border-radius:0;box-shadow:none}
 .service-tile:nth-child(odd){border-right:1px solid var(--border)}
@@ -875,7 +919,7 @@ crossorigin="anonymous"></script>
 
 <div id="main-app">
   <!-- Header -->
-  <div class="header">
+  <header class="header" id="app-header" role="banner">
     <div class="workspace-header">
       <div class="workspace-topline">
         <div class="wordmark">TopFlow<span>NG</span></div>
@@ -896,8 +940,10 @@ crossorigin="anonymous"></script>
       </div>
     </div>
   </div>
+</header>
 
   <!-- Screens -->
+  <main id="app-main" class="app-landmark" role="main">
   <div class="screen active" id="screen-home">
     <div class="home-shell">
       <section class="home-services" aria-labelledby="services-heading">
@@ -1060,7 +1106,8 @@ crossorigin="anonymous"></script>
   </div>
 
   <!-- Bottom Nav -->
-  <nav class="bottom-nav">
+  </main>
+  <nav class="bottom-nav" aria-label="Primary">
     <button class="nav-item active" id="nav-home" onclick="goTab('home')">
       <span class="nav-icon">🏠</span>Home
     </button>
