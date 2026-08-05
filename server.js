@@ -3,81 +3,45 @@
  *
  * Stack: Express · PostgreSQL · JWT · Paystack · Clubkonnect VTU
  * Security: Helmet · express-rate-limit · CORS · Sentry
+ *
+ * Configuration is centralised in config.js; structured logging in
+ * lib/logger.js; VTU/provider logic lives in routes/vtu.js and
+ * services/clubkonnect.js.
  */
 
 'use strict';
 
 // ── Sentry (must be first) ──────────────────────────────────────────────────
 const Sentry = require('@sentry/node');
-if (process.env.SENTRY_DSN) {
+const config = require('./config');
+if (config.sentry.dsn) {
   Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'production',
-    tracesSampleRate: 0.2,
+    dsn: config.sentry.dsn,
+    environment: config.env,
+    tracesSampleRate: config.sentry.tracesSampleRate,
   });
 }
 
-const express    = require('express');
-const cors       = require('cors');
-const helmet     = require('helmet');
-const rateLimit  = require('express-rate-limit');
-const path       = require('path');
-const crypto     = require('crypto');
-const jwt        = require('jsonwebtoken');
-const axios      = require('axios');
-require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const path = require('path');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
 const db = require('./database');
+const logger = require('./lib/logger');
+const { authMiddleware, adminMiddleware } = require('./middleware/auth');
+const { authLimiter, apiLimiter } = require('./middleware/rate-limit');
+const vtuRouter = require('./routes/vtu');
+const { queryClubkonnectOrder } = require('./services/clubkonnect');
+const { sendEmail } = require('./services/email');
+const { sendError } = require('./lib/errors');
 
-const app  = express();
-app.set('trust proxy', 1); // Trust Railway's load balancer for accurate rate limiting
-const PORT = process.env.PORT || 3000;
-
-// ── Email delivery (Resend HTTPS API) ───────────────────────────────────────
-async function sendEmail({ to, subject, html }) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error('Email delivery is not configured');
-  }
-
-  const response = await axios.post('https://api.resend.com/emails', {
-    from: process.env.RESEND_FROM || 'TopFlowNG <noreply@mail.topflowng.com>',
-    to: [to],
-    subject,
-    html,
-  }, {
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    timeout: 15_000,
-  });
-
-  console.log(`Email accepted by Resend: ${response.data?.data?.id || 'unknown id'}`);
-}
-
-function sendPurchaseEmail(userEmail, userName, { service, description, amount, reference, newBalance }) {
-  const formatted = `₦${parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
-  const bal = `₦${parseFloat(newBalance).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
-  sendEmail({
-    to: userEmail,
-    subject: `TopFlowNG — ${service} purchase confirmed`,
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-        <h2 style="color:#0E2235">Payment confirmed ✓</h2>
-        <p>Hi ${userName},</p>
-        <p>Your <strong>${service}</strong> purchase was successful.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Details</td><td style="padding:8px 0;font-size:13px;text-align:right">${description}</td></tr>
-          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right">${formatted}</td></tr>
-          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right">${reference}</td></tr>
-          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">New balance</td><td style="padding:8px 0;font-size:13px;color:#1A7A4A;font-weight:600;text-align:right">${bal}</td></tr>
-        </table>
-        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at support@topflowng.com</p>
-        <p style="font-size:12px;color:#9CA3AF">— TopFlowNG</p>
-      </div>
-    `,
-  }).catch(e => console.error('Purchase email error:', e.message));
-}
+const app = express();
+app.set('trust proxy', config.trustProxy ? 1 : 0); // Trust proxy for rate limiting
+const PORT = config.port;
 
 // ── Security Middleware ──────────────────────────────────────────────────────
 app.use(helmet({
@@ -86,32 +50,15 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: process.env.APP_URL || '*',
+  origin: config.corsOrigin,
   credentials: true,
 }));
-
-// ── Rate Limiters ────────────────────────────────────────────────────────────
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Too many attempts, please try again in 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  message: { error: 'Too many requests, slow down.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // Raw body for Paystack webhook signature verification
 app.use('/api/paystack/webhook', express.raw({ type: 'application/json' }));
 
 // JSON body for everything else
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: config.bodyLimit }));
 app.use(express.urlencoded({ extended: false }));
 
 // Static files — a strict allow-list. The repository root is NOT exposed:
@@ -153,51 +100,13 @@ app.use((req, res, next) => {
     url.startsWith('/node_modules/') || url.startsWith('/.git') ||
     url.endsWith('.env') || url.includes('.env.') ||
     url.includes('.backup-') || url.endsWith('.bak') ||
-    ['/package.json', '/package-lock.json', '/auth.js', '/server.js', '/database.js'].includes(url) ||
+    ['/package.json', '/package-lock.json', '/auth.js', '/server.js', '/database.js', '/config.js'].includes(url) ||
     /\.js$/.test(url) && !url.includes('sw.js')
   ) {
     return res.status(404).end();
   }
   next();
 });
-
-// ── JWT Auth Middleware ──────────────────────────────────────────────────────
-function authMiddleware(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'No token provided' });
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-}
-
-// ── Admin Middleware ─────────────────────────────────────────────────────────
-async function adminMiddleware(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'No token provided' });
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user    = await db.findUserById(payload.id);
-    if (!user || !user.is_admin) return res.status(403).json({ error: 'Admin access required' });
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-}
-
-// ── Transaction PIN Check ─────────────────────────────────────────────────────
-async function checkTransactionPin(userId, pin) {
-  const hasPinSet = await db.hasTransactionPin(userId);
-  if (!hasPinSet) return; // No PIN configured — skip verification
-  if (!pin) { const e = new Error('Transaction PIN required'); e.code = 'PIN_REQUIRED'; throw e; }
-  const valid = await db.verifyTransactionPin(userId, pin);
-  if (!valid) { const e = new Error('Incorrect transaction PIN'); e.code = 'PIN_INVALID'; throw e; }
-}
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -209,15 +118,15 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { fullName, email, phone, password, referralCode } = req.body;
     if (!fullName || !email || !phone || !password)
-      return res.status(400).json({ error: 'All fields are required' });
+      return sendError(res, 400, 'All fields are required');
     if (password.length < 6)
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      return sendError(res, 400, 'Password must be at least 6 characters');
 
     const existing = await db.findUserByEmail(email);
-    if (existing) return res.status(409).json({ error: 'Email already registered' });
+    if (existing) return sendError(res, 409, 'Email already registered');
 
     const existingPhone = await db.findUserByPhone(phone);
-    if (existingPhone) return res.status(409).json({ error: 'Phone already registered' });
+    if (existingPhone) return sendError(res, 409, 'Phone already registered');
 
     // Resolve referrer (optional — invalid codes are silently ignored)
     let referredBy = null;
@@ -227,13 +136,13 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     }
 
     const user  = await db.createUser({ fullName, email, phone, password, referredBy });
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.status(201).json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
-    console.error('Register error:', err.message);
-    if (err.code === '23505') return res.status(409).json({ error: 'Email or phone already registered' });
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Registration failed' });
+    logger.error('Register error', { message: err.message });
+    if (err.code === '23505') return sendError(res, 409, 'Email or phone already registered');
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Registration failed');
   }
 });
 
@@ -241,34 +150,34 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      return res.status(400).json({ error: 'Email and password required' });
+      return sendError(res, 400, 'Email and password required');
 
     const user = await db.findUserByEmail(email);
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return sendError(res, 401, 'Invalid credentials');
 
     const ok = await db.verifyPassword(user, password);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!ok) return sendError(res, 401, 'Invalid credentials');
 
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
-    console.error('Login error:', err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Login failed' });
+    logger.error('Login error', { message: err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Login failed');
   }
 });
 
 app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!email) return sendError(res, 400, 'Email is required');
 
     const user = await db.findUserByEmail(email);
     // Always respond 200 to prevent user enumeration
     if (!user) return res.json({ message: 'If that email is registered, a reset link has been sent.' });
 
     const token     = crypto.randomBytes(32).toString('hex');
-    const resetUrl  = `${process.env.APP_URL || 'https://topflowng.com'}/?reset=${token}`;
+    const resetUrl  = `${config.appUrl}/?reset=${token}`;
     await db.createPasswordReset(user.id, token);
 
     await sendEmail({
@@ -285,25 +194,25 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 
     res.json({ message: 'If that email is registered, a reset link has been sent.' });
   } catch (err) {
-    console.error('Forgot password error:', err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to send reset email' });
+    logger.error('Forgot password error', { message: err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to send reset email');
   }
 });
 
 app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
   try {
     const { token, password } = req.body;
-    if (!token || !password) return res.status(400).json({ error: 'Token and new password required' });
-    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!token || !password) return sendError(res, 400, 'Token and new password required');
+    if (password.length < 6) return sendError(res, 400, 'Password must be at least 6 characters');
 
     await db.consumePasswordReset(token, password);
     res.json({ message: 'Password reset successfully. You can now log in.' });
   } catch (err) {
     if (err.message === 'Invalid or expired reset token')
-      return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Password reset failed' });
+      return sendError(res, 400, 'This reset link is invalid or has expired.');
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Password reset failed');
   }
 });
 
@@ -311,20 +220,20 @@ app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword)
-      return res.status(400).json({ error: 'Current and new password required' });
+      return sendError(res, 400, 'Current and new password required');
     if (newPassword.length < 6)
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      return sendError(res, 400, 'New password must be at least 6 characters');
 
     const user = await db.findUserById(req.user.id);
     const fullUser = await db.findUserByEmail(user.email);
     const ok = await db.verifyPassword(fullUser, currentPassword);
-    if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
+    if (!ok) return sendError(res, 401, 'Current password is incorrect');
 
     await db.updateUserPassword(req.user.id, newPassword);
     res.json({ message: 'Password changed successfully.' });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to change password' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to change password');
   }
 });
 
@@ -332,11 +241,11 @@ app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
 app.get('/api/user/profile', authMiddleware, async (req, res) => {
   try {
     const user = await db.findUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return sendError(res, 404, 'User not found');
     res.json({ id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch profile' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch profile');
   }
 });
 
@@ -345,8 +254,8 @@ app.get('/api/wallet/balance', authMiddleware, async (req, res) => {
     const balance = await db.getWalletBalance(req.user.id);
     res.json({ balance });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch balance' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch balance');
   }
 });
 
@@ -356,8 +265,8 @@ app.get('/api/wallet/transactions', authMiddleware, async (req, res) => {
     const txns  = await db.getTransactions(req.user.id, limit);
     res.json({ transactions: txns });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch transactions');
   }
 });
 
@@ -365,33 +274,35 @@ app.get('/api/wallet/transactions', authMiddleware, async (req, res) => {
 app.post('/api/paystack/initialize', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const { amount } = req.body;
-    if (!amount || amount < 100) return res.status(400).json({ error: 'Minimum top-up is ₦100' });
+    if (!amount || amount < 100) return sendError(res, 400, 'Minimum top-up is ₦100');
 
     const user       = await db.findUserById(req.user.id);
     const amountKobo = Math.round(parseFloat(amount) * 100);
     const reference  = `TF-${Date.now()}-${req.user.id}`;
 
-    const response = await axios.post('https://api.paystack.co/transaction/initialize', {
+    const response = await axios.post(`${config.paystack.apiBaseUrl}/transaction/initialize`, {
       email: user.email,
       amount: amountKobo,
       reference,
-      callback_url: `${process.env.APP_URL || 'https://topflowng.com'}/?verified=${reference}`,
+      callback_url: `${config.appUrl}/?verified=${reference}`,
       metadata: { user_id: req.user.id, user_email: user.email },
     }, {
-      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+      headers: { Authorization: `Bearer ${config.paystack.secretKey}` },
+      timeout: config.paystack.timeoutMs,
     });
 
     res.json({ authorization_url: response.data.data.authorization_url, reference });
   } catch (err) {
-    console.error('Paystack init error:', err.response?.data || err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Payment initialization failed' });
+    logger.error('Paystack init error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Payment initialization failed');
   }
 });
 
 async function getVerifiedPaystackPayment(reference) {
-  const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-    headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+  const response = await axios.get(`${config.paystack.apiBaseUrl}/transaction/verify/${reference}`, {
+    headers: { Authorization: `Bearer ${config.paystack.secretKey}` },
+    timeout: config.paystack.timeoutMs,
   });
   const payment = response.data.data;
   if (payment.status !== 'success' || payment.reference !== reference) {
@@ -412,10 +323,10 @@ function monitorUncreditedPaystackPayment(reference) {
   setTimeout(async () => {
     try {
       if (!await db.paystackRefExists(reference)) {
-        console.error(`ALERT: verified Paystack payment ${reference} is still uncredited after 60 seconds`);
+        logger.error(`ALERT: verified Paystack payment ${reference} is still uncredited after 60 seconds`);
       }
     } catch (err) {
-      console.error(`ALERT: unable to check Paystack credit state for ${reference}:`, err.message);
+      logger.error(`ALERT: unable to check Paystack credit state for ${reference}`, { message: err.message });
     }
   }, 60_000).unref();
 }
@@ -429,7 +340,7 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
   }
   monitorUncreditedPaystackPayment(reference);
   const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
-  console.log(`Paystack payment ${result.credited ? 'credited' : 'already credited'}: user ${payment.userId} +₦${payment.amount} [${reference}]`);
+  logger.info(`Paystack payment ${result.credited ? 'credited' : 'already credited'}: user ${payment.userId} +₦${payment.amount} [${reference}]`);
   return { ...result, userId: payment.userId };
 }
 
@@ -438,22 +349,22 @@ app.get('/api/paystack/verify/:reference', authMiddleware, async (req, res) => {
     const result = await verifyAndCreditPaystackPayment(req.params.reference, req.user.id);
     res.json({ success: true, balance: result.balance, credited: result.credited });
   } catch (err) {
-    console.error('Paystack verify error:', err.response?.data || err.message);
-    Sentry.captureException(err);
+    logger.error('Paystack verify error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
     const status = ['PAYMENT_NOT_SUCCESSFUL', 'PAYMENT_USER_MISMATCH'].includes(err.code) ? 400 : 500;
-    res.status(status).json({ error: 'Payment verification failed' });
+    sendError(res, status, 'Payment verification failed');
   }
 });
 
 app.post('/api/paystack/webhook', async (req, res) => {
   try {
-    const secret    = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY;
+    const secret    = config.paystack.webhookSecret || config.paystack.secretKey;
     const signature = req.headers['x-paystack-signature'];
     const hash      = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
 
     if (hash !== signature) {
-      console.warn('Invalid Paystack webhook signature');
-      return res.status(400).json({ error: 'Invalid signature' });
+      logger.warn('Invalid Paystack webhook signature');
+      return sendError(res, 400, 'Invalid signature');
     }
 
     const event = JSON.parse(req.body.toString());
@@ -466,329 +377,14 @@ app.post('/api/paystack/webhook', async (req, res) => {
 
     res.sendStatus(200);
   } catch (err) {
-    console.error('Webhook error:', err.message);
-    Sentry.captureException(err);
+    logger.error('Webhook error', { message: err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
     res.sendStatus(500);
   }
 });
 
-// ── VTU — Airtime ────────────────────────────────────────────────────────────
-// Client-supplied purchase amounts are never trusted blindly. Every amount is
-// coerced to a number, must be finite, positive, and within a sane ceiling so
-// negative/NaN/Infinity/absurd values can never reach the wallet ledger.
-const MAX_PURCHASE_AMOUNT = 1_000_000;
-
-function parseValidatedAmount(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return null;
-  if (amount <= 0 || amount > MAX_PURCHASE_AMOUNT) return null;
-  return amount;
-}
-
-const CK_PENDING_CODES = new Set([100, 199, 201, 299, 300, 399, 412, 600, 601, 602, 603, 604, 605, 606, 699]);
-
-function normalizeClubkonnectResponse(raw) {
-  const data = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
-  const rawCode = data.statusCode ?? data.StatusCode ?? data.statuscode ?? data.Statuscode;
-  const legacyStatus = data.status ?? data.Status;
-  const statusCode = rawCode !== undefined && rawCode !== null && rawCode !== ''
-    ? Number(rawCode)
-    : /^\d+$/.test(String(legacyStatus || '')) ? Number(legacyStatus) : null;
-  const status = String(data.status ?? data.Status ?? '').trim().toUpperCase();
-  const remark = String(data.remark ?? data.Remark ?? '').trim();
-  const description = String(data.description ?? data.Description ?? data.message ?? data.Message ?? '').trim();
-  const orderId = data.orderId ?? data.OrderID ?? data.OrderId ?? null;
-
-  // Clubkonnect documents 200 as the only terminal delivery success. The
-  // legacy API response format sometimes reports it as status: '200'.
-  if (statusCode === 200 || (!statusCode && status === 'SUCCESSFUL')) {
-    return { outcome: 'success', statusCode: 200, status: status || 'ORDER_COMPLETED', remark: remark || 'Success', description, orderId, raw: data };
-  }
-
-  // ORDER_RECEIVED, ORDER_PROCESSED, and ORDER_ONHOLD are non-terminal. This
-  // deliberately includes ambiguity codes such as 199/299/399; no customer is
-  // charged until the provider gives a terminal successful result.
-  if (CK_PENDING_CODES.has(statusCode) || ['ORDER_RECEIVED', 'ORDER_PROCESSED', 'ORDER_ONHOLD'].includes(status) || /network unresponsive|awaiting|on hold|retry/i.test(`${remark} ${description}`)) {
-    return { outcome: 'pending', statusCode, status, remark, description, orderId, raw: data };
-  }
-
-  // All documented ORDER_ERROR and ORDER_CANCELLED responses are terminal.
-  // Authentication errors are also terminal even when this legacy endpoint
-  // returns a text-only status rather than a numeric statusCode.
-  if ((statusCode >= 400 && statusCode <= 599 && statusCode !== 412)
-    || ['ORDER_ERROR', 'ORDER_CANCELLED'].includes(status)
-    || /AUTHENTICATION_FAILED|INVALID.*(?:KEY|CREDENTIAL|USER)|UNAUTHORIZED/i.test(`${status} ${remark} ${description}`)) {
-    return { outcome: 'failed', statusCode, status, remark, description, orderId, raw: data };
-  }
-
-  // If the network returned an undocumented shape, preserve it for support and
-  // reconciliation instead of risking an incorrect debit or false failure.
-  return { outcome: 'pending', statusCode, status, remark, description, orderId, raw: data };
-}
-
-const CLUBKONNECT_QUERY_URL = process.env.CLUBKONNECT_QUERY_URL || 'https://www.nellobytesystems.com/APIQuery.asp';
-
-async function queryClubkonnectOrder(orderId) {
-  const userId = process.env.CLUBKONNECT_USER_ID;
-  const apiKey = process.env.CLUBKONNECT_API_KEY;
-  if (!userId || !apiKey) {
-    const error = new Error('Clubkonnect Query API is not configured');
-    error.code = 'CLUBKONNECT_NOT_CONFIGURED';
-    throw error;
-  }
-
-  try {
-    const response = await axios.get(CLUBKONNECT_QUERY_URL, {
-      params: { UserID: userId, APIKey: apiKey, OrderID: orderId },
-      timeout: 30_000,
-    });
-    return normalizeClubkonnectResponse(response.data);
-  } catch (err) {
-    if (err.response?.data) return normalizeClubkonnectResponse(err.response.data);
-    const error = new Error(`Clubkonnect Query API request failed: ${err.message}`);
-    error.code = 'CLUBKONNECT_QUERY_UNREACHABLE';
-    throw error;
-  }
-}
-
-async function processClubkonnectPurchase({ userId, requestId, serviceType, amount, description, endpoint, params }) {
-  await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
-
-  let providerRaw;
-  try {
-    const providerUrl = endpoint.startsWith('http')
-      ? endpoint
-      : `${process.env.CLUBKONNECT_BASE_URL}${endpoint}`;
-    const response = await axios.get(providerUrl, { params, timeout: 30_000 });
-    providerRaw = response.data;
-  } catch (err) {
-    providerRaw = err.response?.data;
-    if (!providerRaw) {
-      // The provider may have received the request even though we timed out.
-      // Hold the order and leave the wallet unchanged until it is reconciled.
-      await db.recordVtuProviderResponse(requestId, {
-        statusCode: null,
-        status: 'UNKNOWN',
-        remark: 'Provider connection unresolved',
-        description: err.message,
-        orderId: null,
-        raw: { error: err.message },
-      });
-      await db.markVtuOrderPending(requestId);
-      console.warn(`Clubkonnect purchase pending reconciliation: ${requestId} (${err.message})`);
-      return { outcome: 'pending', message: 'Your request is pending provider confirmation. Your wallet has not been debited.', requestId, orderId: null };
-    }
-  }
-
-  const provider = normalizeClubkonnectResponse(providerRaw);
-  await db.recordVtuProviderResponse(requestId, provider);
-
-  if (provider.outcome === 'success') {
-    const result = await db.completeVtuOrder(requestId);
-    console.log(`Clubkonnect purchase completed: ${requestId} [${provider.orderId || 'no provider order id'}]`);
-    return { outcome: 'success', balance: result.balance, requestId, orderId: provider.orderId, provider };
-  }
-
-  if (provider.outcome === 'failed') {
-    await db.markVtuOrderFailed(requestId);
-    console.warn(`Clubkonnect purchase failed without wallet debit: ${requestId} [${provider.statusCode || 'unknown'}]`);
-    return { outcome: 'failed', message: provider.description || provider.remark || 'The provider declined this purchase.', requestId, orderId: provider.orderId, provider };
-  }
-
-  await db.markVtuOrderPending(requestId);
-  console.warn(`Clubkonnect purchase pending reconciliation: ${requestId} [${provider.statusCode || 'unknown'} ${provider.remark || ''}]`);
-  return {
-    outcome: 'pending',
-    message: 'Your request is pending provider confirmation. Your wallet has not been debited.',
-    requestId,
-    orderId: provider.orderId,
-    provider,
-  };
-}
-
-app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
-  try {
-    const { network, phone, amount, pin } = req.body;
-    if (!network || !phone || !amount) return res.status(400).json({ error: 'network, phone, amount required' });
-    const cost = parseValidatedAmount(amount);
-    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
-    await checkTransactionPin(req.user.id, pin);
-
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
-
-    const networkMap = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
-    const ckNetwork  = networkMap[network.toUpperCase()];
-    if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
-    const requestId  = `AIR-${Date.now()}-${req.user.id}`;
-
-    const params = {
-      UserID: process.env.CLUBKONNECT_USER_ID,
-      APIKey: process.env.CLUBKONNECT_API_KEY,
-      MobileNetwork: ckNetwork,
-      Amount: cost,
-      MobileNumber: phone,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
-
-    const desc = `${network} airtime — ${phone}`;
-    const result = await processClubkonnectPurchase({
-      userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
-      description: desc, endpoint: 'https://www.nellobytesystems.com/APIAirtimeV1.asp', params,
-    });
-    if (result.outcome === 'success') {
-      const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Airtime', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
-    }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
-    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
-  } catch (err) {
-    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
-    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
-    console.error('Airtime error:', err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Airtime service unavailable' });
-  }
-});
-
-// ── VTU — Data Bundle ────────────────────────────────────────────────────────
-app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
-  try {
-    const { network, phone, planCode, amount, pin } = req.body;
-    if (!network || !phone || !planCode || !amount) return res.status(400).json({ error: 'network, phone, planCode, amount required' });
-    const cost = parseValidatedAmount(amount);
-    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
-    await checkTransactionPin(req.user.id, pin);
-
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
-
-    const networkMap = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
-    const ckNetwork  = networkMap[network.toUpperCase()];
-    if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
-
-    const requestId = `DATA-${Date.now()}-${req.user.id}`;
-    const params = {
-      UserID: process.env.CLUBKONNECT_USER_ID,
-      APIKey: process.env.CLUBKONNECT_API_KEY,
-      MobileNetwork: ckNetwork,
-      DataPlan: planCode,
-      MobileNumber: phone,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
-
-    const desc = `${network} data ${planCode} — ${phone}`;
-    const result = await processClubkonnectPurchase({
-      userId: req.user.id, requestId, serviceType: 'data', amount: cost,
-      description: desc, endpoint: 'https://www.nellobytesystems.com/APIDataBundleV1.asp', params,
-    });
-    if (result.outcome === 'success') {
-      const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Data', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId });
-    }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
-    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
-  } catch (err) {
-    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
-    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
-    console.error('Data error:', err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Data service unavailable' });
-  }
-});
-
-// ── VTU — Cable TV ───────────────────────────────────────────────────────────
-app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
-  try {
-    const { provider, smartCardNumber, planCode, amount, pin } = req.body;
-    if (!provider || !smartCardNumber || !planCode || !amount) return res.status(400).json({ error: 'provider, smartCardNumber, planCode, amount required' });
-    const cost = parseValidatedAmount(amount);
-    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
-    await checkTransactionPin(req.user.id, pin);
-
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
-
-    const requestId = `CABLE-${Date.now()}-${req.user.id}`;
-    const params = {
-      UserID: process.env.CLUBKONNECT_USER_ID,
-      APIKey: process.env.CLUBKONNECT_API_KEY,
-      CableTV: provider.toUpperCase(),
-      Package: planCode,
-      SmartCardNo: smartCardNumber,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
-
-    const desc = `${provider} ${planCode} — ${smartCardNumber}`;
-    const result = await processClubkonnectPurchase({
-      userId: req.user.id, requestId, serviceType: 'cable', amount: cost,
-      description: desc, endpoint: 'https://www.nellobytesystems.com/APICableTVV1.asp', params,
-    });
-    if (result.outcome === 'success') {
-      const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Cable TV', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId });
-    }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
-    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
-  } catch (err) {
-    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
-    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
-    console.error('Cable TV error:', err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Cable TV service unavailable' });
-  }
-});
-
-// ── VTU — Electricity ────────────────────────────────────────────────────────
-app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) => {
-  try {
-    const { disco, meterNumber, meterType, amount, pin } = req.body;
-    if (!disco || !meterNumber || !meterType || !amount) return res.status(400).json({ error: 'disco, meterNumber, meterType, amount required' });
-    const cost = parseValidatedAmount(amount);
-    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
-    await checkTransactionPin(req.user.id, pin);
-
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
-
-    const requestId = `ELEC-${Date.now()}-${req.user.id}`;
-    const params = {
-      UserID: process.env.CLUBKONNECT_USER_ID,
-      APIKey: process.env.CLUBKONNECT_API_KEY,
-      ElectricCompany: disco.toUpperCase(),
-      MeterType: meterType.toUpperCase(),
-      MeterNumber: meterNumber,
-      Amount: cost,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
-
-    const desc = `${disco} electricity — ${meterNumber}`;
-    const result = await processClubkonnectPurchase({
-      userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
-      description: desc, endpoint: 'https://www.nellobytesystems.com/APIElectricityV1.asp', params,
-    });
-    if (result.outcome === 'success') {
-      const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Electricity', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId });
-    }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
-    return res.status(400).json({ error: result.message, reference: requestId, orderId: result.orderId });
-  } catch (err) {
-    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
-    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
-    console.error('Electricity error:', err.message);
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Electricity service unavailable' });
-  }
-});
+// ── VTU Routes (mounted /api/vtu/*) ──────────────────────────────────────────
+app.use('/api/vtu', vtuRouter);
 
 // ── Clubkonnect VTU Reconciliation ──────────────────────────────────────────
 // Manual, admin-only resolution. It uses the provider's documented Query API and
@@ -797,7 +393,7 @@ app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (r
   const requestId = String(req.params.requestId || '').trim();
   try {
     const order = await db.getVtuOrderByRequestId(requestId);
-    if (!order) return res.status(404).json({ error: 'VTU order not found' });
+    if (!order) return sendError(res, 404, 'VTU order not found');
     if (order.status !== 'pending') {
       return res.json({ outcome: order.status, order, message: 'This order is already in a terminal state.' });
     }
@@ -815,12 +411,12 @@ app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (r
     if (provider.outcome === 'success') {
       const settled = await db.completeVtuOrder(requestId, { allowPending: true });
       balance = settled.balance;
-      console.log(`Clubkonnect pending order settled: ${requestId} [${order.provider_order_id}]`);
+      logger.info('Clubkonnect pending order settled', { requestId, orderId: order.provider_order_id });
     } else if (provider.outcome === 'failed') {
       await db.markVtuOrderFailed(requestId, { allowPending: true });
-      console.warn(`Clubkonnect pending order failed on reconciliation: ${requestId} [${order.provider_order_id}]`);
+      logger.warn('Clubkonnect pending order failed on reconciliation', { requestId, orderId: order.provider_order_id });
     } else {
-      console.log(`Clubkonnect pending order remains pending: ${requestId} [${order.provider_order_id}]`);
+      logger.info('Clubkonnect pending order remains pending', { requestId, orderId: order.provider_order_id });
     }
 
     const updated = await db.getVtuOrderByRequestId(requestId);
@@ -835,9 +431,9 @@ app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (r
           : 'Clubkonnect confirmed failure. No wallet debit was made.',
     });
   } catch (err) {
-    console.error(`Clubkonnect reconciliation error for ${requestId}:`, err.message);
-    Sentry.captureException(err);
-    res.status(502).json({ error: 'Unable to reconcile this provider order right now.' });
+    logger.error(`Clubkonnect reconciliation error for ${requestId}`, { message: err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 502, 'Unable to reconcile this provider order right now.');
   }
 });
 
@@ -847,8 +443,8 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
     const stats = await db.getAdminStats();
     res.json(stats);
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch stats');
   }
 });
 
@@ -859,8 +455,8 @@ app.get('/api/admin/transactions', adminMiddleware, async (req, res) => {
     const txns   = await db.getAllTransactions(limit, offset);
     res.json({ transactions: txns });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch transactions');
   }
 });
 
@@ -871,8 +467,8 @@ app.get('/api/admin/users', adminMiddleware, async (req, res) => {
     const users  = await db.getAllUsers(limit, offset);
     res.json({ users });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch users');
   }
 });
 
@@ -881,25 +477,25 @@ app.post('/api/auth/set-transaction-pin', authMiddleware, async (req, res) => {
   try {
     const { pin } = req.body;
     if (!pin || !/^\d{4,6}$/.test(pin)) {
-      return res.status(400).json({ error: 'PIN must be 4–6 digits.' });
+      return sendError(res, 400, 'PIN must be 4–6 digits.');
     }
     await db.setTransactionPin(req.user.id, pin);
     res.json({ message: 'Transaction PIN set successfully.' });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to set PIN' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to set PIN');
   }
 });
 
 app.post('/api/auth/verify-transaction-pin', authMiddleware, async (req, res) => {
   try {
     const { pin } = req.body;
-    if (!pin) return res.status(400).json({ error: 'PIN is required.' });
+    if (!pin) return sendError(res, 400, 'PIN is required.');
     const valid = await db.verifyTransactionPin(req.user.id, pin);
     res.json({ valid });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to verify PIN' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to verify PIN');
   }
 });
 
@@ -908,7 +504,7 @@ app.get('/api/auth/pin-status', authMiddleware, async (req, res) => {
     const hasPin = await db.hasTransactionPin(req.user.id);
     res.json({ hasPin });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to check PIN status' });
+    sendError(res, 500, 'Failed to check PIN status');
   }
 });
 
@@ -918,8 +514,8 @@ app.get('/api/beneficiaries', authMiddleware, async (req, res) => {
     const list = await db.getBeneficiaries(req.user.id);
     res.json({ beneficiaries: list });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch beneficiaries' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch beneficiaries');
   }
 });
 
@@ -927,24 +523,24 @@ app.post('/api/beneficiaries', authMiddleware, async (req, res) => {
   try {
     const { type, label, network, identifier } = req.body;
     if (!type || !label || !identifier) {
-      return res.status(400).json({ error: 'type, label and identifier are required.' });
+      return sendError(res, 400, 'type, label and identifier are required.');
     }
     const b = await db.addBeneficiary(req.user.id, { type, label, network, identifier });
     res.json({ beneficiary: b });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to save beneficiary' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to save beneficiary');
   }
 });
 
 app.delete('/api/beneficiaries/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await db.deleteBeneficiary(req.user.id, parseInt(req.params.id));
-    if (!deleted) return res.status(404).json({ error: 'Beneficiary not found' });
+    if (!deleted) return sendError(res, 404, 'Beneficiary not found');
     res.json({ message: 'Deleted.' });
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to delete beneficiary' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to delete beneficiary');
   }
 });
 
@@ -954,19 +550,8 @@ app.get('/api/referral', authMiddleware, async (req, res) => {
     const stats = await db.getReferralStats(req.user.id);
     res.json(stats);
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch referral info' });
-  }
-});
-
-// ── Pending VTU Orders ───────────────────────────────────────────────────────
-app.get('/api/vtu/pending', authMiddleware, async (req, res) => {
-  try {
-    const orders = await db.getPendingVtuOrders(req.user.id);
-    res.json({ hasPending: orders.length > 0, orders });
-  } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to check pending orders' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch referral info');
   }
 });
 
@@ -976,101 +561,8 @@ app.get('/api/analytics/summary', authMiddleware, async (req, res) => {
     const summary = await db.getAnalyticsSummary(req.user.id);
     res.json(summary);
   } catch (err) {
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
-  }
-});
-
-// ── Exam PIN ──────────────────────────────────────────────────────────────────
-const EXAM_BODY_MAP = { WAEC: 'WAEC', NECO: 'NECO', NABTEB: 'NABTEB', JAMB: 'JAMB' };
-const EXAM_PRICES   = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
-
-app.post('/api/vtu/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
-  try {
-    const { examBody, quantity = 1, pin } = req.body;
-    const ckBody = EXAM_BODY_MAP[examBody?.toUpperCase()];
-    if (!ckBody) return res.status(400).json({ error: `Unsupported exam body: ${examBody}` });
-    await checkTransactionPin(req.user.id, pin);
-    const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
-    const amount = EXAM_PRICES[ckBody] * qty;
-
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < amount) return res.status(402).json({ error: 'Insufficient wallet balance' });
-
-    const requestId = `EXAM-${Date.now()}-${req.user.id}`;
-    const description = `${ckBody} exam PIN × ${qty}`;
-
-    const result = await processClubkonnectPurchase({
-      userId: req.user.id, requestId, serviceType: 'exam-pin', amount, description,
-      endpoint: 'https://www.nellobytesystems.com/APIExamPins.asp',
-      params: {
-        UserID: process.env.CLUBKONNECT_USER_ID,
-        APIKey: process.env.CLUBKONNECT_API_KEY,
-        ExamBody: ckBody,
-        Quantity: qty,
-        RequestID: requestId,
-      },
-    });
-
-    if (result.outcome === 'success') {
-      const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Exam PIN', description, amount, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
-    }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
-    return res.status(400).json({ error: result.message, reference: requestId });
-  } catch (err) {
-    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
-    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Exam PIN service error. Please try again.' });
-  }
-});
-
-// ── Recharge Card PIN ─────────────────────────────────────────────────────────
-app.post('/api/vtu/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
-  try {
-    const { network, amount, quantity = 1, pin } = req.body;
-    const networkMap2 = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
-    const ckNetwork = networkMap2[network?.toUpperCase()];
-    if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
-    await checkTransactionPin(req.user.id, pin);
-    const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
-    const amt = parseValidatedAmount(amount);
-    if (!amt || amt < 100) return res.status(400).json({ error: 'Amount must be a positive number of at least ₦100.' });
-    const totalAmount = amt * qty;
-
-    const balance = await db.getWalletBalance(req.user.id);
-    if (balance < totalAmount) return res.status(402).json({ error: 'Insufficient wallet balance' });
-
-    const requestId = `RPIN-${Date.now()}-${req.user.id}`;
-    const description = `${network} recharge card ₦${amt} × ${qty}`;
-
-    const result = await processClubkonnectPurchase({
-      userId: req.user.id, requestId, serviceType: 'recharge-pin', amount: totalAmount, description,
-      endpoint: 'https://www.nellobytesystems.com/APIRechargeCard.asp',
-      params: {
-        UserID: process.env.CLUBKONNECT_USER_ID,
-        APIKey: process.env.CLUBKONNECT_API_KEY,
-        MobileNetwork: ckNetwork,
-        Amount: amt,
-        Quantity: qty,
-        RequestID: requestId,
-      },
-    });
-
-    if (result.outcome === 'success') {
-      const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Recharge Card', description, amount: totalAmount, reference: requestId, newBalance: result.balance });
-      return res.json({ success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId });
-    }
-    if (result.outcome === 'pending') return res.status(202).json({ pending: true, message: result.message, reference: requestId, orderId: result.orderId });
-    return res.status(400).json({ error: result.message, reference: requestId });
-  } catch (err) {
-    if (err.code === 'PIN_REQUIRED') return res.status(400).json({ error: 'Transaction PIN required', pinRequired: true });
-    if (err.code === 'PIN_INVALID') return res.status(401).json({ error: 'Incorrect transaction PIN' });
-    Sentry.captureException(err);
-    res.status(500).json({ error: 'Recharge PIN service error. Please try again.' });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch analytics');
   }
 });
 
@@ -1080,25 +572,25 @@ app.get('*', (req, res) => {
 });
 
 // ── Sentry Error Handler ─────────────────────────────────────────────────────
-if (process.env.SENTRY_DSN) {
+if (config.sentry.dsn) {
   Sentry.setupExpressErrorHandler(app);
 }
 
 // ── Global Error Handler ─────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
-  console.error('Unhandled error:', err.message);
-  res.status(500).json({ error: 'Internal server error' });
+  logger.error('Unhandled error', { message: err.message });
+  sendError(res, 500, 'Internal server error');
 });
 
 // ── Start Server ─────────────────────────────────────────────────────────────
 async function start() {
   await db.initDB();
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`TopFlowNG running on port ${PORT}`);
+    logger.info('TopFlowNG server started', { port: PORT, env: config.env });
   });
 }
 
 start().catch((err) => {
-  console.error('Failed to start server:', err);
+  logger.error('Failed to start server', { message: err.message });
   process.exit(1);
 });
