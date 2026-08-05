@@ -114,9 +114,52 @@ app.use('/api/paystack/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 
-// Static files
+// Static files — a strict allow-list. The repository root is NOT exposed:
+// only the whitelisted client assets below are served. Source code, env
+// files, backups, node_modules and .git all remain private.
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
+
+const ROOT_ASSET_PATHS = new Set([
+  '/topflowng.html',
+  '/admin.html',
+  '/bizflow.html',
+  '/manifest.json',
+  '/sw.js',
+]);
+
+app.use('/icons/:file', (req, res) => {
+  const name = req.params.file;
+  if (!/^[A-Za-z0-9._-]+$/.test(name)) return res.status(400).end();
+  res.sendFile(path.join(__dirname, 'icons', name), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
+app.use((req, res, next) => {
+  if (ROOT_ASSET_PATHS.has(req.path)) {
+    return res.sendFile(path.join(__dirname, req.path), (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  }
+  next();
+});
+
+// Hard-block private/source paths so they return 404 rather than falling
+// through to the SPA shell: source files, env files, backups, node_modules,
+// and .git are never exposed.
+app.use((req, res, next) => {
+  const url = req.path.toLowerCase();
+  if (
+    url.startsWith('/node_modules/') || url.startsWith('/.git') ||
+    url.endsWith('.env') || url.includes('.env.') ||
+    url.includes('.backup-') || url.endsWith('.bak') ||
+    ['/package.json', '/package-lock.json', '/auth.js', '/server.js', '/database.js'].includes(url) ||
+    /\.js$/.test(url) && !url.includes('sw.js')
+  ) {
+    return res.status(404).end();
+  }
+  next();
+});
 
 // ── JWT Auth Middleware ──────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
@@ -430,6 +473,18 @@ app.post('/api/paystack/webhook', async (req, res) => {
 });
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────
+// Client-supplied purchase amounts are never trusted blindly. Every amount is
+// coerced to a number, must be finite, positive, and within a sane ceiling so
+// negative/NaN/Infinity/absurd values can never reach the wallet ledger.
+const MAX_PURCHASE_AMOUNT = 1_000_000;
+
+function parseValidatedAmount(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return null;
+  if (amount <= 0 || amount > MAX_PURCHASE_AMOUNT) return null;
+  return amount;
+}
+
 const CK_PENDING_CODES = new Set([100, 199, 201, 299, 300, 399, 412, 600, 601, 602, 603, 604, 605, 606, 699]);
 
 function normalizeClubkonnectResponse(raw) {
@@ -555,9 +610,10 @@ app.post('/api/vtu/airtime', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const { network, phone, amount, pin } = req.body;
     if (!network || !phone || !amount) return res.status(400).json({ error: 'network, phone, amount required' });
+    const cost = parseValidatedAmount(amount);
+    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
     await checkTransactionPin(req.user.id, pin);
 
-    const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
@@ -602,9 +658,10 @@ app.post('/api/vtu/data', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const { network, phone, planCode, amount, pin } = req.body;
     if (!network || !phone || !planCode || !amount) return res.status(400).json({ error: 'network, phone, planCode, amount required' });
+    const cost = parseValidatedAmount(amount);
+    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
     await checkTransactionPin(req.user.id, pin);
 
-    const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
@@ -649,9 +706,10 @@ app.post('/api/vtu/cable', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const { provider, smartCardNumber, planCode, amount, pin } = req.body;
     if (!provider || !smartCardNumber || !planCode || !amount) return res.status(400).json({ error: 'provider, smartCardNumber, planCode, amount required' });
+    const cost = parseValidatedAmount(amount);
+    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
     await checkTransactionPin(req.user.id, pin);
 
-    const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
@@ -692,9 +750,10 @@ app.post('/api/vtu/electricity', authMiddleware, apiLimiter, async (req, res) =>
   try {
     const { disco, meterNumber, meterType, amount, pin } = req.body;
     if (!disco || !meterNumber || !meterType || !amount) return res.status(400).json({ error: 'disco, meterNumber, meterType, amount required' });
+    const cost = parseValidatedAmount(amount);
+    if (cost === null) return res.status(400).json({ error: `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}` });
     await checkTransactionPin(req.user.id, pin);
 
-    const cost    = parseFloat(amount);
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return res.status(402).json({ error: 'Insufficient wallet balance' });
 
@@ -977,8 +1036,8 @@ app.post('/api/vtu/recharge-pin', authMiddleware, apiLimiter, async (req, res) =
     if (!ckNetwork) return res.status(400).json({ error: `Unsupported network: ${network}` });
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
-    const amt = parseFloat(amount);
-    if (!amt || amt < 100) return res.status(400).json({ error: 'Minimum denomination is ₦100.' });
+    const amt = parseValidatedAmount(amount);
+    if (!amt || amt < 100) return res.status(400).json({ error: 'Amount must be a positive number of at least ₦100.' });
     const totalAmount = amt * qty;
 
     const balance = await db.getWalletBalance(req.user.id);

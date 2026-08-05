@@ -3,3 +3,7 @@ node_modules/
 topflowng.db
 *.db-shm
 *.db-wal
+
+# Local backups — never commit or deploy these
+*.backup-*
+*.bak

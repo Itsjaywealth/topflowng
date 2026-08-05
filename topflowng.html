@@ -1434,7 +1434,7 @@ function txnHTML(t) {
   return `<div class="txn-item">
     <div class="txn-icon ${cls}" aria-hidden="true">${icon}</div>
     <div class="txn-info">
-      <div class="txn-desc" title="${t.description}">${t.description}</div>
+      <div class="txn-desc" title="${escHtml(t.description)}">${escHtml(t.description)}</div>
       <div class="txn-meta"><span class="txn-date">${fmtDate(t.created_at)}</span>${transactionStatusPill(status)}</div>
     </div>
     <div class="txn-amount ${cls}">${amountText}</div>
@@ -1763,10 +1763,10 @@ function showReceipt({ title, sub, lines, token: elecToken, pending = false }) {
   document.getElementById('receipt-check').classList.toggle('pending', pending);
   document.getElementById('receipt-check').textContent = pending ? '◷' : '✓';
   document.getElementById('receipt-token').innerHTML = elecToken
-    ? `<div class="receipt-token">${elecToken}</div>` : '';
+    ? `<div class="receipt-token">${escHtml(elecToken)}</div>` : '';
   const linesEl = document.getElementById('receipt-lines');
   linesEl.innerHTML = lines.map(([l,v]) =>
-    `<div class="receipt-line"><span class="receipt-line-label">${l}</span><span class="receipt-line-value">${v}</span></div>`
+    `<div class="receipt-line"><span class="receipt-line-label">${escHtml(l)}</span><span class="receipt-line-value">${escHtml(v)}</span></div>`
   ).join('');
   document.getElementById('receipt-overlay').classList.add('open');
   // Animate
@@ -1934,11 +1934,11 @@ function showExamPinsReceipt(examBody, qty, amount, reference, pins) {
   document.getElementById('receipt-check').classList.remove('pop','pending');
   const tokenEl = document.getElementById('receipt-token');
   tokenEl.innerHTML = pins
-    ? `<div class="receipt-pins">${String(pins).replace(/,/g,'<br>')}</div><button class="copy-pins-btn" onclick="copyPins(this)">Copy PINs</button>`
+    ? `<div class="receipt-pins">${escHtml(String(pins)).replace(/,/g,'<br>')}</div><button class="copy-pins-btn" onclick="copyPins(this)">Copy PINs</button>`
     : '';
   tokenEl._pins = pins;
   document.getElementById('receipt-lines').innerHTML = [['Exam body',examBody],['Quantity',qty],['Amount',fmt(amount)],['Reference',reference]].map(([l,v]) =>
-    `<div class="receipt-line"><span class="receipt-line-label">${l}</span><span class="receipt-line-value">${v}</span></div>`
+    `<div class="receipt-line"><span class="receipt-line-label">${escHtml(l)}</span><span class="receipt-line-value">${escHtml(v)}</span></div>`
   ).join('');
   overlay.classList.add('open');
   setTimeout(() => document.getElementById('receipt-check').classList.add('pop'), 80);
@@ -2125,7 +2125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── BENEFICIARIES ─────────────────────────────────────────────────────────────
 function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 const BFR_CONFIG = {
