@@ -448,6 +448,7 @@ app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (r
       });
     }
 
+    await db.recordReconciliationAttempt(requestId);
     const provider = await queryClubkonnectOrder(order.provider_order_id);
     await db.recordVtuProviderResponse(requestId, provider);
 

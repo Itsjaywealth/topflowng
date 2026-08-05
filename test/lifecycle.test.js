@@ -1,0 +1,387 @@
+/**
+ * TopFlowNG — Phase 4E VTU status-transition, reconciliation and rollback
+ * safety tests.
+ *
+ * Runs against the real throwaway PostgreSQL database with a mocked provider.
+ * Verifies the status-transition matrix (pending/processing/completed/failed),
+ * terminal-state rejection, idempotent re-completion, reconciliation attempt
+ * tracking, at-most-once wallet debit under duplicates/concurrency, and atomic
+ * rollback when a wallet debit or ledger write fails. Phase 4D idempotency
+ * behaviour is regression-tested at the route level.
+ */
+
+'use strict';
+
+const { test, before, after } = require('node:test');
+const assert = require('node:assert');
+const { Pool } = require('pg');
+
+const h = require('./helpers/load-idempotency-app');
+
+let db;
+let tokenA;  // admin session (reconcile tests)
+let tokenB;  // funded non-admin session
+let userIdB; // funded non-admin user
+let userIdC; // zero-balance user (rollback tests)
+
+let orderSeq = 0;
+const orderId = (tag) => `LC-${process.pid}-${tag}-${++orderSeq}`;
+
+async function createPendingOrder(requestId, userId, amount, { withProviderId = true } = {}) {
+  await db.createVtuAttempt({
+    requestId,
+    userId,
+    serviceType: 'airtime',
+    amount,
+    description: `Lifecycle test ${requestId}`,
+  });
+  if (withProviderId) {
+    await db.recordVtuProviderResponse(requestId, {
+      orderId: `LC-ORDER-${requestId}`,
+      statusCode: 199,
+      status: 'ORDER_RECEIVED',
+      remark: 'On hold',
+      description: 'Pending provider confirmation',
+      raw: {},
+    });
+  }
+  await db.markVtuOrderPending(requestId);
+  return db.getVtuOrderByRequestId(requestId);
+}
+
+async function debitRows(requestId) {
+  const pool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS n, COALESCE(SUM(amount), 0)::numeric AS total, status
+       FROM transactions WHERE reference = $1 AND type = 'debit' GROUP BY status`,
+      [requestId]
+    );
+    return rows;
+  } finally {
+    await pool.end();
+  }
+}
+
+async function walletOf(userId) {
+  return db.getWalletBalance(userId);
+}
+
+before(async () => {
+  db = require('../database');
+  await h.waitForServer();
+  h.applyMigrations();
+
+  const regA = await h.api('POST', '/api/auth/register', {
+    body: { fullName: 'LC Ada', email: 'lcada' + process.pid + '@example.com', phone: '08091000001', password: 'secret123' },
+  });
+  assert.strictEqual(regA.status, 201);
+  tokenA = regA.data.token;
+  await db.setTransactionPin(regA.data.user.id, '1111');
+  await db.creditWallet(regA.data.user.id, 500000, 'seed', 'seed-A');
+  // Promote A to admin so the reconcile endpoint can be exercised.
+  await db.promoteToAdmin(regA.data.user.id);
+
+  const regB = await h.api('POST', '/api/auth/register', {
+    body: { fullName: 'LC Bola', email: 'lcbola' + process.pid + '@example.com', phone: '08091000002', password: 'secret123' },
+  });
+  assert.strictEqual(regB.status, 201);
+  tokenB = regB.data.token;
+  userIdB = regB.data.user.id;
+  await db.setTransactionPin(userIdB, '1111');
+  await db.creditWallet(userIdB, 500000, 'seed', 'seed-B');
+
+  const regC = await h.api('POST', '/api/auth/register', {
+    body: { fullName: 'LC Chidi', email: 'lcchidi' + process.pid + '@example.com', phone: '08091000003', password: 'secret123' },
+  });
+  assert.strictEqual(regC.status, 201);
+  userIdC = regC.data.user.id;
+  await db.setTransactionPin(userIdC, '1111');
+});
+
+after(async () => {
+  await h.cleanup();
+});
+
+// ── 1. pending → completed is the valid settlement path ──────────────────────
+test('1. pending order completes with allowPending and debits once', async () => {
+  const rid = orderId('P2C');
+  await createPendingOrder(rid, userIdB, 2000);
+  const balBefore = await walletOf(userIdB);
+
+  const result = await db.completeVtuOrder(rid, { allowPending: true });
+  assert.strictEqual(result.alreadyCompleted, false);
+  assert.strictEqual(result.balance, balBefore - 2000);
+
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'completed');
+  assert.ok(order.provider_order_id, 'provider reference preserved');
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'debited exactly once');
+});
+
+// ── 2. pending → failed is the valid decline path ────────────────────────────
+test('2. pending order fails without any wallet debit', async () => {
+  const rid = orderId('P2F');
+  await createPendingOrder(rid, userIdB, 2000);
+  const balBefore = await walletOf(userIdB);
+
+  await db.markVtuOrderFailed(rid, { allowPending: true });
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'failed');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'wallet untouched on failure');
+});
+
+// ── 3. completed → pending is rejected ───────────────────────────────────────
+test('3. completed order cannot be moved back to pending', async () => {
+  const rid = orderId('C2P');
+  await createPendingOrder(rid, userIdB, 2000);
+  await db.completeVtuOrder(rid, { allowPending: true });
+  await assert.rejects(() => db.markVtuOrderPending(rid), /terminal|Illegal VTU order transition/i);
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'completed');
+});
+
+// ── 4. completed → failed is rejected ────────────────────────────────────────
+test('4. completed order cannot be flipped to failed', async () => {
+  const rid = orderId('C2F');
+  await createPendingOrder(rid, userIdB, 2000);
+  await db.completeVtuOrder(rid, { allowPending: true });
+  await assert.rejects(() => db.markVtuOrderFailed(rid), /terminal|Illegal VTU order transition/i);
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'completed');
+});
+
+// ── 5. failed → completed is rejected ────────────────────────────────────────
+test('5. failed order cannot be resurrected to completed', async () => {
+  const rid = orderId('F2C');
+  const balBefore = await walletOf(userIdB);
+  await createPendingOrder(rid, userIdB, 2000);
+  await db.markVtuOrderFailed(rid, { allowPending: true });
+  await assert.rejects(() => db.completeVtuOrder(rid, { allowPending: true }), /failed|transition/i);
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'failed');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'no debit on rejected resurrection');
+});
+
+// ── 6. duplicate completion is idempotent ────────────────────────────────────
+test('6. duplicate completion is idempotent: no second debit', async () => {
+  const rid = orderId('DUP');
+  await createPendingOrder(rid, userIdB, 2000);
+  const balBefore = await walletOf(userIdB);
+
+  const first = await db.completeVtuOrder(rid, { allowPending: true });
+  const second = await db.completeVtuOrder(rid, { allowPending: true });
+  assert.strictEqual(first.alreadyCompleted, false);
+  assert.strictEqual(second.alreadyCompleted, true);
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'debited exactly once across duplicates');
+
+  const rows = await debitRows(rid);
+  assert.strictEqual(rows.length, 1, 'one ledger row total');
+  assert.strictEqual(rows[0].status, 'completed');
+  assert.strictEqual(Number(rows[0].n), 1);
+  assert.strictEqual(Number(rows[0].total), 2000);
+});
+
+// ── 7. reconciliation end-to-end: attempts tracked, single debit ─────────────
+test('7. reconcile endpoint settles once, tracks attempts, no re-debit', async () => {
+  h.providerState.reset();
+  const rid = orderId('RECON');
+  await createPendingOrder(rid, userIdB, 2000);
+  const balBefore = await walletOf(userIdB);
+
+  // First reconcile: provider still pending → order stays pending.
+  h.providerState.queryOutcome = 'pending';
+  const r1 = await h.api('POST', `/api/admin/vtu-orders/${rid}/reconcile`, { token: tokenA });
+  assert.strictEqual(r1.status, 200);
+  assert.strictEqual(r1.data.outcome, 'pending');
+  assert.strictEqual(r1.data.order.status, 'pending');
+  assert.strictEqual(r1.data.order.reconcile_attempts, 1);
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'no debit while still pending');
+
+  // Second reconcile: provider confirms success → settles exactly once.
+  h.providerState.queryOutcome = 'success';
+  const r2 = await h.api('POST', `/api/admin/vtu-orders/${rid}/reconcile`, { token: tokenA });
+  assert.strictEqual(r2.status, 200);
+  assert.strictEqual(r2.data.outcome, 'success');
+  assert.strictEqual(r2.data.order.status, 'completed');
+  assert.strictEqual(r2.data.order.reconcile_attempts, 2);
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'single debit after confirmation');
+  assert.strictEqual(h.providerState.queryCalls, 2);
+
+  // Third reconcile: terminal state short-circuits; no query, no re-debit.
+  h.providerState.queryCalls = 0;
+  const r3 = await h.api('POST', `/api/admin/vtu-orders/${rid}/reconcile`, { token: tokenA });
+  assert.strictEqual(r3.status, 200);
+  assert.strictEqual(r3.data.outcome, 'completed');
+  assert.strictEqual(h.providerState.queryCalls, 0, 'no provider query on terminal order');
+  assert.strictEqual(r3.data.order.reconcile_attempts, 2, 'attempts unchanged on terminal short-circuit');
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000);
+});
+
+// ── 8. pending order without a provider ID is safely rejected ────────────────
+test('8. reconcile of order without provider_order_id → 409, no query, no debit', async () => {
+  h.providerState.reset();
+  const rid = orderId('NOPID');
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: false });
+  const balBefore = await walletOf(userIdB);
+
+  const r = await h.api('POST', `/api/admin/vtu-orders/${rid}/reconcile`, { token: tokenA });
+  assert.strictEqual(r.status, 409);
+  assert.strictEqual(h.providerState.queryCalls, 0, 'provider never queried');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'no debit');
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'pending');
+  assert.strictEqual(order.reconcile_attempts, 0, 'no attempt recorded for unqueryable order');
+});
+
+// ── 9. provider success + local failure leaves a recoverable pending order ───
+test('9. local settlement failure after provider success keeps order recoverable', async () => {
+  const rid = orderId('RECOV');
+  await db.createVtuAttempt({
+    requestId: rid,
+    userId: userIdC, // zero balance → debit will fail
+    serviceType: 'airtime',
+    amount: 2000,
+    description: `Lifecycle test ${rid}`,
+  });
+  await db.recordVtuProviderResponse(rid, {
+    orderId: `LC-ORDER-${rid}`,
+    statusCode: 200,
+    status: 'ORDER_COMPLETED',
+    remark: 'Success',
+    description: 'Delivered',
+    raw: {},
+  });
+
+  // Provider says delivered but the wallet cannot be debited.
+  await assert.rejects(() => db.completeVtuOrder(rid), /Insufficient balance/);
+  let order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'submitted', 'failed settlement rolled back cleanly');
+  assert.strictEqual(await walletOf(userIdC), 0, 'no partial debit');
+
+  // Park in the reconcilable pending state with the provider reference intact.
+  await db.markVtuOrderPending(rid);
+  order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'pending');
+  assert.ok(order.provider_order_id, 'provider reference preserved for reconciliation');
+
+  // Once funded, reconciliation settles it in the normal way.
+  await db.creditWallet(userIdC, 5000, 'topup', 'topup-C');
+  const settled = await db.completeVtuOrder(rid, { allowPending: true });
+  assert.strictEqual(settled.alreadyCompleted, false);
+  order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'completed');
+  assert.strictEqual(await walletOf(userIdC), 5000 - 2000, 'single debit after recovery');
+});
+
+// ── 10. wallet debit failure rolls back the whole settlement ─────────────────
+test('10. failed wallet debit leaves no partial transaction state', async () => {
+  const rid = orderId('WDEBIT');
+  // Reset the zero-balance user's wallet (test 9 funded it) so the debit below
+  // genuinely cannot be satisfied.
+  const resetPool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    await resetPool.query('UPDATE users SET wallet = 0 WHERE id = $1', [userIdC]);
+  } finally {
+    await resetPool.end();
+  }
+  await db.createVtuAttempt({
+    requestId: rid,
+    userId: userIdC, // zero balance
+    serviceType: 'airtime',
+    amount: 2000,
+    description: `Lifecycle test ${rid}`,
+  });
+
+  await assert.rejects(() => db.completeVtuOrder(rid), /Insufficient balance/);
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'submitted', 'status unchanged after rollback');
+  assert.strictEqual(await walletOf(userIdC), 0, 'wallet unchanged after rollback');
+
+  const rows = await debitRows(rid);
+  assert.strictEqual(rows.length, 0, 'no ledger rows leaked from a rolled-back settlement');
+});
+
+// ── 11. ledger insert failure rolls back the wallet debit ────────────────────
+test('11. transaction insert failure rolls back the wallet debit', async () => {
+  const rid = orderId('LEDGER');
+  await db.createVtuAttempt({
+    requestId: rid,
+    userId: userIdB,
+    serviceType: 'airtime',
+    amount: 2000,
+    description: `Lifecycle test ${rid}`,
+  });
+  const balBefore = await walletOf(userIdB);
+
+  const pool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    // Force every INSERT into transactions to fail inside the settlement txn.
+    await pool.query(
+      `CREATE OR REPLACE FUNCTION tf_inject_ledger_failure() RETURNS trigger AS $$
+       BEGIN RAISE EXCEPTION 'injected ledger failure'; END; $$ LANGUAGE plpgsql`
+    );
+    await pool.query(
+      `CREATE TRIGGER trg_inject_ledger_failure BEFORE INSERT ON transactions
+       FOR EACH ROW EXECUTE FUNCTION tf_inject_ledger_failure()`
+    );
+
+    await assert.rejects(() => db.completeVtuOrder(rid), /injected ledger failure/);
+  } finally {
+    await pool.query('DROP TRIGGER IF EXISTS trg_inject_ledger_failure ON transactions').catch(() => {});
+    await pool.query('DROP FUNCTION IF EXISTS tf_inject_ledger_failure()').catch(() => {});
+    await pool.end();
+  }
+
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'submitted', 'order not completed after rolled-back settlement');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'wallet debit rolled back');
+  const rows = await debitRows(rid);
+  assert.strictEqual(rows.length, 0, 'no completed ledger row leaked');
+
+  // With the failure removed the same order settles normally (single debit).
+  const settled = await db.completeVtuOrder(rid);
+  assert.strictEqual(settled.alreadyCompleted, false);
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000);
+});
+
+// ── 12. concurrent reconciliation produces exactly one completion ────────────
+test('12. concurrent reconcile settles exactly once', async () => {
+  const rid = orderId('CONC');
+  await createPendingOrder(rid, userIdB, 2000);
+  const balBefore = await walletOf(userIdB);
+
+  const results = await Promise.all([
+    db.completeVtuOrder(rid, { allowPending: true }),
+    db.completeVtuOrder(rid, { allowPending: true }),
+  ]);
+  const completions = results.filter((r) => r.alreadyCompleted === false);
+  assert.strictEqual(completions.length, 1, 'exactly one caller performs the debit');
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'debited exactly once');
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'completed');
+
+  const rows = await debitRows(rid);
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(Number(rows[0].n), 1);
+  assert.strictEqual(Number(rows[0].total), 2000);
+});
+
+// ── 13. Phase 4D route-level idempotency still intact ────────────────────────
+test('13. Phase 4D idempotency regression: replay returns stored response, one debit', async () => {
+  h.providerState.reset();
+  const balBefore = await walletOf(userIdB);
+  const airtime = { network: 'MTN', phone: '08031234567', amount: 2000, pin: '1111' };
+
+  const first = await h.api('POST', '/api/vtu/airtime', { body: airtime, token: tokenB, idempotencyKey: 'LC-4D-KEY' });
+  assert.strictEqual(first.status, 200);
+  assert.ok(first.data.reference.startsWith('IDP-'), 'idempotency key path used');
+  assert.strictEqual(h.providerState.calls, 1);
+
+  h.providerState.calls = 0;
+  const replay = await h.api('POST', '/api/vtu/airtime', { body: airtime, token: tokenB, idempotencyKey: 'LC-4D-KEY' });
+  assert.strictEqual(replay.status, 200);
+  assert.strictEqual(replay.data.reference, first.data.reference);
+  assert.strictEqual(h.providerState.calls, 0, 'no provider call on replay');
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'single debit across replay');
+});

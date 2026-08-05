@@ -138,9 +138,10 @@ after(async () => {
 test('migration 001 applies successfully', async () => {
   const out = runMigrate();
   assert.match(out, /applied 001_vtu_idempotency\.sql/);
+  assert.match(out, /applied 002_vtu_reconcile_attempts\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
-  assert.deepStrictEqual(rows.map((r) => r.version), ['001_vtu_idempotency']);
+  assert.deepStrictEqual(rows.map((r) => r.version), ['001_vtu_idempotency', '002_vtu_reconcile_attempts']);
 
   const cols = await q(
     `SELECT column_name FROM information_schema.columns
@@ -149,6 +150,23 @@ test('migration 001 applies successfully', async () => {
         'idempotency_key_created_at','idempotency_key_last_used_at')`
   );
   assert.strictEqual(cols.length, 5, 'all idempotency columns must exist');
+});
+
+test('migration 002 adds reconciliation attempt tracking columns', async () => {
+  const rows = await q(
+    `SELECT column_name, data_type, is_nullable, column_default
+     FROM information_schema.columns
+     WHERE table_name = 'vtu_orders' AND column_name IN
+       ('reconcile_attempts', 'last_reconciled_at')
+     ORDER BY column_name`
+  );
+  const byName = Object.fromEntries(rows.map((r) => [r.column_name, r]));
+  assert.ok(byName.reconcile_attempts, 'reconcile_attempts column exists');
+  assert.strictEqual(byName.reconcile_attempts.data_type, 'integer');
+  assert.strictEqual(byName.reconcile_attempts.is_nullable, 'NO');
+  assert.strictEqual(byName.reconcile_attempts.column_default, '0', 'defaults to 0');
+  assert.ok(byName.last_reconciled_at, 'last_reconciled_at column exists');
+  assert.strictEqual(byName.last_reconciled_at.data_type, 'timestamp with time zone');
 });
 
 test('re-running migrations is a no-op', async () => {

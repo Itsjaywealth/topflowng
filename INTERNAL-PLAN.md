@@ -389,3 +389,79 @@ test/webhook.test.js` → 44/44 pass.
 
 **Phase 4C schema complete at checkpoint — do not begin route-level idempotency (Phase 4D)
 until approved. Do not commit/push/deploy.**
+
+## Phase 4D — Route-level VTU Idempotency (COMPLETE, committed `881b2a4`)
+
+Shipped `services/idempotency.js` (key validation, SHA-256 payload fingerprint, user-scoped
+`requestIdFromKey`, claim/replay/conflict/in-progress resolution, snapshot builder),
+`database.js` idempotency primitives (`acquireVtuIdempotency` with `INSERT … ON CONFLICT`
++ `FOR UPDATE`, `recordVtuIdempotencyResult`, extended `getVtuOrderByRequestId`), wired all 6
+purchase routes, and preserved legacy no-key reference prefixes. 12 tests green.
+
+## Phase 4E — VTU Status Transitions, Reconciliation & Rollback Safety (COMPLETE, UNCOMMITTED)
+
+### Audit (verified against `database.js` lifecycle + `server.js` reconcile route)
+
+- **Status model:** `vtu_orders.status` CHECK allows only
+  `('submitted' | 'pending' | 'completed' | 'failed')`. There is NO `processing` state in the
+  schema; the matrix intentionally omits it (adding it would need a migration + frontend change,
+  out of scope) so any attempt to move through a non-existent state fails loudly.
+- **Allowed transitions:** `submitted → pending/completed/failed`, `pending → completed/failed`
+  (`completeVtuOrder`/`markVtuOrderFailed` with `allowPending`), plus idempotent same-state
+  re-entry (`completed → completed`, `failed → failed`).
+- **Already rejected:** `failed → completed` (completeVtuOrder threw), `pending → completed`
+  without `allowPending`.
+- **Bugs found:**
+  1. `markVtuOrderPending` and `markVtuOrderFailed` **silently returned** the unchanged order on
+     terminal-state mismatches (`completed → pending`, `completed → failed`) instead of signalling
+     a caller error — ambiguous, hid bugs. Now throw `TransitionError`.
+  2. **Recoverability gap:** if the provider confirmed delivery but the local settlement threw
+     (e.g. wallet emptied between balance-check and debit, or a DB write failed), the transaction
+     rolled back and the order stayed `submitted` — NOT pending — so it was invisible to the
+     `POST /api/admin/vtu-orders/:requestId/reconcile` endpoint despite holding a provider order ID.
+     Now parked in `pending` with the provider reference intact.
+  3. Reconciliation attempts were **not tracked** — no visibility into repeat/excess reconciliation.
+
+### Changes
+
+- `services/order-lifecycle.js` (new): status-transition matrix (`VALID_STATUSES`, `TERMINAL`,
+  `ALLOWED`, `canTransition`, `assertCanTransition`, `TransitionError`). Single source of truth.
+- `database.js`:
+  - `completeVtuOrder` now routes through the matrix (`assertCanTransition(order.status,'completed')`);
+    keeps idempotent `alreadyCompleted` path (no second debit) and `allowPending` semantics.
+  - `markVtuOrderPending` rejects `completed/failed → pending` with a clear error; `pending → pending`
+    stays an idempotent no-op.
+  - `markVtuOrderFailed` rejects `completed → failed`; keeps `failed → failed` idempotent and
+    `pending → failed` gated on `allowPending`.
+  - `recordReconciliationAttempt(requestId)` increments `reconcile_attempts` + stamps
+    `last_reconciled_at`.
+  - `promoteToAdmin(userId)` (test helper) + `getVtuOrderByRequestId` now returns the two new columns.
+- `services/clubkonnect.js`: success path wraps `completeVtuOrder` in try/catch; on local failure it
+  calls `markVtuOrderPending` and returns a `pending` outcome — confirmed deliveries can no longer
+  fall out of the reconciliation set. Never auto-replays the provider purchase.
+- `server.js`: `POST /api/admin/vtu-orders/:requestId/reconcile` records each attempt via
+  `recordReconciliationAttempt` before querying the provider (terminal-state and missing-provider-ID
+  short-circuits still return early without incrementing).
+- `migrations/002_vtu_reconcile_attempts.sql` (new): adds `reconcile_attempts INTEGER NOT NULL
+  DEFAULT 0` and `last_reconciled_at TIMESTAMPTZ` (nullable). Rollback SQL in header. No data
+  modified; defaults keep existing rows valid.
+
+### Reconciliation safety (verified)
+
+- At-most-once wallet debit: `FOR UPDATE` row lock + `alreadyCompleted` guard make concurrent or
+  duplicate reconciliations settle exactly once (tests 6, 7, 12).
+- Provider success + local DB failure → order held `pending` with `provider_order_id` preserved;
+  settles exactly once once funded (test 9).
+- Wallet-debit failure and ledger-insert failure both roll back the entire settlement atomically —
+  no partial debit, no leaked transaction rows (tests 10, 11).
+- Missing `provider_order_id` → 409 with no provider query and no debit (test 8).
+
+### Test report — PASS (13/13 lifecycle + 8/8 migrations + full suite 77/77)
+
+Command: `node --test --test-timeout=60000 test/auth.test.js test/smoke.test.js test/webhook.test.js test/migrations.test.js test/idempotency.test.js test/lifecycle.test.js`
+
+Phase 4D idempotency behaviour intact (route-level regression test 13 + existing 12 tests green);
+shared `topflowng_test` DB untouched by migrations; all provider/email layers mocked (zero real
+external calls); all DBs throwaway.
+
+**Phase 4E complete at checkpoint — UNCOMMITTED. Do not commit, push, deploy, or begin Phase 5.**

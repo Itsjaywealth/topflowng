@@ -121,9 +121,31 @@ async function processClubkonnectPurchase({ userId, requestId, serviceType, amou
   await db.recordVtuProviderResponse(requestId, provider);
 
   if (provider.outcome === 'success') {
-    const result = await db.completeVtuOrder(requestId);
-    logger.info('Clubkonnect purchase completed', { requestId, orderId: provider.orderId || 'no provider order id' });
-    return { outcome: 'success', balance: result.balance, requestId, orderId: provider.orderId, provider };
+    try {
+      const result = await db.completeVtuOrder(requestId);
+      logger.info('Clubkonnect purchase completed', { requestId, orderId: provider.orderId || 'no provider order id' });
+      return { outcome: 'success', balance: result.balance, requestId, orderId: provider.orderId, provider };
+    } catch (err) {
+      // Provider confirmed delivery, but the local settlement could not be
+      // recorded (e.g. wallet is empty, or the DB write failed). The earlier
+      // completeVtuOrder transaction rolled back, so the wallet is untouched
+      // and the order is still 'submitted'. Park it in the reconcilable
+      // 'pending' state with its provider reference intact instead of letting
+      // a confirmed delivery silently fall out of the reconciliation set.
+      logger.error('Clubkonnect confirmed delivery but local settlement failed; holding for reconciliation', {
+        requestId,
+        orderId: provider.orderId || 'no provider order id',
+        message: err.message,
+      });
+      await db.markVtuOrderPending(requestId).catch(() => {});
+      return {
+        outcome: 'pending',
+        message: 'Delivery was confirmed but the wallet debit could not be recorded. The order is held for reconciliation; your wallet has not been debited.',
+        requestId,
+        orderId: provider.orderId,
+        provider,
+      };
+    }
   }
 
   if (provider.outcome === 'failed') {

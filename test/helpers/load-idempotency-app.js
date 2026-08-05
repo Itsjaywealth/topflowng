@@ -58,9 +58,13 @@ psql(ADMIN_DB, `CREATE DATABASE ${DB_NAME}`);
 const providerState = {
   calls: 0,
   outcome: 'success', // 'success' | 'pending' | 'failed'
+  queryOutcome: 'pending', // what queryClubkonnectOrder reports during reconciliation
+  queryCalls: 0,
   async reset() {
     providerState.calls = 0;
     providerState.outcome = 'success';
+    providerState.queryOutcome = 'pending';
+    providerState.queryCalls = 0;
   },
 };
 
@@ -72,7 +76,17 @@ const mockProvider = {
   },
   CK_PENDING_CODES: new Set([100, 199, 299]),
   normalizeClubkonnectResponse: (raw) => ({ ...raw }),
-  queryClubkonnectOrder: async () => ({ outcome: 'pending' }),
+  queryClubkonnectOrder: async () => {
+    providerState.queryCalls += 1;
+    const outcome = providerState.queryOutcome;
+    if (outcome === 'success') {
+      return { outcome: 'success', statusCode: 200, status: 'ORDER_COMPLETED', remark: 'Confirmed', description: 'Delivered', orderId: 'QUERY-ORDER', raw: {} };
+    }
+    if (outcome === 'failed') {
+      return { outcome: 'failed', statusCode: 400, status: 'ORDER_ERROR', remark: 'Declined', description: 'Provider declined', orderId: 'QUERY-ORDER', raw: {} };
+    }
+    return { outcome: 'pending', statusCode: 199, status: 'ORDER_RECEIVED', remark: 'On hold', description: 'Pending', orderId: 'QUERY-ORDER', raw: {} };
+  },
   async processClubkonnectPurchase({ requestId, userId, serviceType, amount, description }) {
     const db = require(path.join(ROOT, 'database.js'));
     providerState.calls += 1;
@@ -84,8 +98,13 @@ const mockProvider = {
         orderId, statusCode: 200, status: 'ORDER_COMPLETED',
         remark: 'Success', description: 'Delivered', raw: { token: 'ELEC-TOKEN-001' },
       });
-      const result = await db.completeVtuOrder(requestId);
-      return { outcome: 'success', balance: result.balance, requestId, orderId, provider: { raw: { token: 'ELEC-TOKEN-001' } } };
+      try {
+        const result = await db.completeVtuOrder(requestId);
+        return { outcome: 'success', balance: result.balance, requestId, orderId, provider: { raw: { token: 'ELEC-TOKEN-001' } } };
+      } catch {
+        await db.markVtuOrderPending(requestId).catch(() => {});
+        return { outcome: 'pending', message: 'Held for reconciliation', requestId, orderId, provider: { raw: { token: 'ELEC-TOKEN-001' } } };
+      }
     }
     if (providerState.outcome === 'failed') {
       await db.recordVtuProviderResponse(requestId, {

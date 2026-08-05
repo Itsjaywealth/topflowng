@@ -7,6 +7,7 @@
 
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const { assertCanTransition } = require('./services/order-lifecycle.js');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -384,6 +385,16 @@ async function recordVtuProviderResponse(requestId, provider) {
   return rows[0] || null;
 }
 
+async function recordReconciliationAttempt(requestId) {
+  await pool.query(
+    `UPDATE vtu_orders
+     SET reconcile_attempts = reconcile_attempts + 1,
+         last_reconciled_at = NOW()
+     WHERE request_id = $1`,
+    [requestId]
+  );
+}
+
 async function completeVtuOrder(requestId, { allowPending = false } = {}) {
   const client = await pool.connect();
   try {
@@ -398,8 +409,8 @@ async function completeVtuOrder(requestId, { allowPending = false } = {}) {
       await client.query('COMMIT');
       return { alreadyCompleted: true, balance: parseFloat(balance.rows[0].wallet), order };
     }
+    assertCanTransition(order.status, 'completed');
     if (order.status === 'pending' && !allowPending) throw new Error(`VTU order ${requestId} is pending reconciliation`);
-    if (order.status === 'failed') throw new Error(`VTU order ${requestId} is already failed`);
 
     const wallet = await client.query(
       'UPDATE users SET wallet = wallet - $1 WHERE id = $2 AND wallet >= $1 RETURNING wallet',
@@ -450,7 +461,8 @@ async function markVtuOrderPending(requestId) {
     );
     const order = orderResult.rows[0];
     if (!order) throw new Error(`VTU order ${requestId} not found`);
-    if (order.status === 'completed' || order.status === 'failed') {
+    assertCanTransition(order.status, 'pending');
+    if (order.status === 'pending') {
       await client.query('COMMIT');
       return order;
     }
@@ -488,7 +500,12 @@ async function markVtuOrderFailed(requestId, { allowPending = false } = {}) {
     );
     const order = result.rows[0];
     if (!order) throw new Error(`VTU order ${requestId} not found`);
-    if (order.status === 'completed' || (order.status === 'pending' && !allowPending)) {
+    if (order.status !== 'failed' && order.status !== 'pending') assertCanTransition(order.status, 'failed', 409);
+    if (order.status === 'pending' && !allowPending) {
+      await client.query('COMMIT');
+      return order;
+    }
+    if (order.status === 'failed') {
       await client.query('COMMIT');
       return order;
     }
@@ -525,13 +542,18 @@ async function markVtuOrderFailed(requestId, { allowPending = false } = {}) {
   }
 }
 
+async function promoteToAdmin(userId) {
+  await pool.query('UPDATE users SET is_admin = TRUE WHERE id = $1', [userId]);
+}
+
 async function getVtuOrderByRequestId(requestId) {
   const { rows } = await pool.query(
     `SELECT request_id, user_id, service_type, amount, description, provider_order_id,
             provider_status_code, provider_status, provider_remark, provider_description,
             status, transaction_id, created_at, updated_at,
             idempotency_key, request_fingerprint, response_snapshot,
-            idempotency_key_created_at, idempotency_key_last_used_at
+            idempotency_key_created_at, idempotency_key_last_used_at,
+            reconcile_attempts, last_reconciled_at
      FROM vtu_orders WHERE request_id = $1`,
     [requestId]
   );
@@ -826,9 +848,11 @@ module.exports = {
   acquireVtuIdempotency,
   recordVtuIdempotencyResult,
   recordVtuProviderResponse,
+  recordReconciliationAttempt,
   completeVtuOrder,
   markVtuOrderPending,
   markVtuOrderFailed,
+  promoteToAdmin,
   getVtuOrderByRequestId,
   createPasswordReset,
   consumePasswordReset,
