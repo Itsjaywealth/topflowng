@@ -39,6 +39,8 @@ process.env.AUTH_LOCKOUT_MAX_FAILURES = '3';
 process.env.AUTH_LOCKOUT_WINDOW_MS = '600000';
 process.env.AUTH_LOCKOUT_DURATION_MS = '600000';
 process.env.SENTRY_DSN = '';
+process.env.PAYSTACK_WEBHOOK_SECRET = 'test-webhook-secret';
+process.env.PAYSTACK_SECRET_KEY = 'test-secret-key';
 
 function installMock(relPath, exports) {
   const abs = path.join(ROOT, relPath);

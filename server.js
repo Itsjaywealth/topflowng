@@ -387,13 +387,26 @@ app.get('/api/paystack/verify/:reference', authMiddleware, async (req, res) => {
   }
 });
 
+// Constant-time signature comparison for the Paystack webhook. The expected
+// digest is always a 64-byte hex string (HMAC-SHA512), so a valid header must
+// be exactly that length. Missing, malformed (non-hex), or wrong-length
+// signatures short-circuit to false without ever reaching timingSafeEqual
+// (which requires equal-length buffers and would throw otherwise).
+function paystackSignatureMatches(expectedHex, signatureHex) {
+  const CH = /^[0-9a-fA-F]{128}$/;
+  if (typeof signatureHex !== 'string' || !CH.test(signatureHex)) return false;
+  const expected = Buffer.from(expectedHex, 'hex');
+  const presented = Buffer.from(signatureHex, 'hex');
+  return crypto.timingSafeEqual(expected, presented);
+};
+
 app.post('/api/paystack/webhook', async (req, res) => {
   try {
     const secret    = config.paystack.webhookSecret || config.paystack.secretKey;
     const signature = req.headers['x-paystack-signature'];
     const hash      = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
 
-    if (hash !== signature) {
+    if (!paystackSignatureMatches(hash, signature)) {
       logger.warn('Invalid Paystack webhook signature');
       return sendError(res, 400, 'Invalid signature');
     }

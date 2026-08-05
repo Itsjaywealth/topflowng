@@ -260,4 +260,76 @@ Commit + push approved: `security: harden authentication and admin access`.**
 - `routes/vtu.js` — VTU purchase + pending routes (new directory)
 - `services/email.js` — sendEmail / sendPurchaseEmail (new)
 - `.env.example` — add new non-secret vars (updated)
-- `server.js` — wire modules, keep remaining routes, swap `console` → logger (updated)
+- `server.js` — wire modules, keep remaining routes, swap `console` → logger (updated)---
+## Phase 4 — Database & Transaction Safety
+
+### Phase 4A — Audit & Design (COMPLETE — no production code changed)
+
+### Verified audit findings (live throwaway DB `topflowng_test` on 127.0.0.1:55432, all 6 tables present, pg connects OK)
+
+1. **Wallet debit/credit** (`database.js` `debitWallet`/`creditWallet`): each function wraps
+   `UPDATE users SET wallet = wallet ± $1 WHERE id=$2` + `INSERT INTO transactions` inside one
+   `BEGIN/COMMIT` on a single client. `debitWallet` debits atomically and only when
+   `wallet >= $1`. **Concurrent debits cannot overspend** as long as all writes go through
+   these functions (VTU does NOT use them at purchase time — see #3).
+2. **Transactions**: `transactions.reference` has **no unique index or constraint** (verified
+   `\d transactions`), and there is no index on `status`, `provider_order_id`, or `reference`.
+   Nothing at DB level prevents duplicate ledger rows for the same reference.
+3. **VTU lifecycle**: wallet is **not reserved at purchase**. `createVtuAttempt`
+   (`database.js`) inserts a `submitted` order via `ON CONFLICT (request_id) DO UPDATE`.
+   `processClubkonnectPurchase` (`services/clubkonnect.js`) then resolves to
+   `completeVtuOrder` / `markVtuOrderPending` / `markVtuOrderFailed`.
+4. **Only `completeVtuOrder` debits the wallet** (`database.js`): it does `SELECT … FOR UPDATE`,
+   short-circuits if already `completed`, then debits, upserts the txn to `completed`, and flips
+   the order. **Duplicate provider confirmation for the SAME request_id cannot double-debit**
+   (row lock + `alreadyCompleted` guard). BUT there is no DB-level unique constraint on the
+   debit reference, so the guard is purely application-level.
+5. **Pending/failed**: `markVtuOrderPending` inserts a `pending` debit row without moving the
+   wallet; `markVtuOrderFailed` writes a `failed` debit row. Confirmed correct no-charge-until-
+   confirmed model.
+6. **Status transitions**: `vtu_orders.status` has a CHECK limiting to the 4 values but **no
+   transition matrix** at DB level (`completed → pending` is not blocked by the schema).
+7. **Paystack** (`server.js:430` webhook): raw body + HMAC-SHA512; compares `hash !== signature`
+   with **plain string comparison (not timingSafeEqual)**. Reference claiming in
+   `creditVerifiedPaystackPayment` is atomic via `INSERT … ON CONFLICT (reference) DO NOTHING`,
+   so **duplicate webhooks cannot double-credit** (good).
+8. **Reconciliation** (`server.js` admin `/reconcile`): depends on `provider_order_id`; if it is
+   null (UNKNOWN/unreachable path stores `orderId:null`), auto-query is blocked (409). Failure
+   path writes a `failed` row with no debit.
+9. **Idempotency feasibility**: yes. Treat client key as optional; absent on old clients ⇒
+   current `RequestID = SVC-timestamp-userId` behavior unchanged; present ⇒ stable request_id +
+   fingerprint + store-original-response.
+
+### Risks
+- R1 duplicate debits/ledger rows from a replayed app-level call (no unique ref constraint).
+- R2 double provider order if a client retry generates a new timestamp request_id.
+- R3 no DB-level status-transition matrix.
+- R4 non-constant-time webhook signature compare.
+- R5 reconciliation blocked (null provider id) + recovery depends on manual alert.
+
+### Proposed schema changes / indexes (Phase 4B candidates)
+- `vtu_orders`: add `idempotency_key TEXT` (nullable) + `idempotency_fingerprint TEXT` +
+  `client_request JSONB`; partial UNIQUE on `idempotency_key WHERE idempotency_key IS NOT NULL`.
+- `transactions`: partial UNIQUE on `reference WHERE reference IS NOT NULL` (preceded by a
+  dedupe/cleanup migration), plus index on `status`, index on `provider_order_id`.
+- `vtu_orders`: index on `(status, service_type)` and `created_at`.
+- Constraint: status transition matrix via CHECK/trigger (`submitted→pending|completed|failed`,
+  `pending→completed|failed`, terminal states are terminal).
+
+### Migration & rollback plan
+- Add a small versioned runner (`migrations/` + `schema_migrations` table). Each `.sql` in a
+  transaction; rollback = documented reverse SQL per file. Applied only to the throwaway DB
+  here.
+
+### Test plan (uses real throwaway Postgres on 55432 — no new in-memory lib)
+- concurrent double debit exactly-once + ledger reconcile; duplicate VTU idempotency key;
+  same key different payload → 409; duplicate provider confirmation no double debit;
+  invalid transitions rejected; pending reconciliation; failed recovery; duplicate Paystack
+  webhook; invalid signature; timing-ready valid signature; rollback on forced failure.
+
+### Compatibility
+- No route/method/response changes. Idempotency key optional + append-only; legacy calls and
+  current `requests` unaffected. Database-level constraints added only after dedupe/backup.
+
+**Phase 4A audit COMPLETE — awaiting approval before Phase 4b production edits.
+Do not commit/push/deploy.**
