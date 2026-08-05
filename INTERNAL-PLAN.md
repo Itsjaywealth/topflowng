@@ -333,3 +333,59 @@ Commit + push approved: `security: harden authentication and admin access`.**
 
 **Phase 4A audit COMPLETE — awaiting approval before Phase 4b production edits.
 Do not commit/push/deploy.**
+
+---
+
+## Phase 4B — Webhook Signature Hardening (COMPLETE, committed + pushed)
+
+Implemented `security: harden Paystack webhook verification` (commit `f119a37`, pushed to origin/main):
+- `server.js` paystack webhook: replaced string compare `hash !== signature` with a constant-time
+  `crypto.timingSafeEqual` (length guard first). Behavior otherwise unchanged.
+- New `test/webhook.test.js` (8 tests): valid signature accepted, tampered body rejected,
+  mismatch signature rejected, missing signature / bad header handling, plus lifecycle-safe boot
+  on the in-memory mock app.
+- Full suite = 44 tests (28 auth + 8 smoke + 8 webhook), all pass.
+- No other production code changed.
+
+---
+
+## Phase 4C — Migration Framework + VTU Idempotency Schema (in progress)
+
+### Completed
+- **Migration runner** `migrations/migrate.js` (new): scans sorted `migrations/*.sql`, uses a
+  `schema_migrations` table (`version TEXT PK, filename, applied_at`), applies each file inside a
+  `BEGIN/COMMIT` transaction per file on a single client, skips already-applied versions, stops
+  cleanly on error (transaction rollback), reads `process.env.DATABASE_URL`. Optional
+  `MIGRATIONS_DIR` env override (for testing failed-rollback against a temp dir).
+- **First migration** `migrations/001_vtu_idempotency.sql` (new): adds 5 nullable columns to
+  `vtu_orders` — `idempotency_key TEXT`, `request_fingerprint TEXT`, `response_snapshot JSONB`,
+  `idempotency_key_created_at TIMESTAMPTZ`, `idempotency_key_last_used_at TIMESTAMPTZ` (all
+  nullable ⇒ legacy-compatible). Adds partial unique index
+  `idx_vtu_orders_idempotency_scope` on `(user_id, idempotency_key) WHERE idempotency_key IS NOT NULL`
+  (same user cannot reuse a key; different users may reuse the same key — no production
+  uniqueness assumption violated). Adds supporting index `idx_vtu_orders_user_status` on
+  `(user_id, status)` for the get-pending-orders query path. Rollback SQL documented in the file
+  header comments.
+- **npm script** `"migrate": "node migrations/migrate.js"` added to `package.json`.
+- Applied ONLY to the throwaway Postgres on 127.0.0.1:55432; the shared app test DB
+  `topflowng_test` was confirmed untouched (no `schema_migrations`, no idempotency columns).
+- E2E verified via `npm run migrate` on a throwaway DB (apply 001 → indexes exist → rerun is a
+  no-op). Malformed/base-missing DB fails clearly.
+
+### Test report — PASS
+`node --test --test-timeout=60000 test/migrations.test.js` → 7/7 pass
+(`test/migrations.test.js` creates/drops a dedicated `topflowng_mig_<pid>`
+DB using pg; bootstraps the base schema, applies 001, asserts: apply success, no-op rerun,
+legacy NULL keys still valid, same-user key reuse rejected, cross-user key reuse allowed,
+indexes exist, and failed migration rolls back atomically incl. no partial table + no recorded
+version).
+Full suite: `node --test --test-timeout=30000 test/auth.test.js test/smoke.test.js
+test/webhook.test.js` → 44/44 pass.
+
+### Left outstanding for a later phase (NOT Phase 4C)
+- Route-level VTU idempotency behavior + provider purchase + reconciliation logic (this phase
+  only adds the schema).
+- `transactions` unique constraint on `reference` (deferred) and status-transition matrix.
+
+**Phase 4C schema complete at checkpoint — do not begin route-level idempotency (Phase 4D)
+until approved. Do not commit/push/deploy.**
