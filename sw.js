@@ -1,9 +1,9 @@
-// TopFlowNG Service Worker v2
+// TopFlowNG Service Worker v3
 // Network-first for every /api/ request (never cached — tokens and private
 // responses are never stored). Shell-first for navigations; cache-first for
 // static assets. skipWaiting + clients.claim mean a new version takes over on
 // the next load — no stale-asset trap.
-const CACHE = 'topflowng-v2';
+const CACHE = 'topflowng-v3';
 const STATIC = [
   '/',
   '/topflowng.html',
