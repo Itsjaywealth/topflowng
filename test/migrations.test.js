@@ -139,9 +139,12 @@ test('migration 001 applies successfully', async () => {
   const out = runMigrate();
   assert.match(out, /applied 001_vtu_idempotency\.sql/);
   assert.match(out, /applied 002_vtu_reconcile_attempts\.sql/);
+  assert.match(out, /applied 003_search_indexes\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
-  assert.deepStrictEqual(rows.map((r) => r.version), ['001_vtu_idempotency', '002_vtu_reconcile_attempts']);
+  assert.deepStrictEqual(rows.map((r) => r.version), [
+    '001_vtu_idempotency', '002_vtu_reconcile_attempts', '003_search_indexes',
+  ]);
 
   const cols = await q(
     `SELECT column_name FROM information_schema.columns
@@ -207,14 +210,34 @@ test('different users can use the same idempotency key', async () => {
 });
 
 test('expected indexes exist', async () => {
-  const idx = await getIndexes('vtu_orders');
-  // Indexes created by migration 001.
+  const vtuIdx = await getIndexes('vtu_orders');
   for (const name of [
     'idx_vtu_orders_idempotency_scope',
     'idx_vtu_orders_user_status',
+    // Migration 003 trigram indexes.
+    'idx_vtu_orders_request_id_trgm',
+    'idx_vtu_orders_description_trgm',
+    'idx_vtu_orders_provider_order_id_trgm',
   ]) {
-    assert.ok(idx.has(name), `missing index ${name}`);
+    assert.ok(vtuIdx.has(name), `missing index ${name}`);
   }
+
+  // Migration 003 also creates indexes on transactions and users.
+  const txnIdx = await getIndexes('transactions');
+  assert.ok(txnIdx.has('idx_transactions_description_trgm'));
+  assert.ok(txnIdx.has('idx_transactions_reference_trgm'));
+
+  const userIdx = await getIndexes('users');
+  assert.ok(userIdx.has('idx_users_name_trgm'));
+  assert.ok(userIdx.has('idx_users_email_trgm'));
+  assert.ok(userIdx.has('idx_users_phone_trgm'));
+
+  // pg_trgm extension is installed.
+  const [{ installed }] = await q(
+    `SELECT installed_version IS NOT NULL AS installed
+     FROM pg_available_extensions WHERE name = 'pg_trgm'`
+  );
+  assert.ok(installed, 'pg_trgm extension must be installed');
 });
 
 test('failed migration rolls back cleanly', async () => {
