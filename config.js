@@ -54,6 +54,8 @@ const config = {
     authMax: num(process.env.AUTH_RATE_MAX, 10),
     apiWindowMs: num(process.env.API_RATE_WINDOW_MS, 60 * 1000),
     apiMax: num(process.env.API_RATE_MAX, 60),
+    purchaseWindowMs: num(process.env.PURCHASE_RATE_WINDOW_MS, 60 * 1000),
+    purchaseMax: num(process.env.PURCHASE_RATE_MAX, 10),
   },
 
   auth: {

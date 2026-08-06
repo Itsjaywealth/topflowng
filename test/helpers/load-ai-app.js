@@ -34,6 +34,7 @@ process.env.TRUST_PROXY = '0';
 process.env.JWT_SECRET = 'test-jwt-secret-do-not-use-in-prod';
 process.env.AUTH_RATE_MAX = '100000';
 process.env.API_RATE_MAX = '100000';
+process.env.PURCHASE_RATE_MAX = '100000';
 process.env.AUTH_LOCKOUT_MAX_FAILURES = '3';
 process.env.AUTH_LOCKOUT_WINDOW_MS = '600000';
 process.env.AUTH_LOCKOUT_DURATION_MS = '600000';

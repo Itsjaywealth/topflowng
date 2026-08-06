@@ -35,7 +35,7 @@ const db = require('./database');
 const logger = require('./lib/logger');
 const security = require('./services/security');
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
-const { authLimiter, apiLimiter } = require('./middleware/rate-limit');
+const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
 const { queryClubkonnectOrder } = require('./services/clubkonnect');
@@ -370,7 +370,7 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/api/wallet/balance', authMiddleware, async (req, res) => {
+app.get('/api/wallet/balance', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const balance = await db.getWalletBalance(req.user.id);
     res.json({ balance });
@@ -380,7 +380,7 @@ app.get('/api/wallet/balance', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/api/wallet/transactions', authMiddleware, async (req, res) => {
+app.get('/api/wallet/transactions', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const txns  = await db.getTransactions(req.user.id, limit);
@@ -518,7 +518,9 @@ app.post('/api/paystack/webhook', async (req, res) => {
 });
 
 // ── VTU Routes (mounted /api/vtu/*) ──────────────────────────────────────────
-app.use('/api/vtu', vtuRouter);
+// Purchase rate limiter (per-user, default 10 req/min) applies to all VTU
+// purchase endpoints — airtime, data, cable, electricity, exam, recharge pins.
+app.use('/api/vtu', purchaseLimiter, vtuRouter);
 
 // ── AI Assistant (mounted /api/ai/*) — read-only, advisory ─────────────────
 app.use('/api/ai', aiRouter);
