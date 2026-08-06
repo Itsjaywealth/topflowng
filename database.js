@@ -10,15 +10,19 @@ const bcrypt = require('bcryptjs');
 const { assertCanTransition } = require('./services/order-lifecycle.js');
 const { connectionSslOptions } = require('./lib/dbconn');
 
+const POOL_MAX = parseInt(process.env.PG_POOL_MAX || '15', 10);
+const POOL_IDLE_MS = parseInt(process.env.PG_POOL_IDLE_MS || '30000', 10);
+const POOL_CONNECT_MS = parseInt(process.env.PG_POOL_CONNECT_MS || '5000', 10);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: connectionSslOptions(
     process.env.DATABASE_URL,
     process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   ),
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  max: Math.min(POOL_MAX, 25),
+  idleTimeoutMillis: POOL_IDLE_MS,
+  connectionTimeoutMillis: POOL_CONNECT_MS,
 });
 
 const SALT_ROUNDS = 12;
@@ -1080,6 +1084,42 @@ async function disableScheduledPurchase(id) {
   );
 }
 
+// ── Financial reconciliation ────────────────────────────────────────────────
+async function getFinancialReconciliation() {
+  const { rows: [walletSum] } = await pool.query(
+    'SELECT COALESCE(SUM(wallet), 0)::numeric(12,2) AS total FROM users'
+  );
+  const { rows: [ledgerSum] } = await pool.query(
+    `SELECT COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0)
+            - COALESCE(SUM(CASE WHEN type = 'debit' AND status = 'completed' THEN amount ELSE 0 END), 0)
+              AS total FROM transactions`
+  );
+  const drift = parseFloat(walletSum.total) - parseFloat(ledgerSum.total);
+  const { rows: flagged } = await pool.query(
+    `SELECT u.id, u.email, u.full_name, u.wallet,
+            COALESCE(t.net, 0) AS tx_net
+     FROM users u LEFT JOIN (
+       SELECT user_id,
+              COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN type = 'debit' AND status = 'completed' THEN amount ELSE 0 END), 0)
+                AS net
+       FROM transactions GROUP BY user_id
+     ) t ON t.user_id = u.id
+     WHERE ABS(u.wallet - COALESCE(t.net, 0)) > 0.01`
+  );
+  return {
+    walletTotal: walletSum.total,
+    ledgerTotal: ledgerSum.total,
+    drift: drift.toFixed(2),
+    ok: Math.abs(drift) < 0.01,
+    flaggedUsers: flagged.map(r => ({
+      id: r.id, email: r.email, name: r.full_name,
+      wallet: r.wallet, txNet: r.tx_net,
+      diff: (parseFloat(r.wallet) - parseFloat(r.tx_net)).toFixed(2),
+    })),
+  };
+}
+
 module.exports = {
   initDB,
   closePool,
@@ -1128,6 +1168,7 @@ module.exports = {
   expireStaleVtuOrders,
   cleanStaleSubmittedOrders,
   getReconcilablePendingOrders,
+  getFinancialReconciliation,
   setAutoRecharge,
   getAutoRecharge,
   deleteAutoRecharge,
