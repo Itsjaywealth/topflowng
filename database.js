@@ -922,7 +922,8 @@ async function getPendingVtuOrders(userId) {
 // orders WITH a provider reference stay pending for manual reconciliation.
 async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {}) {
   const { rows } = await pool.query(
-    `SELECT request_id FROM vtu_orders
+    `SELECT request_id, user_id, service_type, amount, description
+     FROM vtu_orders
      WHERE status = 'pending'
        AND (provider_order_id IS NULL OR provider_order_id = '')
        AND created_at < NOW() - make_interval(mins => $1)
@@ -930,19 +931,19 @@ async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {})
      LIMIT $2`,
     [olderThanMinutes, limit]
   );
-  let expired = 0;
+  const expired = [];
   for (const row of rows) {
     try {
       await markVtuOrderFailed(row.request_id, {
         allowPending: true,
         failureSuffix: ' — provider did not confirm, not charged',
       });
-      expired += 1;
+      expired.push(row);
     } catch (err) {
       console.error(`Auto-expire failed for ${row.request_id}: ${err.message}`);
     }
   }
-  return { scanned: rows.length, expired };
+  return { scanned: rows.length, expired: expired.length, orders: expired };
 }
 
 // ── Pending order reconciliation (auto-resolution) ──────────────────────────

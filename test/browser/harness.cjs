@@ -68,6 +68,7 @@ installMock('services/clubkonnect.js', {
 installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},
+  async sendOrderStatusEmail() {},
 });
 
 installMock('services/openrouter.js', {

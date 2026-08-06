@@ -59,6 +59,37 @@ async function sendEmail({ to, subject, html }) {
   logger.info('Email accepted by Resend', { id: response.data?.data?.id || 'unknown id' });
 }
 
+function sendOrderStatusEmail(userEmail, userName, { service, description, amount, requestId, status, newBalance }) {
+  const formatted = `₦${parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+  const isSuccess = status === 'completed' || status === 'success';
+  const subject = isSuccess
+    ? `TopFlowNG — ${service} purchase confirmed`
+    : `TopFlowNG — ${service} order update`;
+  const body = isSuccess
+    ? `<p>Your <strong>${service}</strong> purchase was successful.</p>
+       <p>New balance: <strong>${formatted}</strong></p>`
+    : `<p>Your <strong>${service}</strong> order could not be completed by the provider.</p>
+       <p style="color:#DC2626;font-weight:600">Your wallet was NOT debited.</p>`;
+  sendEmail({
+    to: userEmail,
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#0E2235">${isSuccess ? 'Payment confirmed ✓' : 'Order update'}</h2>
+        <p>Hi ${userName},</p>
+        ${body}
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Details</td><td style="padding:8px 0;font-size:13px;text-align:right">${description}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right">${formatted}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right">${requestId}</td></tr>
+        </table>
+        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at support@topflowng.com</p>
+        <p style="font-size:12px;color:#9CA3AF">— TopFlowNG</p>
+      </div>
+    `,
+  }).catch(e => logger.error('Order status email error', { message: e.message }));
+}
+
 function sendPurchaseEmail(userEmail, userName, { service, description, amount, reference, newBalance }) {
   const formatted = `₦${parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
   const bal = `₦${parseFloat(newBalance).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
@@ -83,4 +114,4 @@ function sendPurchaseEmail(userEmail, userName, { service, description, amount, 
   }).catch(e => logger.error('Purchase email error', { message: e.message }));
 }
 
-module.exports = { sendEmail, sendPurchaseEmail };
+module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail };

@@ -121,6 +121,7 @@ installMock('services/clubkonnect.js', mockProvider);
 installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},
+  async sendOrderStatusEmail() {},
 });
 
 // ── Boot the real app ────────────────────────────────────────────────────────

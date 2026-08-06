@@ -39,7 +39,7 @@ const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
 const { queryClubkonnectOrder } = require('./services/clubkonnect');
-const { sendEmail } = require('./services/email');
+const { sendEmail, sendOrderStatusEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
 
@@ -816,11 +816,19 @@ function schedulePendingOrderSweep() {
       const expiry = await db.expireStaleVtuOrders({ olderThanMinutes: expiryMinutes });
       if (expiry.expired > 0) {
         logger.info('Auto-expired unconfirmed pending orders', { expired: expiry.expired, scanned: expiry.scanned });
+        // Notify users whose orders were expired (wallet never debited).
+        for (const order of expiry.orders || []) {
+          db.findUserById(order.user_id).then(user => {
+            if (!user) return;
+            sendOrderStatusEmail(user.email, user.full_name, {
+              service: order.service_type, description: order.description,
+              amount: order.amount, requestId: order.request_id, status: 'failed',
+            });
+          }).catch(() => {});
+        }
       }
 
       // 2) Auto-reconcile traceable pending orders via the provider Query API.
-      // Each order is attempted at most once per backoff window and is left for
-      // a human admin after maxAttempts, mirroring the admin reconcile route.
       const reconcilable = await db.getReconcilablePendingOrders({
         backoffMinutes,
         maxAttempts,
@@ -831,8 +839,23 @@ function schedulePendingOrderSweep() {
           const result = await reconcileVtuOrder(row.request_id);
           if (result.outcome === 'success') {
             logger.info('Sweep settled pending order', { requestId: row.request_id });
+            db.findUserById(result.order.user_id).then(user => {
+              if (!user) return;
+              sendOrderStatusEmail(user.email, user.full_name, {
+                service: result.order.service_type, description: result.order.description,
+                amount: result.order.amount, requestId: result.order.request_id,
+                status: 'completed', newBalance: result.balance,
+              });
+            }).catch(() => {});
           } else if (result.outcome === 'failed') {
             logger.warn('Sweep marked pending order failed', { requestId: row.request_id });
+            db.findUserById(result.order.user_id).then(user => {
+              if (!user) return;
+              sendOrderStatusEmail(user.email, user.full_name, {
+                service: result.order.service_type, description: result.order.description,
+                amount: result.order.amount, requestId: result.order.request_id, status: 'failed',
+              });
+            }).catch(() => {});
           }
         } catch (err) {
           logger.error('Sweep reconcile failed', { requestId: row.request_id, message: err.message });

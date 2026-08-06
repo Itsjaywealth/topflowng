@@ -198,6 +198,7 @@ installMock('services/email.js', {
     sentEmails.push({ to, subject, html });
   },
   async sendPurchaseEmail() {},
+  async sendOrderStatusEmail() {},
   __sentEmails: sentEmails,
 });
 
