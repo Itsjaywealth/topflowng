@@ -8,10 +8,14 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const { assertCanTransition } = require('./services/order-lifecycle.js');
+const { connectionSslOptions } = require('./lib/dbconn');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: connectionSslOptions(
+    process.env.DATABASE_URL,
+    process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ),
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -164,6 +168,17 @@ async function initDB() {
 // Close the connection pool. Used by automated tests so process exits cleanly.
 async function closePool() {
   await pool.end();
+}
+
+// Lightweight connectivity probe for liveness/readiness. Returns { ok: boolean }
+// and never leaks the connection string or credentials to callers.
+async function ping() {
+  try {
+    await pool.query('SELECT 1');
+    return { ok: true };
+  } catch (err) {
+    return { ok: false };
+  }
 }
 
 // ── User Queries ──────────────────────────────────────────────────────────────
@@ -832,6 +847,7 @@ async function getPendingVtuOrders(userId) {
 module.exports = {
   initDB,
   closePool,
+  ping,
   findUserByEmail,
   findUserByPhone,
   findUserById,

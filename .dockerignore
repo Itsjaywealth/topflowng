@@ -1,0 +1,39 @@
+# Git / VCS
+.git
+
+# Runtime config & secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies (installed inside the image via npm ci)
+node_modules
+
+# Tests, quality-gate artifacts and reports
+test/
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+playwright.config.js
+
+# Local backups / editor / logs
+*.backup-*
+*.bak
+*.log
+
+# Local databases (never baked into an image)
+*.db
+*.db-shm
+*.db-wal
+
+# Docs & plans (not needed at runtime)
+*.md
+
+# Helpers
+push-changes.command
+
+# IDE
+.DS_Store
+.vscode
+.idea

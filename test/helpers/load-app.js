@@ -58,6 +58,10 @@ const resets = [];
 const mockDb = {
   async initDB() {},
 
+  async ping() {
+    return { ok: true };
+  },
+
   async findUserByEmail(email) {
     const e = String(email || '').trim().toLowerCase();
     return users.find((u) => u.email.toLowerCase() === e) || null;

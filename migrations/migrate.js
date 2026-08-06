@@ -19,13 +19,17 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const { connectionSslOptions } = require('../lib/dbconn');
 
 // Overridable so tests can point at a throwaway migration directory.
 const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR || path.join(__dirname);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: connectionSslOptions(
+    process.env.DATABASE_URL,
+    process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ),
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,

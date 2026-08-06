@@ -132,9 +132,53 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Health Check ─────────────────────────────────────────────────────────────
+// ── Structured per-request log ───────────────────────────────────────────────
+// Request ID (echoed as X-Request-Id), severity (level), route, status and
+// duration. No request bodies/headers are ever logged; the shared logger
+// additionally redacts any sensitive keys that a handler logs.
+app.use((req, res, next) => {
+  const requestId = crypto.randomBytes(8).toString('hex');
+  req.id = requestId;
+  res.setHeader('X-Request-Id', requestId);
+  const startMs = Date.now();
+  res.on('finish', () => {
+    logger.info('http request', {
+      requestId,
+      method: req.method,
+      route: req.originalUrl,
+      status: res.statusCode,
+      durationMs: Date.now() - startMs,
+    });
+  });
+  next();
+});
+
+// ── Health Check (liveness) ──────────────────────────────────────────────────
+// Pure liveness: the process is up and answering HTTP. Never includes
+// configuration, versions, or database details.
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
+});
+
+// ── Readiness ────────────────────────────────────────────────────────────────
+// Liveness plus dependency checks: reports ready only when the database is
+// reachable. Distinguishes "process alive" (/api/health) from "able to serve
+// traffic" (/api/ready). Deliberately leaks nothing about the database — the
+// body only names the failing component.
+app.get('/api/ready', async (_req, res) => {
+  let probe;
+  try {
+    probe = await Promise.race([
+      db.ping(),
+      new Promise((resolve) => setTimeout(() => resolve({ ok: false }), 2500)),
+    ]);
+  } catch {
+    return res.status(503).json({ status: 'unready', component: 'database' });
+  }
+  if (probe && probe.ok) {
+    return res.json({ status: 'ready', component: 'database', ts: new Date().toISOString() });
+  }
+  return res.status(503).json({ status: 'unready', component: 'database' });
 });
 
 // ── Auth Routes ──────────────────────────────────────────────────────────────
@@ -652,9 +696,36 @@ app.use((err, req, res, _next) => {
 // ── Start Server ─────────────────────────────────────────────────────────────
 async function start() {
   await db.initDB();
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     logger.info('TopFlowNG server started', { port: PORT, env: config.env });
   });
+  server.on('error', (err) => {
+    logger.error('Server error', { message: err.message });
+  });
+
+  let shuttingDown = false;
+  async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info('Shutting down', { signal });
+    const forceTimer = setTimeout(() => {
+      logger.warn('Graceful shutdown timed out; forcing exit');
+      process.exit(1);
+    }, 15000);
+    forceTimer.unref();
+    try {
+      if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
+      await new Promise((resolve) => server.close(resolve));
+      if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
+      logger.info('Shutdown complete');
+      process.exit(0);
+    } catch (err) {
+      logger.error('Error during shutdown', { message: err.message });
+      process.exit(1);
+    }
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 start().catch((err) => {

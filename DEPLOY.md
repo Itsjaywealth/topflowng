@@ -1,6 +1,11 @@
 # TopFlowNG — Deployment Guide
 ## Domain: topflowng.com (Hostinger) → Railway (Node.js host)
 
+> **OUTDATED.** This guide predates the switch to PostgreSQL and the modern
+> stack. See **`DEPLOYMENT.md`** for the current deployment documentation.
+
+---
+
 ---
 
 ## Overview

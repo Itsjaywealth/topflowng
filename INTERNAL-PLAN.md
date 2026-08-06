@@ -743,3 +743,61 @@ environment changed. No real providers contacted. Do not commit / push / deploy.
 - Dependency audit: 19 moderate via @sentry/node→@opentelemetry/* (informational).
 
 **Phase 8 complete at checkpoint - UNCOMMITTED. Stop before Phase 9 (no commit).**
+
+---
+
+## Phase 9 — Deployment, Monitoring, Backups, Launch Readiness (CHECKPOINT — UNCOMMITTED)
+
+**Scope: operational safety only. No change to business behaviour, API
+contracts, storage keys, payment/VTU/auth/AI/frontend flows. No auto-deploy, no
+push, no commit until reviewed. No real providers contacted.**
+
+### Changes made
+- **A. Production config** — `config.js` fails fast at startup in production
+  when REQUIRED vars missing (DATABASE_URL, JWT_SECRET, APP_URL,
+  PAYSTACK_SECRET_KEY, CLUBKONNECT_USER_ID, CLUBKONNECT_API_KEY); OPTIONAL vars
+  degrade a feature (RESEND/OPENROUTER/SENTRY/PAYSTACK_WEBHOOK) with a warning.
+  Only variable names are reported — never values. `.env.example` rewritten with
+  REQUIRED/OPTIONAL/test-only sections and placeholders.
+  **Decision:** Paystack + Clubkonnect confirmed MANDATORY for every production
+  deployment (only money flows; no payments-disabled mode). Fail-fast retained;
+  no opt-out flag (documented in config.js, DEPLOYMENT.md, OPERATIONS.md).
+  Authenticity verified by providers on first live call — boot validates presence
+  only, and fake/default production secrets are never accepted.
+- **B. Health & readiness** — added `GET /api/ready` (readiness: DB `SELECT 1`),
+  503 `unready` when down; `/api/health` stays pure liveness `{status,ts}`. No
+  secrets / DB URLs / stack traces in either. Ready probe has a 2.5s timeout.
+- **C. Logging** — per-request structured log adds `requestId` (echoed in
+  `X-Request-Id`), `method`, `route`, `status`, `durationMs`; logger regex
+  extended with `_pin` so `user_pin` etc. redact; `redact` exported for tests.
+  Sentry remains conditional on `SENTRY_DSN`. Alert matrix documented (RUNBOOK).
+- **D. Database ops** — migration workflow + rollback guidance (DEPLOYMENT.md);
+  backup/restore (pg_dump/pg_restore) + weekly verification procedure
+  (OPERATIONS.md). New `lib/dbconn.js` honours `?sslmode` from DATABASE_URL with
+  NODE_ENV default preserved (database.js + migrations/migrate.js updated).
+- **E. Deployment assets** — Dockerfile (node:20-alpine, non-root, npm ci
+  --omit=dev, migrate→start entrypoint, /api/health HEALTHCHECK) + .dockerignore.
+  Docker not present locally so the image was NOT built (file validated).
+- **F. CI/CD** — no auto-deploy added; CI stays separate. Release / rollback /
+  post-deploy-smoke checklists added to DEPLOYMENT.md & RUNBOOK.md.
+- **G. Security/resilience** — audit captured in SECURITY-CHECKLIST.md (HTTPS,
+  TRUST_PROXY, no cookies, rate limits, SW no-cache, source allow-list, admin
+  guard, prod fail-fast, no fake secrets).
+- **H. Docs** — created DEPLOYMENT.md, OPERATIONS.md, RUNBOOK.md,
+  SECURITY-CHECKLIST.md; DEPLOY.md marked superseded.
+- **I. Tests** — `test/operations.test.js` (8): liveness, readiness ok, readiness
+  fail when DB down, health/ready no secret leak, redaction, production
+  startup-fail on missing secrets, graceful shutdown (real ORANGE PG + SIGTERM →
+  exit 0), migrations idempotent-present. mock `ping` added to load-app.
+
+### Verification (all PASS)
+- Full `node --test test/*.test.js` → **110/110** (102 existing + 8 operational).
+- `test:syntax` 39 files 0 fail; `test:frontend` 30/30; `test:browser` 32/32;
+  `test:ci` 110/110; `audit:prod` exit 0 (19 moderate, no high/critical).
+- Prod-like local boot (mocks + throwaway PG): liveness 200, readiness
+  `ready` 200, SIGTERM graceful exit 0 (`Shutting down`+`Shutdown complete`);
+  zero secret leaks in logs; zero real provider calls. DBs left: only
+  `topflowng_test`.
+
+**Phase 9 at checkpoint - UNCOMMITTED, not pushed. Stop; do not begin a new**
+**phase.**

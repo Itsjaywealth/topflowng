@@ -121,4 +121,49 @@ const config = {
   },
 };
 
+// ── Production startup validation ───────────────────────────────────────────
+// In production the app fails fast (at startup, before any listener binds) if a
+// variable required to operate the platform is missing. Secrets are never
+// logged or echoed — only the variable NAMES are reported. Development/test
+// keep their safe fallbacks so local work and automated checks still boot.
+//
+// DECISION: Paystack (wallet top-up) and Clubkonnect (VTU) are MANDATORY for
+// every production deployment — they are the platform's only money-moving
+// integration and there is no supported payments/VTU-disabled mode. They stay
+// in the hard-required set, so a deployment that omits them refuses to boot
+// rather than silently running with broken payments. There is deliberately no
+// opt-out flag: an intentionally-paused payments deployment is expressed by not
+// routing traffic to this service, never by booting it without the keys.
+// Authenticity (not just presence) is verified by the providers at first live
+// call; boot-time validation only guarantees a value was provided.
+const REQUIRED_PRODUCTION = [
+  'DATABASE_URL',        // Postgres connection
+  'JWT_SECRET',          // token signing
+  'APP_URL',             // canonical origin (CORS, callbacks, reset links)
+  'PAYSTACK_SECRET_KEY', // payments — mandatory (see decision note)
+  'CLUBKONNECT_USER_ID', // VTU provider — mandatory (see decision note)
+  'CLUBKONNECT_API_KEY', // VTU provider — mandatory (see decision note)
+];
+
+const OPTIONAL_PRODUCTION = [
+  'PAYSTACK_WEBHOOK_SECRET', // falls back to PAYSTACK_SECRET_KEY when absent
+  'RESEND_API_KEY',          // email delivery; without it reset/purchase emails fail
+  'OPENROUTER_API_KEY',      // AI assistant (read-only, advisory) — degraded when absent
+  'SENTRY_DSN',              // observability — disabled when absent
+];
+
+function validateProductionConfig() {
+  if (!isProduction) return;
+  const missing = REQUIRED_PRODUCTION.filter((name) => !process.env[name] || !process.env[name].trim());
+  if (missing.length > 0) {
+    throw new Error(`[config] Missing required environment variable(s): ${missing.join(', ')}`);
+  }
+  const optionalMissing = OPTIONAL_PRODUCTION.filter((name) => !process.env[name]);
+  if (optionalMissing.length > 0) {
+    console.warn(`[config] Optional env var(s) not set (feature degraded): ${optionalMissing.join(', ')}`);
+  }
+}
+
+validateProductionConfig();
+
 module.exports = config;

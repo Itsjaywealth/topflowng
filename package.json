@@ -11,6 +11,7 @@
     "test:unit": "node --test test/smoke.test.js test/auth.test.js test/webhook.test.js",
     "test:integration": "node --test test/idempotency.test.js test/lifecycle.test.js test/ai.test.js",
     "test:migrations": "node --test test/migrations.test.js",
+    "test:operations": "node --test test/operations.test.js",
     "test:syntax": "node scripts/syntax-check.cjs",
     "test:frontend": "node test/static/static-checks.mjs",
     "test:browser": "playwright test",
