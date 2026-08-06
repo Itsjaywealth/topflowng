@@ -76,6 +76,7 @@ app.use(helmet({
       baseUri: ["'self'"],
       formAction: ["'self'"],
       frameAncestors: ["'self'"],
+      reportUri: '/api/admin/csp-report',
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -601,8 +602,13 @@ app.get('/api/admin/transactions', adminMiddleware, async (req, res) => {
   try {
     const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
-    const txns   = await db.getAllTransactions(limit, offset);
-    res.json({ transactions: txns });
+    const type   = String(req.query.type || '').trim() || undefined;
+    const status = String(req.query.status || '').trim() || undefined;
+    const q      = String(req.query.q || '').trim() || undefined;
+    const from   = req.query.from || undefined;
+    const to     = req.query.to || undefined;
+    const result = await db.getAllTransactions({ limit, offset, type, status, q, from, to });
+    res.json(result);
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch transactions');
@@ -613,12 +619,73 @@ app.get('/api/admin/users', adminMiddleware, async (req, res) => {
   try {
     const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
-    const users  = await db.getAllUsers(limit, offset);
-    res.json({ users });
+    const q      = String(req.query.q || '').trim() || undefined;
+    const result = await db.getAllUsers({ limit, offset, q });
+    res.json(result);
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch users');
   }
+});
+
+app.get('/api/admin/vtu-orders', adminMiddleware, async (req, res) => {
+  try {
+    const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = parseInt(req.query.offset) || 0;
+    const status = String(req.query.status || '').trim() || undefined;
+    const q      = String(req.query.q || '').trim() || undefined;
+    const result = await db.getAdminVtuOrders({ limit, offset, status, q });
+    res.json(result);
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, err.message || 'Failed to fetch VTU orders');
+  }
+});
+
+app.get('/api/admin/transactions/export', adminMiddleware, async (req, res) => {
+  try {
+    const q    = String(req.query.q || '').trim() || undefined;
+    const from = req.query.from || undefined;
+    const to   = req.query.to || undefined;
+    const result = await db.getAllTransactions({ limit: 5000, offset: 0, q, from, to });
+    const txns = result.transactions;
+    const header = 'id,type,amount,description,reference,status,user_name,user_email,created_at\n';
+    const rows = txns.map(t =>
+      [t.id, t.type, t.amount, `"${(t.description||'').replace(/"/g,'""')}"`,
+       t.reference||'', t.status||'completed',
+       `"${(t.user_name||'').replace(/"/g,'""')}"`,
+       `"${(t.user_email||'').replace(/"/g,'""')}"`, t.created_at].join(',')
+    ).join('\n');
+    const csv = '\uFEFF' + header + rows; // BOM for Excel
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="transactions-${Date.now()}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to export transactions');
+  }
+});
+
+// CSP violation reporting endpoint (receives report-only violations for monitoring)
+app.post('/api/admin/csp-report', express.json({ type: 'application/reports+json' }), (req, res) => {
+  const body = req.body;
+  if (body && body['csp-report']) {
+    logger.warn('CSP violation', {
+      blocked: body['csp-report']['blocked-uri'],
+      directive: body['csp-report']['violated-directive'],
+      document: body['csp-report']['document-uri'],
+    });
+  } else if (body && Array.isArray(body)) {
+    body.forEach(r => {
+      if (r.body && r.body['csp-report']) {
+        logger.warn('CSP violation (report-to)', {
+          blocked: r.body['csp-report']['blocked-uri'],
+          directive: r.body['csp-report']['violated-directive'],
+        });
+      }
+    });
+  }
+  res.sendStatus(204);
 });
 
 // ── Transaction PIN ──────────────────────────────────────────────────────────

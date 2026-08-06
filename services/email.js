@@ -1,8 +1,9 @@
 /**
- * TopFlowNG — Email service (Resend HTTPS API).
+ * TopFlowNG — Email service (Resend + Brevo).
  *
- * Extracted from server.js without behaviour change. Uses config for the API
- * URL, key, and from address. Never logs the API key or user PII.
+ * Auto-detects provider from the API key prefix:
+ *   re_        → Resend (https://api.resend.com/emails)
+ *   xkeysib-   → Brevo  (https://api.brevo.com/v3/smtp/email)
  */
 
 'use strict';
@@ -12,24 +13,49 @@ const axios = require('axios');
 const config = require('../config');
 const logger = require('../lib/logger');
 
+function detectProvider(apiKey) {
+  if (!apiKey) return null;
+  if (apiKey.startsWith('re_')) return 'resend';
+  if (apiKey.startsWith('xkeysib-')) return 'brevo';
+  return 'resend';
+}
+
 async function sendEmail({ to, subject, html }) {
-  if (!config.resend.apiKey) {
-    throw new Error('Email delivery is not configured');
+  const apiKey = config.resend.apiKey;
+  if (!apiKey) throw new Error('Email delivery is not configured');
+
+  const provider = detectProvider(apiKey);
+  const from = config.resend.from;
+
+  if (provider === 'brevo') {
+    const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+      sender: { name: from.replace(/<.*>/, '').trim(), email: from.match(/<([^>]+)>/)?.[1] || from },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }, {
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      timeout: config.resend.timeoutMs,
+    });
+    logger.info('Email accepted by Brevo', { id: response.data?.messageId || 'unknown id' });
+    return;
   }
 
   const response = await axios.post(config.resend.url, {
-    from: config.resend.from,
+    from,
     to: [to],
     subject,
     html,
   }, {
     headers: {
-      Authorization: `Bearer ${config.resend.apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     timeout: config.resend.timeoutMs,
   });
-
   logger.info('Email accepted by Resend', { id: response.data?.data?.id || 'unknown id' });
 }
 

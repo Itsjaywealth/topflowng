@@ -709,32 +709,101 @@ async function getAdminStats() {
       (SELECT COUNT(*) FROM transactions)::int                                    AS total_transactions,
       (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'credit')  AS total_credited,
       (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'debit'
-         AND status = 'completed')                                                 AS total_debited
+         AND status = 'completed')                                                 AS total_debited,
+      (SELECT COUNT(*) FROM vtu_orders WHERE status IN ('pending','submitted'))  AS pending_orders
   `);
   return rows[0];
 }
 
-async function getAllTransactions(limit = 50, offset = 0) {
-  const { rows } = await pool.query(
-    `SELECT
-       t.id, t.type, t.amount, t.description, t.reference, t.status, t.provider_order_id, t.created_at,
-       u.full_name AS user_name, u.email AS user_email
-     FROM transactions t
-     JOIN users u ON u.id = t.user_id
-     ORDER BY t.created_at DESC
-     LIMIT $1 OFFSET $2`,
-    [limit, offset]
-  );
-  return rows;
+async function getAllTransactions({ limit = 50, offset = 0, type, status, q, from, to } = {}) {
+  const clauses = [];
+  const params = [];
+  let idx = 1;
+  if (type) { clauses.push(`t.type = $${idx++}`); params.push(type); }
+  if (status) { clauses.push(`t.status = $${idx++}`); params.push(status); }
+  if (from) { clauses.push(`t.created_at >= $${idx++}`); params.push(from); }
+  if (to) { clauses.push(`t.created_at <= $${idx++}`); params.push(to); }
+  if (q) {
+    clauses.push(`(
+      t.description ILIKE $${idx} OR t.reference ILIKE $${idx}
+      OR u.full_name ILIKE $${idx} OR u.email ILIKE $${idx}
+    )`);
+    params.push(`%${q}%`);
+    idx++;
+  }
+  const where = clauses.length > 0 ? 'WHERE ' + clauses.join(' AND ') : '';
+  const sql = `SELECT t.id, t.type, t.amount, t.description, t.reference, t.status,
+                      t.provider_order_id, t.created_at,
+                      u.full_name AS user_name, u.email AS user_email
+               FROM transactions t
+               JOIN users u ON u.id = t.user_id
+               ${where}
+               ORDER BY t.created_at DESC
+               LIMIT $${idx++} OFFSET $${idx++}`;
+  const [countResult, rowsResult] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int AS total FROM transactions t JOIN users u ON u.id = t.user_id ${where}`,
+      params
+    ),
+    pool.query(sql, [...params, limit, offset]),
+  ]);
+  return { transactions: rowsResult.rows, total: countResult.rows[0].total };
 }
 
-async function getAllUsers(limit = 50, offset = 0) {
-  const { rows } = await pool.query(
-    `SELECT id, full_name, email, phone, wallet, is_admin, created_at
-     FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-    [limit, offset]
-  );
-  return rows;
+async function getAllUsers({ limit = 50, offset = 0, q } = {}) {
+  const params = [];
+  let idx = 1;
+  let where = '';
+  if (q) {
+    where = `WHERE (
+      full_name ILIKE $${idx} OR email ILIKE $${idx} OR phone ILIKE $${idx}
+    )`;
+    params.push(`%${q}%`);
+    idx++;
+  }
+  const [countResult, rowsResult] = await Promise.all([
+    pool.query(`SELECT COUNT(*)::int AS total FROM users ${where}`, params),
+    pool.query(
+      `SELECT id, full_name, email, phone, wallet, is_admin, created_at
+       FROM users ${where} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
+      [...params, limit, offset]
+    ),
+  ]);
+  return { users: rowsResult.rows, total: countResult.rows[0].total };
+}
+
+async function getAdminVtuOrders({ limit = 50, offset = 0, status, q } = {}) {
+  const clauses = [];
+  const params = [];
+  let idx = 1;
+  if (status) { clauses.push(`v.status = $${idx++}`); params.push(status); }
+  if (q) {
+    clauses.push(`(
+      v.request_id ILIKE $${idx} OR v.description ILIKE $${idx}
+      OR v.provider_order_id ILIKE $${idx} OR u.full_name ILIKE $${idx}
+      OR u.email ILIKE $${idx}
+    )`);
+    params.push(`%${q}%`);
+    idx++;
+  }
+  const where = clauses.length > 0 ? 'WHERE ' + clauses.join(' AND ') : '';
+  const sql = `SELECT v.request_id, v.service_type, v.amount, v.description,
+                      v.provider_order_id, v.status, v.reconcile_attempts,
+                      v.last_reconciled_at, v.created_at,
+                      u.full_name AS user_name, u.email AS user_email
+               FROM vtu_orders v
+               JOIN users u ON u.id = v.user_id
+               ${where}
+               ORDER BY v.created_at DESC
+               LIMIT $${idx++} OFFSET $${idx++}`;
+  const [countResult, rowsResult] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int AS total FROM vtu_orders v JOIN users u ON u.id = v.user_id ${where}`,
+      params
+    ),
+    pool.query(sql, [...params, limit, offset]),
+  ]);
+  return { orders: rowsResult.rows, total: countResult.rows[0].total };
 }
 
 // ── Transaction PIN ───────────────────────────────────────────────────────────
@@ -930,6 +999,7 @@ module.exports = {
   getAdminStats,
   getAllTransactions,
   getAllUsers,
+  getAdminVtuOrders,
   setTransactionPin,
   verifyTransactionPin,
   hasTransactionPin,

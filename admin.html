@@ -283,6 +283,10 @@ tbody tr:hover td{background:var(--mist)}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Users
       </div>
+      <div class="nav-item" onclick="showTab('orders')" id="nav-orders" role="button" tabindex="0">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14 11 16l4-4"/></svg>
+        Orders
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user">
@@ -331,6 +335,14 @@ tbody tr:hover td{background:var(--mist)}
           <div class="stat-value" id="stat-txns">—</div>
           <div class="stat-sub">All time</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-ico ink"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+          </div>
+          <div class="stat-label">Pending Orders</div>
+          <div class="stat-value" id="stat-orders">—</div>
+          <div class="stat-sub">Awaiting confirmation</div>
+        </div>
       </div>
 
       <!-- Recent transactions preview -->
@@ -358,13 +370,16 @@ tbody tr:hover td{background:var(--mist)}
       <div class="section">
         <div class="section-header">
           <div class="section-title" id="txn-section-title">All transactions</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="search-input" type="text" id="txn-search" placeholder="Search description..." oninput="filterTxns()">
-            <select class="search-input" id="txn-type-filter" onchange="filterTxns()" style="width:140px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="search-input" type="text" id="txn-search" placeholder="Search reference, user..." oninput="filterTxns()" style="min-width:160px">
+            <select class="search-input" id="txn-type-filter" onchange="filterTxns()" style="width:120px">
               <option value="">All types</option>
               <option value="credit">Credits</option>
               <option value="debit">Debits</option>
             </select>
+            <input type="date" id="txn-from" onchange="filterTxns()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ink)">
+            <input type="date" id="txn-to" onchange="filterTxns()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ink)">
+            <button class="reconcile-btn" onclick="exportCsv()" title="Export filtered results as CSV" style="padding:6px 12px;font-size:12px">Export CSV</button>
           </div>
         </div>
         <div class="tab-bar">
@@ -378,7 +393,7 @@ tbody tr:hover td{background:var(--mist)}
         <table>
           <thead><tr>
             <th>Reference</th><th>User</th><th>Description</th>
-            <th>Amount</th><th>Type</th><th>Date</th>
+            <th>Amount</th><th>Status</th><th>Date</th>
           </tr></thead>
           <tbody id="txns-body">
             <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
@@ -421,14 +436,52 @@ tbody tr:hover td{background:var(--mist)}
         </div>
       </div>
     </div>
+
+    <!-- VTU ORDERS -->
+    <div id="tab-orders" style="display:none">
+      <div class="page-title">VTU Orders</div>
+      <div class="page-sub">All service transactions — airtime, data, bills</div>
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title" id="orders-section-title">All orders</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input class="search-input" type="text" id="orders-search" placeholder="Search ID, user, description..." oninput="filterVtuOrders()" style="flex:1;min-width:180px">
+            <select id="orders-status" onchange="filterVtuOrders()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-size:13px">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="submitted">Submitted</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Request ID</th><th>User</th><th>Service</th><th>Description</th>
+            <th>Amount</th><th>Status</th><th>Provider ID</th><th>Date</th>
+          </tr></thead>
+          <tbody id="orders-body">
+            <tr><td colspan="8" class="table-empty"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span id="orders-pagination-info">Loading...</span>
+          <div class="page-btns">
+            <button class="page-btn" id="orders-prev" onclick="vtuOrderPage(-1)" disabled>← Prev</button>
+            <button class="page-btn" id="orders-next" onclick="vtuOrderPage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 
 <script>
 const API = '';
 let TOKEN = localStorage.getItem('admin_token') || '';
-let allTxns = [], allUsers = [];
-let txnOffset = 0, userOffset = 0;
+let allTxns = [], allUsers = [], allOrders = [];
+let txnOffset = 0, userOffset = 0, ordersOffset = 0;
+let txnTotal = 0, usersTotal = 0, ordersTotal = 0;
 const PAGE = 50;
 let txnTabFilter = 'all';
 
@@ -496,8 +549,10 @@ function initApp() {
   document.getElementById('app').style.display = 'block';
   document.getElementById('overview-date').textContent = new Date().toLocaleDateString('en-NG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   loadOverview();
+  loadRecentTxns();
   loadTransactions();
   loadUsers();
+  loadVtuOrders();
 }
 
 // ── OVERVIEW ───────────────────────────────────────────────────────────────
@@ -508,54 +563,55 @@ async function loadOverview() {
     document.getElementById('stat-spent').textContent = '₦' + fmt(stats.total_debited || 0);
     document.getElementById('stat-users').textContent = num(stats.total_users || 0);
     document.getElementById('stat-txns').textContent = num(stats.total_transactions || 0);
+    document.getElementById('stat-orders').textContent = num(stats.pending_orders || 0);
   } catch(e) { console.error('Stats error:', e.message); }
 }
 
 // ── TRANSACTIONS ───────────────────────────────────────────────────────────
-async function loadTransactions() {
+async function loadRecentTxns() {
   try {
-    const data = await apiFetch(`/api/admin/transactions?limit=200&offset=0`);
-    allTxns = data.transactions || [];
-    txnOffset = 0;
-    renderTxns();
+    const data = await apiFetch(`/api/admin/transactions?limit=10&offset=0`);
+    const recent = data.transactions || [];
+    document.getElementById('recent-txn-count').textContent = (data.total || 0) + ' total';
+    document.getElementById('recent-txns-body').innerHTML = recent.map(txnRow).join('') || emptyRow(6, 'No transactions yet');
   } catch(e) {
-    document.getElementById('txns-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load transactions</td></tr>`;
     document.getElementById('recent-txns-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load</td></tr>`;
   }
 }
 
-function getFilteredTxns() {
-  const search = (document.getElementById('txn-search')?.value || '').toLowerCase();
+async function loadTransactions() {
+  try {
+    const params = txnSearchParams();
+    const data = await apiFetch(`/api/admin/transactions?${params}`);
+    allTxns = data.transactions || [];
+    txnTotal = data.total || 0;
+    renderTxns();
+  } catch(e) {
+    document.getElementById('txns-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load transactions</td></tr>`;
+  }
+}
+
+function txnSearchParams() {
+  const search = document.getElementById('txn-search')?.value || '';
   const typeF = document.getElementById('txn-type-filter')?.value || '';
-  return allTxns.filter(t => {
-    const desc = (t.description || '').toLowerCase();
-    const matchSearch = !search || desc.includes(search) || (t.reference||'').toLowerCase().includes(search);
-    const matchType = !typeF || t.type === typeF;
-    const matchTab = txnTabFilter === 'all' ? true :
-      txnTabFilter === 'airtime' ? desc.includes('airtime') :
-      txnTabFilter === 'data' ? desc.includes('data') :
-      txnTabFilter === 'electricity' ? desc.includes('electricity') :
-      txnTabFilter === 'cable' ? (desc.includes('cable') || desc.includes('dstv') || desc.includes('gotv') || desc.includes('startimes')) :
-      txnTabFilter === 'topup' ? (t.type === 'credit' && desc.includes('paystack')) : true;
-    return matchSearch && matchType && matchTab;
-  });
+  const from = document.getElementById('txn-from')?.value || '';
+  const to = document.getElementById('txn-to')?.value || '';
+  const p = new URLSearchParams();
+  p.set('limit', PAGE);
+  p.set('offset', txnOffset);
+  if (search) p.set('q', search);
+  if (typeF) p.set('type', typeF);
+  if (from) p.set('from', from);
+  if (to) p.set('to', to + 'T23:59:59Z');
+  return p;
 }
 
 function renderTxns() {
-  const filtered = getFilteredTxns();
-  const page = filtered.slice(txnOffset, txnOffset + PAGE);
-  const recent = allTxns.slice(0, 10);
-
-  // Recent transactions on overview
-  document.getElementById('recent-txn-count').textContent = allTxns.length + ' total';
-  document.getElementById('recent-txns-body').innerHTML = recent.map(txnRow).join('') || emptyRow(6, 'No transactions yet');
-
-  // Full transactions table
-  document.getElementById('txns-body').innerHTML = page.map(txnRow).join('') || emptyRow(6, 'No transactions match');
-  document.getElementById('txn-section-title').textContent = filtered.length + ' transactions';
-  document.getElementById('txn-pagination-info').textContent = `${txnOffset+1}–${Math.min(txnOffset+PAGE, filtered.length)} of ${filtered.length}`;
+  document.getElementById('txns-body').innerHTML = allTxns.map(txnRow).join('') || emptyRow(6, 'No transactions match');
+  document.getElementById('txn-section-title').textContent = txnTotal + ' transactions';
+  document.getElementById('txn-pagination-info').textContent = `${txnOffset+1}–${Math.min(txnOffset+PAGE, txnTotal)} of ${txnTotal}`;
   document.getElementById('txn-prev').disabled = txnOffset === 0;
-  document.getElementById('txn-next').disabled = txnOffset + PAGE >= filtered.length;
+  document.getElementById('txn-next').disabled = txnOffset + PAGE >= txnTotal;
 }
 
 function adminStatusPill(status) {
@@ -589,45 +645,41 @@ function txnRow(t) {
   </tr>`;
 }
 
-function filterTxns() { txnOffset=0; renderTxns(); }
-function txnPage(dir) { txnOffset = Math.max(0, txnOffset + dir*PAGE); renderTxns(); }
+function filterTxns() { txnOffset=0; loadTransactions(); }
+function txnPage(dir) { txnOffset = Math.max(0, txnOffset + dir*PAGE); loadTransactions(); }
 function filterTxnTab(key, el) {
   txnTabFilter = key; txnOffset = 0;
   document.querySelectorAll('#tab-transactions .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  renderTxns();
+  if (key === 'all') {
+    document.getElementById('txn-type-filter').value = '';
+  } else {
+    document.getElementById('txn-type-filter').value = key === 'topup' ? 'credit' : 'debit';
+  }
+  loadTransactions();
 }
 
 // ── USERS ───────────────────────────────────────────────────────────────────
 async function loadUsers() {
   try {
-    const data = await apiFetch(`/api/admin/users?limit=200&offset=0`);
+    const search = document.getElementById('user-search')?.value || '';
+    const params = new URLSearchParams({ limit: PAGE, offset: userOffset });
+    if (search) params.set('q', search);
+    const data = await apiFetch(`/api/admin/users?${params}`);
     allUsers = data.users || [];
-    userOffset = 0;
+    usersTotal = data.total || 0;
     renderUsers();
   } catch(e) {
     document.getElementById('users-body').innerHTML = `<tr><td colspan="6" class="table-empty">Failed to load users</td></tr>`;
   }
 }
 
-function getFilteredUsers() {
-  const search = (document.getElementById('user-search')?.value || '').toLowerCase();
-  return allUsers.filter(u => {
-    return !search ||
-      (u.full_name||'').toLowerCase().includes(search) ||
-      (u.email||'').toLowerCase().includes(search) ||
-      (u.phone||'').includes(search);
-  });
-}
-
 function renderUsers() {
-  const filtered = getFilteredUsers();
-  const page = filtered.slice(userOffset, userOffset + PAGE);
-  document.getElementById('users-body').innerHTML = page.map(userRow).join('') || emptyRow(6, 'No users match');
-  document.getElementById('users-section-title').textContent = filtered.length + ' users';
-  document.getElementById('user-pagination-info').textContent = `${userOffset+1}–${Math.min(userOffset+PAGE, filtered.length)} of ${filtered.length}`;
+  document.getElementById('users-body').innerHTML = allUsers.map(userRow).join('') || emptyRow(6, 'No users match');
+  document.getElementById('users-section-title').textContent = usersTotal + ' users';
+  document.getElementById('user-pagination-info').textContent = `${userOffset+1}–${Math.min(userOffset+PAGE, usersTotal)} of ${usersTotal}`;
   document.getElementById('user-prev').disabled = userOffset === 0;
-  document.getElementById('user-next').disabled = userOffset + PAGE >= filtered.length;
+  document.getElementById('user-next').disabled = userOffset + PAGE >= usersTotal;
 }
 
 function userRow(u) {
@@ -641,8 +693,8 @@ function userRow(u) {
   </tr>`;
 }
 
-function filterUsers() { userOffset=0; renderUsers(); }
-function userPage(dir) { userOffset = Math.max(0, userOffset + dir*PAGE); renderUsers(); }
+function filterUsers() { userOffset=0; loadUsers(); }
+function userPage(dir) { userOffset = Math.max(0, userOffset + dir*PAGE); loadUsers(); }
 
 // ── VTU reconciliation ──────────────────────────────────────────────────────
 async function reconcileOrder(reference) {
@@ -657,9 +709,79 @@ async function reconcileOrder(reference) {
   }
 }
 
+// ── VTU ORDERS ────────────────────────────────────────────────────────────
+async function loadVtuOrders() {
+  try {
+    const search = document.getElementById('orders-search')?.value || '';
+    const st = document.getElementById('orders-status')?.value || '';
+    const params = new URLSearchParams({ limit: PAGE, offset: ordersOffset });
+    if (search) params.set('q', search);
+    if (st) params.set('status', st);
+    const data = await apiFetch(`/api/admin/vtu-orders?${params}`);
+    allOrders = data.orders || [];
+    ordersTotal = data.total || 0;
+    renderVtuOrders();
+  } catch(e) {
+    document.getElementById('orders-body').innerHTML = `<tr><td colspan="9" class="table-empty">Failed to load orders</td></tr>`;
+  }
+}
+
+function renderVtuOrders() {
+  document.getElementById('orders-body').innerHTML = allOrders.map(vtuOrderRow).join('') || emptyRow(9, 'No orders match');
+  document.getElementById('orders-section-title').textContent = ordersTotal + ' orders';
+  document.getElementById('orders-pagination-info').textContent = `${ordersOffset+1}–${Math.min(ordersOffset+PAGE, ordersTotal)} of ${ordersTotal}`;
+  document.getElementById('orders-prev').disabled = ordersOffset === 0;
+  document.getElementById('orders-next').disabled = ordersOffset + PAGE >= ordersTotal;
+}
+
+function vtuOrderRow(o) {
+  const amt = parseFloat(o.amount);
+  const actions = o.status === 'pending' && o.provider_order_id
+    ? `<button class="reconcile-btn" onclick='reconcileOrder(${esc(JSON.stringify(o.request_id))})'>Reconcile</button>`
+    : '';
+  return `<tr>
+    <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(o.request_id||'—')}</td>
+    <td>${esc(o.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(o.user_email||'')}</span></td>
+    <td>${esc(o.service_type||'—')}</td>
+    <td>${esc(o.description||'—')}</td>
+    <td class="amount-negative">₦${fmt(amt)}</td>
+    <td>${adminStatusPill(o.status)}${actions}</td>
+    <td style="font-family:monospace;font-size:11px;color:var(--mid)">${o.provider_order_id ? esc(o.provider_order_id) : '—'}</td>
+    <td style="color:var(--mid);font-size:12px">${fmtDate(o.created_at)}</td>
+  </tr>`;
+}
+
+function filterVtuOrders() { ordersOffset=0; loadVtuOrders(); }
+function vtuOrderPage(dir) { ordersOffset = Math.max(0, ordersOffset + dir*PAGE); loadVtuOrders(); }
+
+// ── CSV EXPORT ─────────────────────────────────────────────────────────────
+async function exportCsv() {
+  try {
+    const search = document.getElementById('txn-search')?.value || '';
+    const typeF = document.getElementById('txn-type-filter')?.value || '';
+    const from = document.getElementById('txn-from')?.value || '';
+    const to = document.getElementById('txn-to')?.value || '';
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (typeF) params.set('type', typeF);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to + 'T23:59:59Z');
+    const token = TOKEN;
+    const r = await fetch(`/api/admin/transactions/export?${params}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) { alert('Export failed'); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'transactions.csv'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('Export error: ' + e.message); }
+}
+
 // ── NAV ────────────────────────────────────────────────────────────────────
 function showTab(tab) {
-  ['overview','transactions','users'].forEach(t => {
+  ['overview','transactions','users','orders'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
     document.getElementById('nav-'+t).classList.toggle('active', t===tab);
   });
