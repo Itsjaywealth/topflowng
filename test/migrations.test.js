@@ -140,10 +140,13 @@ test('migration 001 applies successfully', async () => {
   assert.match(out, /applied 001_vtu_idempotency\.sql/);
   assert.match(out, /applied 002_vtu_reconcile_attempts\.sql/);
   assert.match(out, /applied 003_search_indexes\.sql/);
+  assert.match(out, /applied 004_auto_recharge\.sql/);
+  assert.match(out, /applied 005_scheduled_purchases\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
   assert.deepStrictEqual(rows.map((r) => r.version), [
     '001_vtu_idempotency', '002_vtu_reconcile_attempts', '003_search_indexes',
+    '004_auto_recharge', '005_scheduled_purchases',
   ]);
 
   const cols = await q(
@@ -238,6 +241,14 @@ test('expected indexes exist', async () => {
      FROM pg_available_extensions WHERE name = 'pg_trgm'`
   );
   assert.ok(installed, 'pg_trgm extension must be installed');
+
+  // Tables created by migrations 004 and 005.
+  const tables = (await q(
+    `SELECT table_name FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name IN ('auto_recharges','scheduled_purchases')`
+  )).map(r => r.table_name);
+  assert.ok(tables.includes('auto_recharges'), 'auto_recharges table must exist');
+  assert.ok(tables.includes('scheduled_purchases'), 'scheduled_purchases table must exist');
 });
 
 test('failed migration rolls back cleanly', async () => {

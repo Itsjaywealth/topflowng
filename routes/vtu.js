@@ -19,9 +19,17 @@ const { processClubkonnectPurchase, MAX_PURCHASE_AMOUNT, parseValidatedAmount } 
 const { sendPurchaseEmail } = require('../services/email');
 const { resolveRequest, recordRequest } = require('../services/idempotency');
 const { sendError } = require('../lib/errors');
+const { validate, airtimeSchema, dataSchema, cableSchema, electricitySchema, examPinSchema, rechargePinSchema } = require('../lib/schemas');
 const Sentry = require('@sentry/node');
 
 const router = express.Router();
+
+function withTracing(name, handler) {
+  return async (req, res) => {
+    if (!config.sentry.dsn) return handler(req, res);
+    return Sentry.startSpan({ name, op: 'vtu.purchase' }, () => handler(req, res));
+  };
+}
 
 const NETWORK_MAP = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
 const EXAM_BODY_MAP = { WAEC: 'WAEC', NECO: 'NECO', NABTEB: 'NABTEB', JAMB: 'JAMB' };
@@ -45,10 +53,9 @@ function captureError(service, err) {
 }
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────
-router.post('/airtime', authMiddleware, apiLimiter, async (req, res) => {
+router.post('/airtime', authMiddleware, apiLimiter, validate(airtimeSchema), withTracing('vtu.airtime', async (req, res) => {
   try {
-    const { network, phone, amount, pin } = req.body;
-    if (!network || !phone || !amount) return sendError(res, 400, 'network, phone, amount required');
+    const { network, phone, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
@@ -104,13 +111,12 @@ router.post('/airtime', authMiddleware, apiLimiter, async (req, res) => {
     captureError('Airtime', err);
     sendError(res, 500, 'Airtime service unavailable');
   }
-});
+}));
 
 // ── VTU — Data Bundle ────────────────────────────────────────────────────────
-router.post('/data', authMiddleware, apiLimiter, async (req, res) => {
+router.post('/data', authMiddleware, apiLimiter, validate(dataSchema), withTracing('vtu.data', async (req, res) => {
   try {
-    const { network, phone, planCode, amount, pin } = req.body;
-    if (!network || !phone || !planCode || !amount) return sendError(res, 400, 'network, phone, planCode, amount required');
+    const { network, phone, planCode, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
@@ -166,13 +172,12 @@ router.post('/data', authMiddleware, apiLimiter, async (req, res) => {
     captureError('Data', err);
     sendError(res, 500, 'Data service unavailable');
   }
-});
+}));
 
 // ── VTU — Cable TV ───────────────────────────────────────────────────────────
-router.post('/cable', authMiddleware, apiLimiter, async (req, res) => {
+router.post('/cable', authMiddleware, apiLimiter, validate(cableSchema), withTracing('vtu.cable', async (req, res) => {
   try {
-    const { provider, smartCardNumber, planCode, amount, pin } = req.body;
-    if (!provider || !smartCardNumber || !planCode || !amount) return sendError(res, 400, 'provider, smartCardNumber, planCode, amount required');
+    const { provider, smartCardNumber, planCode, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
@@ -227,13 +232,12 @@ router.post('/cable', authMiddleware, apiLimiter, async (req, res) => {
     captureError('Cable TV', err);
     sendError(res, 500, 'Cable TV service unavailable');
   }
-});
+}));
 
 // ── VTU — Electricity ────────────────────────────────────────────────────────
-router.post('/electricity', authMiddleware, apiLimiter, async (req, res) => {
+router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySchema), withTracing('vtu.electricity', async (req, res) => {
   try {
-    const { disco, meterNumber, meterType, amount, pin } = req.body;
-    if (!disco || !meterNumber || !meterType || !amount) return sendError(res, 400, 'disco, meterNumber, meterType, amount required');
+    const { disco, meterNumber, meterType, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
@@ -290,14 +294,13 @@ router.post('/electricity', authMiddleware, apiLimiter, async (req, res) => {
     captureError('Electricity', err);
     sendError(res, 500, 'Electricity service unavailable');
   }
-});
+}));
 
 // ── Exam PIN ──────────────────────────────────────────────────────────────────
-router.post('/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
+router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), withTracing('vtu.exam-pin', async (req, res) => {
   try {
-    const { examBody, quantity = 1, pin } = req.body;
-    const ckBody = EXAM_BODY_MAP[examBody?.toUpperCase()];
-    if (!ckBody) return sendError(res, 400, `Unsupported exam body: ${examBody}`);
+    const { examBody, quantity, pin } = req.validated;
+    const ckBody = EXAM_BODY_MAP[examBody.toUpperCase()];
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
     const amount = EXAM_PRICES[ckBody] * qty;
@@ -348,13 +351,13 @@ router.post('/exam-pin', authMiddleware, apiLimiter, async (req, res) => {
     captureError('Exam PIN', err);
     sendError(res, 500, 'Exam PIN service error. Please try again.');
   }
-});
+}));
 
 // ── Recharge Card PIN ─────────────────────────────────────────────────────────
-router.post('/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
+router.post('/recharge-pin', authMiddleware, apiLimiter, validate(rechargePinSchema), withTracing('vtu.recharge-pin', async (req, res) => {
   try {
-    const { network, amount, quantity = 1, pin } = req.body;
-    const ckNetwork = NETWORK_MAP[network?.toUpperCase()];
+    const { network, amount, quantity, pin } = req.validated;
+    const ckNetwork = NETWORK_MAP[network.toUpperCase()];
     if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
@@ -409,7 +412,7 @@ router.post('/recharge-pin', authMiddleware, apiLimiter, async (req, res) => {
     captureError('Recharge PIN', err);
     sendError(res, 500, 'Recharge PIN service error. Please try again.');
   }
-});
+}));
 
 // ── Pending VTU Orders ───────────────────────────────────────────────────────
 router.get('/pending', authMiddleware, async (req, res) => {

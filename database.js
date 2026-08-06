@@ -946,6 +946,22 @@ async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {})
   return { scanned: rows.length, expired: expired.length, orders: expired };
 }
 
+// ── Stale submitted order cleanup ───────────────────────────────────────────
+// Pre-idempotency artifacts or interrupted flows that stalled in 'submitted'
+// with no transaction_id and no provider_order_id. These were NEVER debited.
+async function cleanStaleSubmittedOrders({ olderThanHours = 24, limit = 50 } = {}) {
+  const { rowCount } = await pool.query(
+    `UPDATE vtu_orders SET status = 'failed', updated_at = NOW()
+     WHERE status = 'submitted'
+       AND transaction_id IS NULL
+       AND (provider_order_id IS NULL OR provider_order_id = '')
+       AND created_at < NOW() - make_interval(hours => $1)
+     LIMIT $2`,
+    [olderThanHours, limit]
+  );
+  return rowCount;
+}
+
 // ── Pending order reconciliation (auto-resolution) ──────────────────────────
 // Pending orders that DO carry a provider order ID are traceable via the
 // provider Query API. Return the oldest few that have not been reconciled in
@@ -964,6 +980,101 @@ async function getReconcilablePendingOrders({ backoffMinutes = 10, maxAttempts =
     [maxAttempts, backoffMinutes, limit]
   );
   return rows;
+}
+
+// ── Auto-recharge ────────────────────────────────────────────────────────────
+async function setAutoRecharge(userId, { threshold, amount }) {
+  const { rows } = await pool.query(
+    `INSERT INTO auto_recharges (user_id, threshold, amount)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id) DO UPDATE SET threshold = $2, amount = $3, active = true, updated_at = NOW()
+     RETURNING *`,
+    [userId, threshold, amount]
+  );
+  return rows[0];
+}
+
+async function getAutoRecharge(userId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM auto_recharges WHERE user_id = $1', [userId]
+  );
+  return rows[0] || null;
+}
+
+async function deleteAutoRecharge(userId) {
+  await pool.query(
+    'UPDATE auto_recharges SET active = false, updated_at = NOW() WHERE user_id = $1',
+    [userId]
+  );
+}
+
+async function getDueAutoRecharges(limit = 20) {
+  const { rows } = await pool.query(
+    `SELECT a.*, u.email, u.full_name, u.wallet
+     FROM auto_recharges a JOIN users u ON u.id = a.user_id
+     WHERE a.active = true AND u.wallet <= a.threshold
+       AND (a.last_triggered_at IS NULL OR a.last_triggered_at < NOW() - INTERVAL '1 hour')
+       AND a.failed_attempts < 3
+     ORDER BY u.wallet ASC LIMIT $1`,
+    [limit]
+  );
+  return rows;
+}
+
+// ── Scheduled purchases ───────────────────────────────────────────────────────
+async function createScheduledPurchase(userId, data) {
+  const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = data;
+  const { rows } = await pool.query(
+    `INSERT INTO scheduled_purchases
+       (user_id, service_type, plan_code, phone, identifier, network, amount, frequency, next_run_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [userId, serviceType, planCode || null, phone || null, identifier || null, network || null, amount, frequency, nextRunAt]
+  );
+  return rows[0];
+}
+
+async function getScheduledPurchases(userId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM scheduled_purchases WHERE user_id = $1 ORDER BY next_run_at ASC',
+    [userId]
+  );
+  return rows;
+}
+
+async function deleteScheduledPurchase(userId, id) {
+  const { rowCount } = await pool.query(
+    'DELETE FROM scheduled_purchases WHERE id = $1 AND user_id = $2',
+    [id, userId]
+  );
+  return rowCount > 0;
+}
+
+async function getDueScheduledPurchases(limit = 20) {
+  const { rows } = await pool.query(
+    `SELECT sp.*, u.email, u.full_name, u.wallet
+     FROM scheduled_purchases sp JOIN users u ON u.id = sp.user_id
+     WHERE sp.active = true AND sp.next_run_at <= NOW()
+     ORDER BY sp.next_run_at ASC LIMIT $1`,
+    [limit]
+  );
+  return rows;
+}
+
+async function recordScheduledRun(id, nextRun) {
+  await pool.query(
+    `UPDATE scheduled_purchases
+     SET last_run_at = NOW(), run_count = run_count + 1,
+         next_run_at = $2, updated_at = NOW()
+     WHERE id = $1`,
+    [id, nextRun]
+  );
+}
+
+async function disableScheduledPurchase(id) {
+  await pool.query(
+    `UPDATE scheduled_purchases SET active = false, updated_at = NOW() WHERE id = $1`,
+    [id]
+  );
 }
 
 module.exports = {
@@ -1012,5 +1123,16 @@ module.exports = {
   getAnalyticsSummary,
   getPendingVtuOrders,
   expireStaleVtuOrders,
+  cleanStaleSubmittedOrders,
   getReconcilablePendingOrders,
+  setAutoRecharge,
+  getAutoRecharge,
+  deleteAutoRecharge,
+  getDueAutoRecharges,
+  createScheduledPurchase,
+  getScheduledPurchases,
+  deleteScheduledPurchase,
+  getDueScheduledPurchases,
+  recordScheduledRun,
+  disableScheduledPurchase,
 };

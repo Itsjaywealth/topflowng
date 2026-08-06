@@ -42,6 +42,12 @@ const { queryClubkonnectOrder } = require('./services/clubkonnect');
 const { sendEmail, sendOrderStatusEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
+const {
+  validate,
+  registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema,
+  changePasswordSchema, setPinSchema, resetPinSchema, verifyPinSchema,
+  paystackInitSchema, beneficiaryAddSchema,
+} = require('./lib/schemas');
 
 const DUMMY_BCRYPT_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEeO7BmW2g8K7P3XyZGkN6QqKxE6y1yJ2eC';
 
@@ -209,20 +215,11 @@ app.get('/api/ready', async (_req, res) => {
 });
 
 // ── Auth Routes ──────────────────────────────────────────────────────────────
-app.post('/api/auth/register', authLimiter, async (req, res) => {
+app.post('/api/auth/register', authLimiter, validate(registerSchema), async (req, res) => {
   try {
-    const { fullName, email, phone, password, referralCode } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-    if (!fullName || !normalizedEmail || !phone || !password)
-      return sendError(res, 400, 'All fields are required');
-    if (!isValidEmail(normalizedEmail))
-      return sendError(res, 400, 'Enter a valid email address');
-    if (!isValidPhone(phone))
-      return sendError(res, 400, 'Enter a valid phone number');
-    if (password.length < 6)
-      return sendError(res, 400, 'Password must be at least 6 characters');
+    const { fullName, email, phone, password, referralCode } = req.validated;
 
-    const existing = await db.findUserByEmail(normalizedEmail);
+    const existing = await db.findUserByEmail(email);
     if (existing) return sendError(res, 409, 'Email already registered');
 
     const existingPhone = await db.findUserByPhone(phone.trim());
@@ -235,7 +232,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       if (referrer) referredBy = referrer.id;
     }
 
-    const user  = await db.createUser({ fullName, email: normalizedEmail, phone: phone.trim(), password, referredBy });
+    const user  = await db.createUser({ fullName, email, phone: phone.trim(), password, referredBy });
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.status(201).json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
@@ -246,30 +243,27 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', authLimiter, async (req, res) => {
+app.post('/api/auth/login', authLimiter, validate(loginSchema), async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail || !password)
-      return sendError(res, 400, 'Email and password required');
+    const { email, password } = req.validated;
 
-    if (security.isLockedOut(normalizedEmail)) {
+    if (security.isLockedOut(email)) {
       return sendError(res, 429, 'Too many failed attempts. Please try again in a few minutes.');
     }
 
-    const user = await db.findUserByEmail(normalizedEmail);
+    const user = await db.findUserByEmail(email);
     if (!user) {
-      await security.recordLoginFailure(normalizedEmail);
+      await security.recordLoginFailure(email);
       return sendError(res, 401, 'Invalid credentials');
     }
 
     const ok = await db.verifyPassword(user, password);
     if (!ok) {
-      await security.recordLoginFailure(normalizedEmail);
+      await security.recordLoginFailure(email);
       return sendError(res, 401, 'Invalid credentials');
     }
 
-    security.resetLoginFailures(normalizedEmail);
+    security.resetLoginFailures(email);
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
@@ -279,10 +273,9 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+app.post('/api/auth/forgot-password', authLimiter, validate(forgotPasswordSchema), async (req, res) => {
   try {
-    const email = normalizeEmail(req.body.email);
-    if (!email) return sendError(res, 400, 'Email is required');
+    const { email } = req.validated;
 
     const user = await db.findUserByEmail(email);
     // Always respond 200 to prevent user enumeration
@@ -316,11 +309,9 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+app.post('/api/auth/reset-password', authLimiter, validate(resetPasswordSchema), async (req, res) => {
   try {
-    const { token, password } = req.body;
-    if (!token || !password) return sendError(res, 400, 'Token and new password required');
-    if (password.length < 6) return sendError(res, 400, 'Password must be at least 6 characters');
+    const { token, password } = req.validated;
 
     await db.consumePasswordReset(token, password);
     res.json({ message: 'Password reset successfully. You can now log in.' });
@@ -332,13 +323,9 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
+app.post('/api/auth/change-password', authMiddleware, validate(changePasswordSchema), async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword)
-      return sendError(res, 400, 'Current and new password required');
-    if (newPassword.length < 6)
-      return sendError(res, 400, 'New password must be at least 6 characters');
+    const { currentPassword, newPassword } = req.validated;
 
     const user = await db.findUserById(req.user.id);
     const fullUser = await db.findUserByEmail(user.email);
@@ -392,10 +379,9 @@ app.get('/api/wallet/transactions', authMiddleware, apiLimiter, async (req, res)
 });
 
 // ── Paystack ─────────────────────────────────────────────────────────────────
-app.post('/api/paystack/initialize', authMiddleware, apiLimiter, async (req, res) => {
+app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paystackInitSchema), async (req, res) => {
   try {
-    const { amount } = req.body;
-    if (!amount || amount < 100) return sendError(res, 400, 'Minimum top-up is ₦100');
+    const { amount } = req.validated;
 
     const user       = await db.findUserById(req.user.id);
     const amountKobo = Math.round(parseFloat(amount) * 100);
@@ -691,12 +677,24 @@ app.post('/api/admin/csp-report', express.json({ type: 'application/reports+json
 });
 
 // ── Transaction PIN ──────────────────────────────────────────────────────────
-app.post('/api/auth/set-transaction-pin', authMiddleware, async (req, res) => {
+app.post('/api/auth/reset-transaction-pin', authMiddleware, validate(resetPinSchema), async (req, res) => {
   try {
-    const { pin } = req.body;
-    if (!pin || !/^\d{4,6}$/.test(pin)) {
-      return sendError(res, 400, 'PIN must be 4–6 digits.');
-    }
+    const { currentPassword, newPin } = req.validated;
+    const user = await db.findUserById(req.user.id);
+    const fullUser = await db.findUserByEmail(user.email);
+    const ok = await db.verifyPassword(fullUser, currentPassword);
+    if (!ok) return sendError(res, 401, 'Current password is incorrect');
+    await db.setTransactionPin(req.user.id, newPin);
+    res.json({ message: 'Transaction PIN reset successfully.' });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to reset PIN');
+  }
+});
+
+app.post('/api/auth/set-transaction-pin', authMiddleware, validate(setPinSchema), async (req, res) => {
+  try {
+    const { pin } = req.validated;
     await db.setTransactionPin(req.user.id, pin);
     res.json({ message: 'Transaction PIN set successfully.' });
   } catch (err) {
@@ -705,10 +703,9 @@ app.post('/api/auth/set-transaction-pin', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/auth/verify-transaction-pin', authMiddleware, async (req, res) => {
+app.post('/api/auth/verify-transaction-pin', authMiddleware, validate(verifyPinSchema), async (req, res) => {
   try {
-    const { pin } = req.body;
-    if (!pin) return sendError(res, 400, 'PIN is required.');
+    const { pin } = req.validated;
     const valid = await db.verifyTransactionPin(req.user.id, pin);
     res.json({ valid });
   } catch (err) {
@@ -737,12 +734,9 @@ app.get('/api/beneficiaries', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/beneficiaries', authMiddleware, async (req, res) => {
+app.post('/api/beneficiaries', authMiddleware, validate(beneficiaryAddSchema), async (req, res) => {
   try {
-    const { type, label, network, identifier } = req.body;
-    if (!type || !label || !identifier) {
-      return sendError(res, 400, 'type, label and identifier are required.');
-    }
+    const { type, label, network, identifier } = req.validated;
     const b = await db.addBeneficiary(req.user.id, { type, label, network, identifier });
     res.json({ beneficiary: b });
   } catch (err) {
@@ -784,6 +778,80 @@ app.get('/api/analytics/summary', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Auto-recharge ────────────────────────────────────────────────────────────
+app.get('/api/auto-recharge', authMiddleware, async (req, res) => {
+  try {
+    const settings = await db.getAutoRecharge(req.user.id);
+    res.json({ settings: settings || null });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch auto-recharge settings');
+  }
+});
+
+app.post('/api/auto-recharge', authMiddleware, async (req, res) => {
+  try {
+    const { threshold, amount } = req.body;
+    if (!threshold || !amount || threshold < 100 || amount < 100 || amount > 1000000) {
+      return sendError(res, 400, 'Threshold must be at least ₦100, amount ₦100–₦1,000,000');
+    }
+    const settings = await db.setAutoRecharge(req.user.id, { threshold, amount });
+    res.json({ settings, message: 'Auto-recharge enabled. Wallet will top up when balance drops below ₦' + threshold });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to set auto-recharge');
+  }
+});
+
+app.delete('/api/auto-recharge', authMiddleware, async (req, res) => {
+  try {
+    await db.deleteAutoRecharge(req.user.id);
+    res.json({ message: 'Auto-recharge disabled.' });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to disable auto-recharge');
+  }
+});
+
+// ── Scheduled purchases ──────────────────────────────────────────────────────
+app.get('/api/scheduled-purchases', authMiddleware, async (req, res) => {
+  try {
+    const list = await db.getScheduledPurchases(req.user.id);
+    res.json({ scheduled: list });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch scheduled purchases');
+  }
+});
+
+app.post('/api/scheduled-purchases', authMiddleware, async (req, res) => {
+  try {
+    const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = req.body;
+    if (!serviceType || !amount || !frequency || !nextRunAt) {
+      return sendError(res, 400, 'serviceType, amount, frequency and nextRunAt are required');
+    }
+    const purchase = await db.createScheduledPurchase(req.user.id, {
+      serviceType, planCode, phone, identifier, network, amount, frequency,
+      nextRunAt: new Date(nextRunAt),
+    });
+    res.status(201).json({ purchase, message: 'Purchase scheduled.' });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to schedule purchase');
+  }
+});
+
+app.delete('/api/scheduled-purchases/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await db.deleteScheduledPurchase(req.user.id, parseInt(req.params.id));
+    if (!deleted) return sendError(res, 404, 'Scheduled purchase not found');
+    res.json({ message: 'Scheduled purchase cancelled.' });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to cancel scheduled purchase');
+  }
+});
+
 // ── SPA Fallback ─────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'topflowng.html'));
@@ -810,6 +878,69 @@ function schedulePendingOrderSweep() {
   const maxAttempts = config.clubkonnect.reconcileMaxAttempts;
   let timer = null;
 
+  async function processDueAutoRecharges() {
+    try {
+      const due = await db.getDueAutoRecharges(10);
+      for (const row of due) {
+        logger.info('Processing auto-recharge', { userId: row.user_id, amount: row.amount });
+        try {
+          const response = await axios.post(`${config.paystack.apiBaseUrl}/transaction/initialize`, {
+            email: row.email,
+            amount: Math.round(parseFloat(row.amount) * 100),
+            reference: `AR-${Date.now()}-${row.user_id}`,
+            metadata: { user_id: row.user_id, auto_recharge: true },
+          }, {
+            headers: { Authorization: `Bearer ${config.paystack.secretKey}` },
+            timeout: config.paystack.timeoutMs,
+          });
+          logger.info('Auto-recharge initiated', { userId: row.user_id, ref: response.data?.data?.reference });
+        } catch (err) {
+          logger.error('Auto-recharge failed', { userId: row.user_id, message: err.message });
+          await db.pool.query(
+            'UPDATE auto_recharges SET failed_attempts = failed_attempts + 1 WHERE user_id = $1',
+            [row.user_id]
+          ).catch(() => {});
+        }
+      }
+    } catch (err) {
+      logger.error('Auto-recharge sweep failed', { message: err.message });
+    }
+  }
+
+  function computeNextRun(frequency, from) {
+    const d = new Date(from);
+    if (frequency === 'daily') d.setDate(d.getDate() + 1);
+    else if (frequency === 'weekly') d.setDate(d.getDate() + 7);
+    else if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
+    else return null;
+    return d;
+  }
+
+  async function processDueScheduledPurchases() {
+    try {
+      const due = await db.getDueScheduledPurchases(20);
+      for (const row of due) {
+        try {
+          if (parseFloat(row.wallet) < parseFloat(row.amount)) {
+            logger.warn('Scheduled purchase skipped — insufficient balance', { id: row.id, userId: row.user_id });
+            continue;
+          }
+          logger.info('Processing scheduled purchase', { id: row.id, serviceType: row.service_type });
+          const nextRun = row.frequency === 'once' ? null : computeNextRun(row.frequency, new Date());
+          if (nextRun) {
+            await db.recordScheduledRun(row.id, nextRun);
+          } else {
+            await db.disableScheduledPurchase(row.id);
+          }
+        } catch (err) {
+          logger.error('Scheduled purchase failed', { id: row.id, message: err.message });
+        }
+      }
+    } catch (err) {
+      logger.error('Scheduled purchase sweep failed', { message: err.message });
+    }
+  }
+
   async function sweep() {
     try {
       // 1) Auto-expire unconfirmed orders that never got a provider reference.
@@ -827,6 +958,24 @@ function schedulePendingOrderSweep() {
           }).catch(() => {});
         }
       }
+
+      // 1.5) Clean up stuck 'submitted' orders that never progressed (pre-idempotency
+      // legacy artifacts or interrupted flows). These have no transaction_id and
+      // no provider_order_id — they were never debited. Move to failed after 24h.
+      try {
+        const staleSubmitted = await db.cleanStaleSubmittedOrders({ olderThanHours: 24 });
+        if (staleSubmitted > 0) {
+          logger.info('Cleaned stale submitted orders', { cleaned: staleSubmitted });
+        }
+      } catch (err) {
+        logger.error('Failed to clean stale submitted orders', { message: err.message });
+      }
+
+      // 3) Process due auto-recharges (wallet below threshold).
+      await processDueAutoRecharges();
+
+      // 4) Process due scheduled purchases.
+      await processDueScheduledPurchases();
 
       // 2) Auto-reconcile traceable pending orders via the provider Query API.
       const reconcilable = await db.getReconcilablePendingOrders({
