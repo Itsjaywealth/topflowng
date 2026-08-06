@@ -365,6 +365,11 @@ a{color:var(--green-strong);text-decoration:none}
   box-shadow:0 18px 40px -18px rgba(0,168,104,.55);
   position:relative;overflow:hidden;
 }
+.hero-slide{display:none;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;width:100%}
+.hero-slide.active{display:flex}
+.hero-dots{display:flex;gap:6px;justify-content:center;padding:4px 0 12px}
+.hero-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);border:0;cursor:pointer;padding:0;transition:background .3s}
+.hero-dot.active{background:#fff;width:18px;border-radius:3px}
 .balance-panel::before{
   content:"";position:absolute;right:-70px;top:-80px;width:260px;height:260px;
   background:radial-gradient(circle,rgba(255,255,255,.18),transparent 62%);border-radius:50%;
@@ -1065,16 +1070,33 @@ a{color:var(--green-strong);text-decoration:none}
           <button class="header-avatar" id="header-avatar" onclick="goTab('account')" aria-label="Open account">T</button>
         </div>
       </div>
-      <div class="balance-panel">
-        <div>
-          <div class="balance-label">Available balance</div>
-          <div class="balance-amount" id="balance-display">₦0.00</div>
+      <div class="balance-panel" id="hero-slider">
+        <div class="hero-slide active" id="hero-slide-balance">
+          <div>
+            <div class="balance-label">Available balance</div>
+            <div class="balance-amount" id="balance-display">₦0.00</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn-fund" onclick="openFundModal()">Fund wallet</button>
+            <button class="btn-history-quick" onclick="goTab('history')">Transactions</button>
+          </div>
         </div>
-        <div class="header-actions">
-          <button class="btn-fund" onclick="openFundModal()">Fund wallet</button>
-          <button class="btn-history-quick" onclick="goTab('history')">Transactions</button>
+        <div class="hero-slide" id="hero-slide-recharge">
+          <div class="balance-label">Auto-recharge</div>
+          <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Never run low — top up automatically when your balance drops below a threshold.</div>
+          <div class="header-actions">
+            <button class="btn-fund" onclick="goTab('account');setTimeout(()=>{let e=document.getElementById('auto-recharge-section');if(e)e.scrollIntoView({behavior:'smooth'})},100)">Configure</button>
+          </div>
+        </div>
+        <div class="hero-slide" id="hero-slide-schedule">
+          <div class="balance-label">Scheduled purchases</div>
+          <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Set up recurring airtime, data or bills — daily, weekly or monthly.</div>
+          <div class="header-actions">
+            <button class="btn-fund" onclick="openService('airtime')">Schedule now</button>
+          </div>
         </div>
       </div>
+      <div class="hero-dots" id="hero-dots"></div>
     </div>
   </header>
 
@@ -1766,8 +1788,7 @@ function launchApp() {
   updateUserUI();
   loadBalance();
   loadRecentTxns();
-  loadDataPlans();
-  loadCablePlans();
+  loadPlans().then(() => { loadDataPlans(); loadCablePlans(); });
   checkPendingOrders();
   loadPinStatus();
   loadAllBeneficiaries();
@@ -1938,62 +1959,25 @@ function selectAmt(el, inputId) {
   document.getElementById(inputId).value = parseFloat(el.textContent.replace(/[₦,]/g, ''));
 }
 
-// ── DATA PLANS ────────────────────────────────────────────────────────────
-const DATA_PLANS = {
-  MTN: [
-    {name:'1GB — 30 days', code:'MTN1GB', price:350},
-    {name:'2GB — 30 days', code:'MTN2GB', price:600},
-    {name:'5GB — 30 days', code:'MTN5GB', price:1500},
-    {name:'10GB — 30 days', code:'MTN10GB', price:2500},
-    {name:'20GB — 30 days', code:'MTN20GB', price:4000},
-    {name:'50GB — 30 days', code:'MTN50GB', price:9000},
-  ],
-  Glo: [
-    {name:'1.35GB — 30 days', code:'GLO1GB', price:300},
-    {name:'2.9GB — 30 days', code:'GLO3GB', price:500},
-    {name:'7.7GB — 30 days', code:'GLO8GB', price:1000},
-    {name:'13.25GB — 30 days', code:'GLO10GB', price:2000},
-    {name:'29.5GB — 30 days', code:'GLO30GB', price:4000},
-  ],
-  Airtel: [
-    {name:'1GB — 30 days', code:'AIRTEL1GB', price:350},
-    {name:'2GB — 30 days', code:'AIRTEL2GB', price:600},
-    {name:'5GB — 30 days', code:'AIRTEL5GB', price:1500},
-    {name:'10GB — 30 days', code:'AIRTEL10GB', price:2500},
-    {name:'25GB — 30 days', code:'AIRTEL25GB', price:5000},
-  ],
-  '9mobile': [
-    {name:'1.5GB — 30 days', code:'9M1GB', price:350},
-    {name:'3GB — 30 days', code:'9M3GB', price:600},
-    {name:'9GB — 30 days', code:'9M9GB', price:1500},
-    {name:'18GB — 30 days', code:'9M18GB', price:3000},
-  ],
-};
+// ── DATA PLANS (from server catalog) ─────────────────────────────────────
+let DATA_PLANS = {};
+let CABLE_PLANS = {};
+const NET_KEY = {MTN:'MTN',GLO:'Glo',AIRTEL:'Airtel','9MOBILE':'9mobile',DSTV:'DStv',GOTV:'GOtv',STARTIMES:'StarTimes'};
 
-const CABLE_PLANS = {
-  DStv: [
-    {name:'Padi', code:'DSTV_PADI', price:2150},
-    {name:'Yanga', code:'DSTV_YANGA', price:2950},
-    {name:'Confam', code:'DSTV_CONFAM', price:5100},
-    {name:'Compact', code:'DSTV_COMPACT', price:10500},
-    {name:'Compact Plus', code:'DSTV_COMPACTPLUS', price:16600},
-    {name:'Premium', code:'DSTV_PREMIUM', price:29500},
-  ],
-  GOtv: [
-    {name:'Smallie', code:'GOTV_SMALLIE', price:900},
-    {name:'Jinja', code:'GOTV_JINJA', price:1900},
-    {name:'Jolli', code:'GOTV_JOLLI', price:2800},
-    {name:'Max', code:'GOTV_MAX', price:4850},
-    {name:'Supa', code:'GOTV_SUPA', price:6400},
-  ],
-  StarTimes: [
-    {name:'Nova — Basic', code:'ST_NOVA', price:900},
-    {name:'Basic', code:'ST_BASIC', price:1850},
-    {name:'Smart', code:'ST_SMART', price:2600},
-    {name:'Classic', code:'ST_CLASSIC', price:3100},
-    {name:'Super', code:'ST_SUPER', price:6200},
-  ],
-};
+async function loadPlans() {
+  try {
+    const r = await fetch('/api/vtu/plans');
+    const cat = await r.json();
+    if (cat.data) {
+      DATA_PLANS = {};
+      Object.entries(cat.data).forEach(([k,plans]) => { DATA_PLANS[NET_KEY[k]||k] = plans.map(p => ({name:p.name, code:p.code, price:p.price})); });
+    }
+    if (cat.cable) {
+      CABLE_PLANS = {};
+      Object.entries(cat.cable).forEach(([k,plans]) => { CABLE_PLANS[NET_KEY[k]||k] = plans.map(p => ({name:p.name, code:p.code, price:p.price})); });
+    }
+  } catch(e) { console.error('Failed to load pricing catalog', e); }
+}
 
 function loadDataPlans() {
   const net = getSelected(document.querySelector('#svc-data .network-chips')) || 'MTN';
