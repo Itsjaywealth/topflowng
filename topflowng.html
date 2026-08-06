@@ -2737,24 +2737,6 @@ loadCablePlans();
 init();
 </script>
 
-<!-- ══════════════ AI ASSISTANT ══════════════ -->
-<button type="button" class="ai-fab" id="ai-fab" role="button" tabindex="0" aria-label="Open AI assistant" onclick="toggleAiChat()">AI</button>
-<div class="ai-panel" id="ai-panel" role="dialog" aria-modal="true" aria-labelledby="ai-panel-title" hidden>
-  <div class="ai-head">
-    <div>
-      <div class="ai-title" id="ai-panel-title">TopFlow Assistant</div>
-      <div class="ai-sub">Read-only guidance — never changes balances or order status</div>
-    </div>
-    <button type="button" class="ai-close" onclick="closeAiChat()" aria-label="Close AI assistant">×</button>
-  </div>
-  <div class="ai-messages" id="ai-messages" aria-live="polite"></div>
-  <div class="ai-compose">
-    <input type="text" id="ai-input" maxlength="2000" autocomplete="off" placeholder="Ask about a service, balance, or order…">
-    <button type="button" id="ai-send" onclick="sendAiMessage()">Send</button>
-  </div>
-  <p class="ai-note">Responses may be imperfect. AI answers do not override your balance or transaction/payment status — always confirm in the app.</p>
-</div>
-
 <!-- ══════════════ PIN PROMPT OVERLAY ══════════════ -->
 <div class="receipt-overlay" id="pin-prompt-overlay" style="z-index:60" role="dialog" aria-modal="true" aria-labelledby="pin-prompt-title">
   <div class="receipt-card" style="padding:28px 24px 36px;border-radius:20px 20px 0 0">
