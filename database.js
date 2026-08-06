@@ -506,7 +506,7 @@ async function markVtuOrderPending(requestId) {
   }
 }
 
-async function markVtuOrderFailed(requestId, { allowPending = false } = {}) {
+async function markVtuOrderFailed(requestId, { allowPending = false, failureSuffix = ' — provider declined' } = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -529,9 +529,9 @@ async function markVtuOrderFailed(requestId, { allowPending = false } = {}) {
       await client.query(
         `UPDATE transactions
          SET status = 'failed',
-             description = regexp_replace(description, ' — pending provider confirmation$', ' — provider declined')
+             description = regexp_replace(description, ' — pending provider confirmation$', $2)
          WHERE id = $1`,
-        [transactionId]
+        [transactionId, failureSuffix]
       );
     } else {
       const txn = await client.query(
@@ -844,6 +844,38 @@ async function getPendingVtuOrders(userId) {
   return rows;
 }
 
+// ── Stale pending order expiry (auto-resolution) ────────────────────────────
+// Clubkonnect never returned a provider order ID for these, so they are
+// untraceable and their wallets were NEVER debited (that only happens on a
+// terminal provider success inside completeVtuOrder). Leaving them 'pending'
+// forever is confusing, so after a grace window they are safely moved to
+// 'failed — not charged'. Only orders without a provider_order_id are eligible:
+// orders WITH a provider reference stay pending for manual reconciliation.
+async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT request_id FROM vtu_orders
+     WHERE status = 'pending'
+       AND (provider_order_id IS NULL OR provider_order_id = '')
+       AND created_at < NOW() - make_interval(mins => $1)
+     ORDER BY created_at ASC
+     LIMIT $2`,
+    [olderThanMinutes, limit]
+  );
+  let expired = 0;
+  for (const row of rows) {
+    try {
+      await markVtuOrderFailed(row.request_id, {
+        allowPending: true,
+        failureSuffix: ' — provider did not confirm, not charged',
+      });
+      expired += 1;
+    } catch (err) {
+      console.error(`Auto-expire failed for ${row.request_id}: ${err.message}`);
+    }
+  }
+  return { scanned: rows.length, expired };
+}
+
 module.exports = {
   initDB,
   closePool,
@@ -888,4 +920,5 @@ module.exports = {
   deleteBeneficiary,
   getAnalyticsSummary,
   getPendingVtuOrders,
+  expireStaleVtuOrders,
 };

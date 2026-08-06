@@ -694,6 +694,32 @@ app.use((err, req, res, _next) => {
 });
 
 // ── Start Server ─────────────────────────────────────────────────────────────
+function schedulePendingOrderSweep() {
+  if (typeof db.expireStaleVtuOrders !== 'function') return null;
+  const expiryMinutes = config.clubkonnect.pendingOrderExpiryMinutes;
+  const intervalMs = config.clubkonnect.sweepIntervalMs;
+  let timer = null;
+
+  async function sweep() {
+    try {
+      const result = await db.expireStaleVtuOrders({ olderThanMinutes: expiryMinutes });
+      if (result.expired > 0) {
+        logger.info('Auto-expired unconfirmed pending orders', { expired: result.expired, scanned: result.scanned });
+      }
+    } catch (err) {
+      logger.error('Pending order sweep failed', { message: err.message });
+    }
+  }
+
+  // Run once shortly after boot so already-stale orders (e.g. from a deploy
+  // without the sweeper) are cleaned immediately, then every interval.
+  const firstRun = setTimeout(() => { sweep(); }, 3000);
+  firstRun.unref();
+  timer = setInterval(sweep, intervalMs);
+  timer.unref();
+  return timer;
+}
+
 async function start() {
   await db.initDB();
   const server = app.listen(PORT, '0.0.0.0', () => {
@@ -702,6 +728,8 @@ async function start() {
   server.on('error', (err) => {
     logger.error('Server error', { message: err.message });
   });
+
+  const sweepTimer = schedulePendingOrderSweep();
 
   let shuttingDown = false;
   async function shutdown(signal) {
@@ -715,6 +743,7 @@ async function start() {
     forceTimer.unref();
     try {
       if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
+      if (sweepTimer) clearInterval(sweepTimer);
       await new Promise((resolve) => server.close(resolve));
       if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
       logger.info('Shutdown complete');

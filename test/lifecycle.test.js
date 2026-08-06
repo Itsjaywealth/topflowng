@@ -385,3 +385,55 @@ test('13. Phase 4D idempotency regression: replay returns stored response, one d
   assert.strictEqual(h.providerState.calls, 0, 'no provider call on replay');
   assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'single debit across replay');
 });
+
+// ── 14. stale unconfirmed orders auto-expire without any wallet debit ────────
+test('14. auto-expire moves stale unconfirmed pending orders to failed, no debit', async () => {
+  const rid = orderId('EXPIRY');
+  const balBefore = await walletOf(userIdB);
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: false });
+
+  // Backdate the order beyond the expiry window so it is eligible.
+  const pool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    await pool.query(
+      `UPDATE vtu_orders SET created_at = NOW() - interval '30 minutes' WHERE request_id = $1`,
+      [rid]
+    );
+  } finally {
+    await pool.end();
+  }
+
+  // Sweep with a zero-minute window so the backdate is definitely stale.
+  const result = await db.expireStaleVtuOrders({ olderThanMinutes: 5 });
+  assert.strictEqual(result.expired, 1, 'exactly one stale order expired');
+
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'failed');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'wallet untouched by auto-expiry');
+  const rows = await debitRows(rid);
+  assert.strictEqual(rows.length, 1, 'one failed ledger row');
+  assert.strictEqual(rows[0].status, 'failed');
+});
+
+// ── 15. auto-expiry never touches pending orders with a provider reference ───
+test('15. auto-expire skips pending orders that hold a provider order ID', async () => {
+  const rid = orderId('KEEP');
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: true });
+
+  const pool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    await pool.query(
+      `UPDATE vtu_orders SET created_at = NOW() - interval '30 minutes' WHERE request_id = $1`,
+      [rid]
+    );
+  } finally {
+    await pool.end();
+  }
+
+  const result = await db.expireStaleVtuOrders({ olderThanMinutes: 5 });
+  assert.strictEqual(result.expired, 0, 'reconcilable order is not auto-expired');
+
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'pending', 'kept for manual reconciliation');
+  assert.ok(order.provider_order_id, 'provider reference intact');
+});

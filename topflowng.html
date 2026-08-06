@@ -1150,7 +1150,7 @@ a{color:var(--green-strong);text-decoration:none}
           </section>
           <section class="glance-pending" id="glance-pending" hidden>
             <div class="glance-label">Pending order</div>
-            <p>Your provider is still confirming a purchase. Your wallet has not been debited.</p>
+            <p id="glance-pending-text">One purchase is awaiting provider confirmation. Your wallet has not been debited and it resolves automatically.</p>
             <button type="button" onclick="goTab('history')">View order</button>
           </section>
         </aside>
@@ -1777,7 +1777,13 @@ async function checkPendingOrders() {
   try {
     const data = await api('GET', '/api/vtu/pending');
     const widget = document.getElementById('glance-pending');
-    if (data.hasPending) {
+    if (data.hasPending && data.orders.length) {
+      const text = document.getElementById('glance-pending-text');
+      const n = data.orders.length;
+      const amt = '₦' + fmt(data.orders.reduce((s, o) => s + Number(o.amount || 0), 0));
+      text.textContent = n === 1
+        ? `One purchase of ${amt} is awaiting provider confirmation. Your wallet has not been debited — it resolves automatically.`
+        : `${n} purchases (${amt} total) are awaiting provider confirmation. Your wallet has not been debited — they resolve automatically.`;
       widget.removeAttribute('hidden');
     } else {
       widget.setAttribute('hidden', '');
