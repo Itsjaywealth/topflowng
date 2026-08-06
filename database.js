@@ -952,11 +952,14 @@ async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {})
 async function cleanStaleSubmittedOrders({ olderThanHours = 24, limit = 50 } = {}) {
   const { rowCount } = await pool.query(
     `UPDATE vtu_orders SET status = 'failed', updated_at = NOW()
-     WHERE status = 'submitted'
-       AND transaction_id IS NULL
-       AND (provider_order_id IS NULL OR provider_order_id = '')
-       AND created_at < NOW() - make_interval(hours => $1)
-     LIMIT $2`,
+     WHERE request_id IN (
+       SELECT request_id FROM vtu_orders
+       WHERE status = 'submitted'
+         AND transaction_id IS NULL
+         AND (provider_order_id IS NULL OR provider_order_id = '')
+         AND created_at < NOW() - make_interval(hours => $1)
+       LIMIT $2
+     )`,
     [olderThanHours, limit]
   );
   return rowCount;
