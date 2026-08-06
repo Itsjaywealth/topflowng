@@ -16,6 +16,7 @@ const logger = require('../lib/logger');
 const { authMiddleware, checkTransactionPin } = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rate-limit');
 const { processClubkonnectPurchase, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/clubkonnect');
+const { validatePlanAmount, getCatalog } = require('../services/pricing');
 const { sendPurchaseEmail } = require('../services/email');
 const { resolveRequest, recordRequest } = require('../services/idempotency');
 const { sendError } = require('../lib/errors');
@@ -51,6 +52,14 @@ function captureError(service, err) {
   logger.error(`${service} error`, { message: err.message });
   if (config.sentry.dsn) Sentry.captureException(err);
 }
+
+// ── VTU — Pricing catalog (server-side source of truth) ─────────────────────
+router.get('/plans', (_req, res) => {
+  res.json(getCatalog());
+});
+
+// ── VTU — Pricing catalog (server-side) ────────────────────────────────────
+router.get('/plans', (_req, res) => { res.json(getCatalog()); });
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────
 router.post('/airtime', authMiddleware, apiLimiter, validate(airtimeSchema), withTracing('vtu.airtime', async (req, res) => {
@@ -120,6 +129,7 @@ router.post('/data', authMiddleware, apiLimiter, validate(dataSchema), withTraci
     const cost = parseValidatedAmount(amount);
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
+    try { validatePlanAmount(network, planCode, cost); } catch (e) { return sendError(res, 400, e.message); }
 
     const ckNetwork = NETWORK_MAP[network.toUpperCase()];
     if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
