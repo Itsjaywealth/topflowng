@@ -11,7 +11,10 @@
  *   npm run migrate            # apply pending migrations
  *   DATABASE_URL=... node migrations/migrate.js
  *
- * No new dependencies: uses the existing `pg` pool config.
+ * On a fresh database the base schema does not exist yet, so the base tables
+ * are bootstrapped first via `database.js → initDB()` (idempotent) before any
+ * `ALTER TABLE` migration file runs. `database.js` and its transitive imports
+ * do not load `config.js`, so this stays independent of production secrets.
  */
 
 'use strict';
@@ -19,6 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const db = require('../database');
 const { connectionSslOptions } = require('../lib/dbconn');
 
 // Overridable so tests can point at a throwaway migration directory.
@@ -92,6 +96,13 @@ async function run() {
 
   if (!process.env.DATABASE_URL) {
     fail('DATABASE_URL is not set');
+    return;
+  }
+
+  try {
+    await db.initDB();
+  } catch (err) {
+    fail(`failed to bootstrap schema: ${err.message}`);
     return;
   }
 
