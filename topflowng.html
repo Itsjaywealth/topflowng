@@ -829,61 +829,6 @@ a{color:var(--green-strong);text-decoration:none}
 .modal-error.show{display:block}
 
 /* ═══════════════════════════════════════════════════════════════════
-   AI ASSISTANT
-   ═══════════════════════════════════════════════════════════════════ */
-.ai-fab{
-  position:fixed;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));
-  z-index:45;width:58px;height:58px;border-radius:19px;border:0;
-  background:var(--grad);color:var(--white);
-  font:800 15px/1 var(--display);letter-spacing:.02em;
-  box-shadow:0 16px 36px -12px rgba(0,168,104,.6);
-  display:flex;align-items:center;justify-content:center;
-  transition:transform .12s ease;
-}
-.ai-fab:hover{transform:translateY(-2px) scale(1.03)}
-.ai-panel{
-  position:fixed;left:50%;bottom:0;transform:translateX(-50%);
-  z-index:58;width:100%;max-width:560px;
-  height:min(70vh,560px);
-  background:var(--white);border-radius:24px 24px 0 0;
-  display:flex;flex-direction:column;
-  box-shadow:var(--shadow-lg);overflow:hidden;
-}
-.ai-head{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:18px 20px;border-bottom:1px solid var(--border);
-}
-.ai-title{font:800 15.5px/1 var(--display);letter-spacing:-.02em}
-.ai-sub{font:500 11.5px/1.5 var(--font);color:var(--mid);margin-top:3px}
-.ai-close{border:0;background:var(--mist);color:var(--ink);width:34px;height:34px;border-radius:10px;font:600 18px/1 var(--font)}
-.ai-close:hover{background:var(--border)}
-.ai-messages{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px;display:flex;flex-direction:column;gap:10px}
-.ai-bubble{
-  max-width:82%;padding:12px 15px;border-radius:16px;
-  font:500 13.5px/1.55 var(--font);
-  white-space:pre-wrap;word-break:break-word;
-}
-.ai-bot{background:var(--mist);color:var(--ink);border-bottom-left-radius:5px;align-self:flex-start}
-.ai-user{background:var(--grad);color:var(--white);border-bottom-right-radius:5px;align-self:flex-end}
-.ai-loading{color:var(--mid);font-style:italic}
-.ai-compose{
-  display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));
-  border-top:1px solid var(--border);background:var(--white);
-}
-.ai-compose input{
-  flex:1;min-height:48px;border:1.5px solid var(--border);border-radius:13px;
-  padding:0 14px;font:500 14px/1 var(--font);outline:none;
-  transition:border-color .12s ease,box-shadow .12s ease;
-}
-.ai-compose input:focus{border-color:var(--green);box-shadow:var(--ring)}
-.ai-compose button{
-  border:0;background:var(--grad);color:var(--white);font:700 13.5px/1 var(--font);
-  padding:0 20px;border-radius:13px;
-}
-.ai-compose button:disabled{opacity:.6;cursor:default}
-.ai-note{padding:0 18px 14px;font:500 11px/1.5 var(--font);color:var(--mid);text-align:center}
-
-/* ═══════════════════════════════════════════════════════════════════
    PIN PROMPT
    ═══════════════════════════════════════════════════════════════════ */
 .pin-prompt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
@@ -915,7 +860,7 @@ a{color:var(--green-strong);text-decoration:none}
   .receipt-card,.modal-card,.panel-card{border-radius:24px;transform:translateY(14px)}
   .receipt-overlay.open .receipt-card,.modal-overlay.open .modal-card,
   .panel-overlay.open .panel-card{transform:translateY(0)}
-  .ai-panel{bottom:calc(18px + env(safe-area-inset-bottom));border-radius:24px;height:min(64vh,520px);
+  /* ai removed */
     box-shadow:0 30px 80px -30px rgba(11,18,32,.4)}
 }
 </style>

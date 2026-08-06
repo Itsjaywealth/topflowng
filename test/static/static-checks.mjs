@@ -156,15 +156,6 @@ await checkInlineSyntax('bizflow.html');
   check('sw skipWaiting/claim', /skipWaiting\(\)/.test(sw) && /clients\.claim\(\)/.test(sw));
 }
 
-// ── 8. AI assistant safe rendering ─────────────────────────────────────────
-{
-  const html = read('topflowng.html');
-  const modelRenderUsesTextContent =
-    /function aiAppendText\s*\([\s\S]*?m\.textContent\s*=\s*String\(/.test(html);
-  check('AI renders via textContent (model text is never HTML)', modelRenderUsesTextContent);
-  check('AI panel has aria-live', /id="ai-messages"[^>]*aria-live="polite"/.test(html));
-}
-
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log(`\nFrontend/static checks: ${results.length} total, ${failures} failed.`);
 for (const r of results) {
