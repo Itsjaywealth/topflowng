@@ -876,6 +876,26 @@ async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {})
   return { scanned: rows.length, expired };
 }
 
+// ── Pending order reconciliation (auto-resolution) ──────────────────────────
+// Pending orders that DO carry a provider order ID are traceable via the
+// provider Query API. Return the oldest few that have not been reconciled in
+// the backoff window (so the sweeper never hammers the provider on every tick),
+// and stop automatically once an order has had enough attempts — from then on
+// only a human admin resolves it.
+async function getReconcilablePendingOrders({ backoffMinutes = 10, maxAttempts = 30, limit = 20 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT request_id FROM vtu_orders
+     WHERE status = 'pending'
+       AND provider_order_id IS NOT NULL AND provider_order_id <> ''
+       AND reconcile_attempts < $1
+       AND (last_reconciled_at IS NULL OR last_reconciled_at < NOW() - make_interval(mins => $2))
+     ORDER BY created_at ASC
+     LIMIT $3`,
+    [maxAttempts, backoffMinutes, limit]
+  );
+  return rows;
+}
+
 module.exports = {
   initDB,
   closePool,
@@ -921,4 +941,5 @@ module.exports = {
   getAnalyticsSummary,
   getPendingVtuOrders,
   expireStaleVtuOrders,
+  getReconcilablePendingOrders,
 };

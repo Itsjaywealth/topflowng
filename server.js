@@ -51,7 +51,33 @@ const PORT = config.port;
 
 // ── Security Middleware ──────────────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // The SPA ships its JS inline (no build step), so inline scripts and
+      // event handlers are unavoidable and must be allowed. Paystack's
+      // inline.js is the only third-party script. Google Fonts CSS is inlined
+      // by the stylesheet link; the font files come from gstatic.
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.paystack.co'],
+      // The SPA uses inline event handlers (onclick etc.); helmet's default
+      // `script-src-attr 'none'` would block every one of them, so inline is
+      // allowed for handler attributes specifically.
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://paystack.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      // API calls are same-origin; Paystack inline.js may open its own
+      // connections and render the checkout in an iframe for popup flows even
+      // though the app normally redirects to authorization_url.
+      connectSrc: ["'self'", 'https://js.paystack.co', 'https://api.paystack.co'],
+      frameSrc: ["'self'", 'https://checkout.paystack.com'],
+      workerSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -497,50 +523,62 @@ app.use('/api/vtu', vtuRouter);
 app.use('/api/ai', aiRouter);
 
 // ── Clubkonnect VTU Reconciliation ──────────────────────────────────────────
-// Manual, admin-only resolution. It uses the provider's documented Query API and
-// never trusts a browser claim or a stale initial response.
+// Uses the provider's documented Query API and never trusts a browser claim or
+// a stale initial response. Shared by the admin endpoint and the background
+// sweeper so both apply identical, exactly-once settlement semantics.
+async function reconcileVtuOrder(requestId) {
+  const order = await db.getVtuOrderByRequestId(requestId);
+  if (!order) return { error: 'VTU order not found' };
+  if (order.status !== 'pending') {
+    return { outcome: order.status, order, message: 'This order is already in a terminal state.' };
+  }
+  if (!order.provider_order_id) {
+    return {
+      outcome: 'unqueryable',
+      order,
+      message: 'This pending order has no provider order ID and cannot be queried automatically.',
+    };
+  }
+
+  await db.recordReconciliationAttempt(requestId);
+  const provider = await queryClubkonnectOrder(order.provider_order_id);
+  await db.recordVtuProviderResponse(requestId, provider);
+
+  let balance = null;
+  if (provider.outcome === 'success') {
+    const settled = await db.completeVtuOrder(requestId, { allowPending: true });
+    balance = settled.balance;
+    logger.info('Clubkonnect pending order settled', { requestId, orderId: order.provider_order_id });
+  } else if (provider.outcome === 'failed') {
+    await db.markVtuOrderFailed(requestId, { allowPending: true });
+    logger.warn('Clubkonnect pending order failed on reconciliation', { requestId, orderId: order.provider_order_id });
+  } else {
+    logger.info('Clubkonnect pending order remains pending', { requestId, orderId: order.provider_order_id });
+  }
+
+  const updated = await db.getVtuOrderByRequestId(requestId);
+  return {
+    outcome: provider.outcome,
+    order: updated,
+    balance,
+    message: provider.outcome === 'pending'
+      ? 'Clubkonnect still reports this order as pending. No wallet debit was made.'
+      : provider.outcome === 'success'
+        ? 'Clubkonnect confirmed delivery and the wallet was debited once.'
+        : 'Clubkonnect confirmed failure. No wallet debit was made.',
+  };
+}
+
+// Admin-only manual reconciliation.
 app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (req, res) => {
   const requestId = String(req.params.requestId || '').trim();
   try {
-    const order = await db.getVtuOrderByRequestId(requestId);
-    if (!order) return sendError(res, 404, 'VTU order not found');
-    if (order.status !== 'pending') {
-      return res.json({ outcome: order.status, order, message: 'This order is already in a terminal state.' });
+    const result = await reconcileVtuOrder(requestId);
+    if (result.error) return sendError(res, 404, result.error);
+    if (result.outcome === 'unqueryable') {
+      return res.status(409).json({ error: result.message, order: result.order });
     }
-    if (!order.provider_order_id) {
-      return res.status(409).json({
-        error: 'This pending order has no provider order ID and cannot be queried automatically.',
-        order,
-      });
-    }
-
-    await db.recordReconciliationAttempt(requestId);
-    const provider = await queryClubkonnectOrder(order.provider_order_id);
-    await db.recordVtuProviderResponse(requestId, provider);
-
-    let balance = null;
-    if (provider.outcome === 'success') {
-      const settled = await db.completeVtuOrder(requestId, { allowPending: true });
-      balance = settled.balance;
-      logger.info('Clubkonnect pending order settled', { requestId, orderId: order.provider_order_id });
-    } else if (provider.outcome === 'failed') {
-      await db.markVtuOrderFailed(requestId, { allowPending: true });
-      logger.warn('Clubkonnect pending order failed on reconciliation', { requestId, orderId: order.provider_order_id });
-    } else {
-      logger.info('Clubkonnect pending order remains pending', { requestId, orderId: order.provider_order_id });
-    }
-
-    const updated = await db.getVtuOrderByRequestId(requestId);
-    res.json({
-      outcome: provider.outcome,
-      order: updated,
-      balance,
-      message: provider.outcome === 'pending'
-        ? 'Clubkonnect still reports this order as pending. No wallet debit was made.'
-        : provider.outcome === 'success'
-          ? 'Clubkonnect confirmed delivery and the wallet was debited once.'
-          : 'Clubkonnect confirmed failure. No wallet debit was made.',
-    });
+    res.json(result);
   } catch (err) {
     logger.error(`Clubkonnect reconciliation error for ${requestId}`, { message: err.message });
     if (config.sentry.dsn) Sentry.captureException(err);
@@ -696,15 +734,40 @@ app.use((err, req, res, _next) => {
 // ── Start Server ─────────────────────────────────────────────────────────────
 function schedulePendingOrderSweep() {
   if (typeof db.expireStaleVtuOrders !== 'function') return null;
+  if (typeof db.getReconcilablePendingOrders !== 'function') return null;
   const expiryMinutes = config.clubkonnect.pendingOrderExpiryMinutes;
   const intervalMs = config.clubkonnect.sweepIntervalMs;
+  const backoffMinutes = config.clubkonnect.reconcileBackoffMinutes;
+  const maxAttempts = config.clubkonnect.reconcileMaxAttempts;
   let timer = null;
 
   async function sweep() {
     try {
-      const result = await db.expireStaleVtuOrders({ olderThanMinutes: expiryMinutes });
-      if (result.expired > 0) {
-        logger.info('Auto-expired unconfirmed pending orders', { expired: result.expired, scanned: result.scanned });
+      // 1) Auto-expire unconfirmed orders that never got a provider reference.
+      const expiry = await db.expireStaleVtuOrders({ olderThanMinutes: expiryMinutes });
+      if (expiry.expired > 0) {
+        logger.info('Auto-expired unconfirmed pending orders', { expired: expiry.expired, scanned: expiry.scanned });
+      }
+
+      // 2) Auto-reconcile traceable pending orders via the provider Query API.
+      // Each order is attempted at most once per backoff window and is left for
+      // a human admin after maxAttempts, mirroring the admin reconcile route.
+      const reconcilable = await db.getReconcilablePendingOrders({
+        backoffMinutes,
+        maxAttempts,
+        limit: 20,
+      });
+      for (const row of reconcilable) {
+        try {
+          const result = await reconcileVtuOrder(row.request_id);
+          if (result.outcome === 'success') {
+            logger.info('Sweep settled pending order', { requestId: row.request_id });
+          } else if (result.outcome === 'failed') {
+            logger.warn('Sweep marked pending order failed', { requestId: row.request_id });
+          }
+        } catch (err) {
+          logger.error('Sweep reconcile failed', { requestId: row.request_id, message: err.message });
+        }
       }
     } catch (err) {
       logger.error('Pending order sweep failed', { message: err.message });
@@ -761,3 +824,7 @@ start().catch((err) => {
   logger.error('Failed to start server', { message: err.message });
   process.exit(1);
 });
+
+// Exported for tests that need to exercise the reconciliation path directly
+// against the real database (test/lifecycle.test.js).
+module.exports = { reconcileVtuOrder };

@@ -63,6 +63,26 @@ test('static: backup files are not exposed', async () => {
   assert.strictEqual(res.status, 404);
 });
 
+test('security: CSP header is present and allows inline + Paystack', async () => {
+  const res = await fetch(h.BASE_URL + '/');
+  const csp = res.headers.get('content-security-policy');
+  assert.ok(csp, 'Content-Security-Policy header is set');
+  assert.match(csp, /default-src 'self'/);
+  assert.match(csp, /script-src 'self' 'unsafe-inline' https:\/\/js\.paystack\.co/);
+  assert.match(csp, /script-src-attr 'unsafe-inline'/);
+  assert.match(csp, /frame-src 'self' https:\/\/checkout\.paystack\.com/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /frame-ancestors 'self'/);
+});
+
+test('security: security headers present', async () => {
+  const res = await fetch(h.BASE_URL + '/');
+  assert.ok(res.headers.get('strict-transport-security'));
+  assert.ok(res.headers.get('x-content-type-options'));
+  assert.ok(res.headers.get('x-frame-options'));
+  assert.ok(res.headers.get('referrer-policy'));
+});
+
 test('error contract: unknown API route returns { error } JSON (SPA fallback excluded)', async () => {
   // /api/* falls through to the SPA fallback in the current contract, so we
   // assert the documented error shape on an authenticated-route rejection.

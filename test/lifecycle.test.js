@@ -19,6 +19,7 @@ const { Pool } = require('pg');
 const h = require('./helpers/load-idempotency-app');
 
 let db;
+const { reconcileVtuOrder } = require('../server');
 let tokenA;  // admin session (reconcile tests)
 let tokenB;  // funded non-admin session
 let userIdB; // funded non-admin user
@@ -436,4 +437,55 @@ test('15. auto-expire skips pending orders that hold a provider order ID', async
   const order = await db.getVtuOrderByRequestId(rid);
   assert.strictEqual(order.status, 'pending', 'kept for manual reconciliation');
   assert.ok(order.provider_order_id, 'provider reference intact');
+});
+
+// ── 16. auto-reconcile settles traceable pending orders via the Query API ────
+test('16. auto-reconcile settles a pending order once the provider confirms', async () => {
+  h.providerState.reset();
+  const rid = orderId('AUTOREC');
+  const balBefore = await walletOf(userIdB);
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: true });
+
+  // Provider still reports pending on the first sweep → order stays pending,
+  // no debit, and attempts are tracked so the next sweep re-checks it.
+  h.providerState.queryOutcome = 'pending';
+  let list = await db.getReconcilablePendingOrders({ backoffMinutes: 0, maxAttempts: 30 });
+  assert.ok(list.some((r) => r.request_id === rid), 'order is reconcilable');
+  const result = await reconcileVtuOrder(rid);
+  assert.strictEqual(result.outcome, 'pending');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'no debit while still pending');
+
+  // Provider confirms delivery → sweep settles it exactly once.
+  h.providerState.queryOutcome = 'success';
+  const settled = await reconcileVtuOrder(rid);
+  assert.strictEqual(settled.outcome, 'success');
+  assert.strictEqual(settled.order.status, 'completed');
+  assert.strictEqual(await walletOf(userIdB), balBefore - 2000, 'single debit after auto-confirm');
+
+  // Once terminal it is no longer reconcilable.
+  list = await db.getReconcilablePendingOrders({ backoffMinutes: 0, maxAttempts: 30 });
+  assert.ok(!list.some((r) => r.request_id === rid), 'terminal order drops out of the sweep set');
+});
+
+// ── 17. auto-reconcile respects the attempt budget and backoff window ────────
+test('17. auto-reconcile backs off and stops after maxAttempts', async () => {
+  h.providerState.reset();
+  const rid = orderId('BUDGET');
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: true });
+
+  // Exhaust the attempt budget so the order no longer appears in the sweep set.
+  await db.recordReconciliationAttempt(rid);
+  await db.recordReconciliationAttempt(rid);
+  let list = await db.getReconcilablePendingOrders({ backoffMinutes: 0, maxAttempts: 2 });
+  assert.ok(!list.some((r) => r.request_id === rid), 'budget exhausted → not auto-reconciled');
+
+  // A freshly attempted order is skipped until the backoff window elapses.
+  const rid2 = orderId('BACKOFF');
+  await createPendingOrder(rid2, userIdB, 2000, { withProviderId: true });
+  await db.recordReconciliationAttempt(rid2);
+  list = await db.getReconcilablePendingOrders({ backoffMinutes: 60, maxAttempts: 30 });
+  assert.ok(!list.some((r) => r.request_id === rid2), 'within backoff → not auto-reconciled');
+
+  list = await db.getReconcilablePendingOrders({ backoffMinutes: 0, maxAttempts: 30 });
+  assert.ok(list.some((r) => r.request_id === rid2), 'backoff elapsed → reconcilable again');
 });
