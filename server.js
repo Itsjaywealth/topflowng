@@ -476,6 +476,9 @@ function paystackSignatureMatches(expectedHex, signatureHex) {
   return crypto.timingSafeEqual(expected, presented);
 };
 
+// In-memory webhook retry queue with exponential backoff.
+const webhookRetries = new Map(); // reference -> { attempts, nextRetryAt }
+
 app.post('/api/paystack/webhook', async (req, res) => {
   try {
     const secret    = config.paystack.webhookSecret || config.paystack.secretKey;
@@ -490,18 +493,49 @@ app.post('/api/paystack/webhook', async (req, res) => {
     const event = JSON.parse(req.body.toString());
 
     if (event.event === 'charge.success') {
-      // The signed webhook identifies the event; Paystack's verify API remains
-      // the source of truth before a wallet is ever credited.
       await verifyAndCreditPaystackPayment(event.data.reference);
     }
 
     res.sendStatus(200);
   } catch (err) {
     logger.error('Webhook error', { message: err.message });
+    // Queue for retry with exponential backoff: 30s, 2min, 8min, 32min
+    try {
+      const event = JSON.parse(req.body.toString());
+      if (event.event === 'charge.success' && event.data?.reference) {
+        const ref = event.data.reference;
+        const existing = webhookRetries.get(ref);
+        const attempts = (existing?.attempts || 0) + 1;
+        const delayMs = Math.min(30000 * Math.pow(4, attempts - 1), 30 * 60 * 1000);
+        webhookRetries.set(ref, { attempts, nextRetryAt: Date.now() + delayMs });
+        logger.info('Webhook queued for retry', { reference: ref, attempt: attempts, delayMs });
+      }
+    } catch { /* best-effort queue */ }
     if (config.sentry.dsn) Sentry.captureException(err);
-    res.sendStatus(500);
+    res.sendStatus(200);
   }
 });
+
+// Retry failed webhooks in the sweeper interval.
+async function processWebhookRetries() {
+  const now = Date.now();
+  for (const [ref, entry] of webhookRetries) {
+    if (entry.nextRetryAt > now) continue;
+    try {
+      await verifyAndCreditPaystackPayment(ref);
+      webhookRetries.delete(ref);
+      logger.info('Webhook retry succeeded', { reference: ref });
+    } catch (err) {
+      entry.attempts += 1;
+      const delayMs = Math.min(30000 * Math.pow(4, entry.attempts - 1), 30 * 60 * 1000);
+      entry.nextRetryAt = Date.now() + delayMs;
+      if (entry.attempts >= 6) {
+        logger.error('Webhook retry exhausted', { reference: ref, attempts: entry.attempts });
+        webhookRetries.delete(ref);
+      }
+    }
+  }
+}
 
 // ── VTU Routes (mounted /api/vtu/*) ──────────────────────────────────────────
 // Purchase rate limiter (per-user, default 10 req/min) applies to all VTU
@@ -655,7 +689,7 @@ app.get('/api/admin/transactions/export', adminMiddleware, async (req, res) => {
 });
 
 // CSP violation reporting endpoint (receives report-only violations for monitoring)
-app.post('/api/admin/csp-report', express.json({ type: 'application/reports+json' }), (req, res) => {
+app.post('/api/admin/csp-report', apiLimiter, express.json({ type: 'application/reports+json' }), (req, res) => {
   const body = req.body;
   if (body && body['csp-report']) {
     logger.warn('CSP violation', {
@@ -976,6 +1010,9 @@ function schedulePendingOrderSweep() {
 
       // 4) Process due scheduled purchases.
       await processDueScheduledPurchases();
+
+      // 5) Retry failed Paystack webhook verifications.
+      await processWebhookRetries();
 
       // 2) Auto-reconcile traceable pending orders via the provider Query API.
       const reconcilable = await db.getReconcilablePendingOrders({

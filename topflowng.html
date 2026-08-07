@@ -580,6 +580,12 @@ a{color:var(--green-strong);text-decoration:none}
 .pin-section > p{font:500 13px/1.55 var(--font);color:var(--graphite);margin-bottom:14px}
 .pin-row{display:flex;gap:8px}
 .pin-row .field-input{flex:1}
+.toggle-switch{position:relative;display:inline-block;width:48px;height:28px;flex:none}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:28px;transition:.3s}
+.toggle-slider::before{content:"";position:absolute;height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:var(--green)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
 .account-card{
   background:var(--white);border:1px solid var(--border);border-radius:20px;
   overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-sm);
@@ -1142,6 +1148,7 @@ a{color:var(--green-strong);text-decoration:none}
         <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('recharge-pin',this)">Recharge Cards</div>
         <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('credit',this)">Top-ups</div>
       </div>
+      <input type="text" class="history-search" id="txn-search-input" placeholder="Search by reference, description, or user..." oninput="filterTxns(activeTxnFilter,activeTxnChip)" style="width:100%;margin-bottom:14px;padding:12px 16px;border:1.5px solid var(--border);border-radius:13px;font:500 13.5px/1 var(--font);outline:none;background:var(--white);box-sizing:border-box">
       <div class="txn-list" id="all-txns">
         <div class="txn-empty">Loading...</div>
       </div>
@@ -1493,7 +1500,7 @@ a{color:var(--green-strong);text-decoration:none}
 let token = localStorage.getItem('tf_token');
 let user  = null;
 let allTxns = [];
-let txnOffset = 0;
+let txnOffset = 0, txnTotal = 0;
 const TXN_LIMIT = 30;
 let selectedDataPlan = null;
 let selectedCablePlan = null;
@@ -1831,42 +1838,6 @@ async function loadRecentTxns() {
 }
 
 let txnFilter = 'all';
-async function loadAllTxns(reset) {
-  if (reset) { txnOffset = 0; allTxns = []; }
-  try {
-    const data = await api('GET', `/api/wallet/transactions?limit=${TXN_LIMIT}&offset=${txnOffset}`);
-    allTxns = allTxns.concat(data.transactions);
-    txnOffset += data.transactions.length;
-    renderTxns();
-    document.getElementById('btn-load-more').style.display = data.transactions.length < TXN_LIMIT ? 'none' : 'block';
-  } catch {
-    document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Transactions are temporarily unavailable. Please try again.</div>';
-  }
-}
-
-function renderTxns() {
-  const el = document.getElementById('all-txns');
-  let filtered = allTxns;
-  if (txnFilter !== 'all') {
-    if (txnFilter === 'credit') filtered = allTxns.filter(t => t.type === 'credit');
-    else filtered = allTxns.filter(t => t.description.toLowerCase().includes(txnFilter));
-  }
-  if (!filtered.length) {
-    el.innerHTML = '<div class="txn-empty">No transactions found.</div>';
-  } else {
-    el.innerHTML = filtered.map(txnHTML).join('');
-  }
-}
-
-function filterTxns(f, el) {
-  txnFilter = f;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderTxns();
-}
-
-function loadMoreTxns() { loadAllTxns(false); }
-
 // ── NAVIGATION ────────────────────────────────────────────────────────────
  function _goTab(tab) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -2412,7 +2383,66 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── TRANSACTION PIN PROMPT ────────────────────────────────────────────────────
+// ── AUTO-RECHARGE ────────────────────────────────────────────────────────────
+async function loadAutoRecharge() {
+  try {
+    const d = await api('GET', '/api/auto-recharge');
+    const s = d.settings;
+    const toggle = document.getElementById('ar-toggle');
+    const config = document.getElementById('ar-config');
+    toggle.checked = s && s.active;
+    config.style.display = s && s.active ? 'block' : 'none';
+    if (s) { document.getElementById('ar-threshold').value = s.threshold; document.getElementById('ar-amount').value = s.amount; }
+  } catch {}
+}
+function toggleAutoRecharge() {
+  const on = document.getElementById('ar-toggle').checked;
+  document.getElementById('ar-config').style.display = on ? 'block' : 'none';
+  if (!on) api('DELETE', '/api/auto-recharge').catch(() => {});
+}
+async function saveAutoRecharge() {
+  const th = parseFloat(document.getElementById('ar-threshold').value);
+  const am = parseFloat(document.getElementById('ar-amount').value);
+  const msg = document.getElementById('ar-msg');
+  if (!th || th < 100) { msg.textContent = 'Minimum threshold is ₦100'; msg.style.display='block'; return; }
+  if (!am || am < 100 || am > 1000000) { msg.textContent = 'Amount must be ₦100–₦1,000,000'; msg.style.display='block'; return; }
+  try {
+    await api('POST', '/api/auto-recharge', { threshold: th, amount: am });
+    msg.textContent = 'Auto-recharge enabled!'; msg.style.display='block'; msg.style.color='var(--green)';
+  } catch(e) { msg.textContent = e.message; msg.style.display='block'; msg.style.color=''; }
+  setTimeout(() => { msg.style.display='none'; }, 3000);
+}
+
+// ── TRANSACTION SEARCH ────────────────────────────────────────────────────
+let activeTxnFilter = 'all', activeTxnChip = null;
+function filterTxns(f, el) {
+  activeTxnFilter = f; activeTxnChip = el;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  loadAllTxns(true);
+}
+async function loadAllTxns(reset) {
+  if (reset) { txnOffset = 0; document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Loading...</div>'; }
+  const limit = 20;
+  const search = (document.getElementById('txn-search-input')?.value || '').trim();
+  try {
+    const params = new URLSearchParams({ limit, offset: txnOffset });
+    if (search) params.set('q', search);
+    const data = await api('GET', '/api/wallet/transactions?' + params);
+    const txns = data.transactions || [];
+    txnTotal = data.total || 0;
+    if (reset) { document.getElementById('all-txns').innerHTML = ''; }
+    txns.forEach(t => { document.getElementById('all-txns').appendChild(createTxnRow(t)); });
+    if (txnOffset + limit < txnTotal) {
+      const more = document.createElement('button');
+      more.className = 'load-more'; more.textContent = 'Load more…';
+      more.onclick = () => { txnOffset += limit; loadAllTxns(false); };
+      document.getElementById('all-txns').appendChild(more);
+    }
+  } catch { document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Failed to load</div>'; }
+}
+
+// ── TRANSACTION PIN PROMPT ────────────────────────────────────────────────
 let _pinResolve = null, _pinReject = null;
 let _userHasPin = null; // cached: null = unknown, true/false
 

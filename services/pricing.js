@@ -42,6 +42,11 @@ const DATA_PLANS = {
 
 const CABLE_PLANS = {
   DSTV: [
+    { code: 'DSTV_PADI',     name: 'Padi',        price: 2150 },
+    { code: 'DSTV_YANGA',    name: 'Yanga',       price: 2950 },
+    { code: 'DSTV_CONFAM',   name: 'Confam',      price: 5100 },
+    { code: 'DSTV_COMPACT',  name: 'Compact',     price: 10500 },
+    { code: 'DSTV_COMPACTPLUS', name: 'Compact Plus', price: 16600 },
     { code: 'DSTV_PREMIUM',  name: 'Premium',     price: 24200 },
     { code: 'DSTV_COMFORT',  name: 'Comfort Plus', price: 15400 },
     { code: 'DSTV_CONFAM',   name: 'Confam',       price: 8100 },
@@ -49,10 +54,18 @@ const CABLE_PLANS = {
     { code: 'DSTV_ASIA',     name: 'Asian Add-on', price: 3900 },
   ],
   GOTV: [
-    { code: 'GOTV_MAX',     name: 'Max',      price: 5750 },
-    { code: 'GOTV_JOLI',    name: 'Jolli',    price: 3650 },
-    { code: 'GOTV_SMALL',   name: 'Supa',     price: 2400 },
-    { code: 'GOTV_JINJA',   name: 'Jinja',    price: 1300 },
+    { code: 'GOTV_SMALLIE', name: 'Smallie',  price: 900 },
+    { code: 'GOTV_JINJA',   name: 'Jinja',    price: 1900 },
+    { code: 'GOTV_JOLLI',   name: 'Jolli',    price: 2800 },
+    { code: 'GOTV_MAX',     name: 'Max',      price: 4850 },
+    { code: 'GOTV_SUPA',    name: 'Supa',     price: 6400 },
+  ],
+  STARTIMES: [
+    { code: 'ST_NOVA',      name: 'Nova — Basic',  price: 900 },
+    { code: 'ST_BASIC',     name: 'Basic',         price: 1850 },
+    { code: 'ST_SMART',     name: 'Smart',         price: 2600 },
+    { code: 'ST_CLASSIC',   name: 'Classic',       price: 3100 },
+    { code: 'ST_SUPER',     name: 'Super',         price: 6200 },
   ],
 };
 
