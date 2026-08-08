@@ -146,6 +146,18 @@ button{font-family:var(--font)}
 .stat-card.green .stat-value{color:var(--green-strong)}
 .stat-card.amber .stat-value{color:var(--amber)}
 
+/* ── RECONCILIATION ── */
+.recon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:18px 22px}
+.recon-tile{background:var(--mist);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.recon-label{font:600 11px/1 var(--font);color:var(--mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.recon-value{font:800 22px/1 var(--display);color:var(--ink);letter-spacing:-.5px}
+.recon-sub{font-size:11.5px;color:var(--mid);margin-top:6px}
+.recon-flagged{margin:0 22px 18px;border-top:1px solid var(--border);padding-top:12px}
+.recon-flagged h4{font:700 13px/1 var(--font);color:var(--ink);margin-bottom:8px}
+.flagged-user{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:#FFF7EC;border:1px solid #F4DDBC;margin-bottom:6px;font-size:12.5px}
+.flagged-user .f-email{flex:1;color:var(--ink);font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font:700 11px/1 var(--font);background:var(--bg,var(--mid));color:var(--fg,#fff)}
+
 /* ── TABLE ── */
 .section{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:24px}
 .section-header{
@@ -343,6 +355,34 @@ tbody tr:hover td{background:var(--mist)}
           <div class="stat-value" id="stat-orders">—</div>
           <div class="stat-sub">Awaiting confirmation</div>
         </div>
+      </div>
+
+      <!-- Financial reconciliation -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Financial reconciliation</div>
+          <div class="section-meta">
+            <span id="recon-badge" class="badge" style="--bg:var(--mid);--fg:#fff">Checking…</span>
+          </div>
+        </div>
+        <div class="recon-grid">
+          <div class="recon-tile">
+            <div class="recon-label">Wallet ledger</div>
+            <div class="recon-value" id="recon-wallet">—</div>
+            <div class="recon-sub">Sum of every user balance</div>
+          </div>
+          <div class="recon-tile">
+            <div class="recon-label">Transaction ledger</div>
+            <div class="recon-value" id="recon-ledger">—</div>
+            <div class="recon-sub">Credits − completed debits</div>
+          </div>
+          <div class="recon-tile">
+            <div class="recon-label">Drift</div>
+            <div class="recon-value" id="recon-drift">—</div>
+            <div class="recon-sub" id="recon-drift-sub">Difference between ledgers</div>
+          </div>
+        </div>
+        <div class="recon-flagged" id="recon-flagged" style="display:none"></div>
       </div>
 
       <!-- Recent transactions preview -->
@@ -549,6 +589,7 @@ function initApp() {
   document.getElementById('app').style.display = 'block';
   document.getElementById('overview-date').textContent = new Date().toLocaleDateString('en-NG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   loadOverview();
+  loadReconciliation();
   loadRecentTxns();
   loadTransactions();
   loadUsers();
@@ -565,6 +606,38 @@ async function loadOverview() {
     document.getElementById('stat-txns').textContent = num(stats.total_transactions || 0);
     document.getElementById('stat-orders').textContent = num(stats.pending_orders || 0);
   } catch(e) { console.error('Stats error:', e.message); }
+}
+
+async function loadReconciliation() {
+  try {
+    const r = await apiFetch('/api/admin/reconciliation');
+    document.getElementById('recon-wallet').textContent = '₦' + fmt(r.walletTotal || 0);
+    document.getElementById('recon-ledger').textContent = '₦' + fmt(r.ledgerTotal || 0);
+    const drift = parseFloat(r.drift || 0);
+    const driftEl = document.getElementById('recon-drift');
+    driftEl.textContent = (drift < 0 ? '−' : '') + '₦' + fmt(Math.abs(drift));
+    driftEl.style.color = r.ok ? 'var(--green-strong)' : 'var(--amber)';
+    document.getElementById('recon-drift-sub').textContent = r.ok ? 'Ledgers match — all clear' : 'Ledgers differ — needs review';
+    const badge = document.getElementById('recon-badge');
+    badge.textContent = r.ok ? 'In balance' : 'Out of balance';
+    badge.style.setProperty('--bg', r.ok ? 'var(--green-soft)' : 'var(--amber-soft)');
+    badge.style.setProperty('--fg', r.ok ? 'var(--green-strong)' : 'var(--amber)');
+    const flagged = r.flaggedUsers || [];
+    const box = document.getElementById('recon-flagged');
+    if (flagged.length) {
+      box.style.display = 'block';
+      box.innerHTML = `<h4>⚠ ${flagged.length} account${flagged.length > 1 ? 's' : ''} out of balance</h4>` +
+        flagged.map(u => `<div class="flagged-user"><span class="f-email">${esc(u.name || u.email)}</span><span>${u.email}</span><b>wallet ₦${fmt(u.wallet)}</b><span>ledger ₦${fmt(u.txNet)}</span><b>Δ ${u.diff}</b></div>`).join('');
+    } else {
+      box.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('recon-wallet').textContent = '—';
+    document.getElementById('recon-ledger').textContent = '—';
+    document.getElementById('recon-drift').textContent = '—';
+    const badge = document.getElementById('recon-badge');
+    badge.textContent = 'Unavailable'; badge.style.setProperty('--bg', 'var(--mid)'); badge.style.setProperty('--fg', '#fff');
+  }
 }
 
 // ── TRANSACTIONS ───────────────────────────────────────────────────────────

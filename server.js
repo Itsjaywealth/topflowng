@@ -688,6 +688,16 @@ app.get('/api/admin/transactions/export', adminMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/admin/reconciliation', adminMiddleware, async (req, res) => {
+  try {
+    const data = await db.getFinancialReconciliation();
+    res.json(data);
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to run reconciliation');
+  }
+});
+
 // CSP violation reporting endpoint (receives report-only violations for monitoring)
 app.post('/api/admin/csp-report', apiLimiter, express.json({ type: 'application/reports+json' }), (req, res) => {
   const body = req.body;
