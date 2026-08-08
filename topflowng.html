@@ -6,7 +6,7 @@
 <title>TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Subscriptions in Nigeria</title>
 <meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and 9mobile airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#00B67A">
+<meta name="theme-color" content="#0000FF">
 <link rel="canonical" href="https://topflowng.com/">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -67,6 +67,11 @@
   --green-strong:#008F57;
   --green-soft:#E7F8F0;
   --green-softer:#F1FBF6;
+  --blue:#0000FF;
+  --blue-2:#0A33FF;
+  --blue-strong:#0B1E8A;
+  --blue-soft:#E8ECFF;
+  --blue-softer:#F4F6FF;
   --red:#E5484D;
   --amber:#E8912D;
   --amber-soft:#FEF3E6;
@@ -79,14 +84,14 @@
   --white:#FFFFFF;
   --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --display:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --grad:linear-gradient(135deg,#00B67A 0%,#00A868 55%,#00915B 100%);
+  --grad:linear-gradient(135deg,#0A33FF 0%,#0000FF 55%,#0B1E8A 100%);
   --grad-ink:linear-gradient(150deg,#0B1220 0%,#101A30 100%);
   --radius:18px;
   --radius-sm:12px;
   --shadow-sm:0 1px 2px rgba(11,18,32,.05),0 2px 8px rgba(11,18,32,.04);
   --shadow-md:0 8px 28px -8px rgba(11,18,32,.14);
   --shadow-lg:0 24px 60px -24px rgba(11,18,32,.28);
-  --ring:0 0 0 4px rgba(0,168,104,.14);
+  --ring:0 0 0 4px rgba(10,51,255,.16);
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -105,24 +110,24 @@ input,select,textarea{font-family:var(--font);font-size:15px;color:var(--ink)}
 [hidden]{display:none !important}
 h1,h2,h3,h4{margin:0;font-family:var(--display);letter-spacing:-.02em}
 p{margin:0}
-a{color:var(--green-strong);text-decoration:none}
+a{color:var(--blue-2);text-decoration:none}
 
 /* ── Shared buttons ──────────────────────────────────────────────────── */
 .btn-primary{
   width:100%;min-height:52px;border:0;border-radius:14px;
   background:var(--grad);color:var(--white);
   font:700 15px/1 var(--display);letter-spacing:-.01em;
-  box-shadow:0 10px 24px -10px rgba(0,168,104,.55);
+  box-shadow:0 10px 24px -10px rgba(10,51,255,.5);
   transition:transform .12s ease,box-shadow .12s ease,opacity .12s ease;
 }
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px rgba(0,168,104,.6)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px rgba(10,51,255,.55)}
 .btn-primary:active{transform:translateY(0)}
 .btn-primary:disabled{opacity:.65;cursor:default;transform:none}
 .btn-confirm{
   width:100%;min-height:52px;border:0;border-radius:14px;
   background:var(--grad);color:var(--white);
   font:700 15px/1 var(--display);letter-spacing:-.01em;
-  box-shadow:0 10px 24px -10px rgba(0,168,104,.5);
+  box-shadow:0 10px 24px -10px rgba(10,51,255,.45);
   transition:transform .12s ease,opacity .12s ease;
 }
 .btn-confirm:hover{transform:translateY(-1px)}
@@ -156,7 +161,7 @@ a{color:var(--green-strong);text-decoration:none}
 }
 .field input::placeholder,.field-input::placeholder{color:var(--mid);font-weight:500}
 .field input:focus,.field-input:focus{
-  border-color:var(--green);box-shadow:var(--ring);
+  border-color:var(--blue-2);box-shadow:var(--ring);
 }
 
 /* ── Logomark ────────────────────────────────────────────────────────── */
@@ -171,9 +176,10 @@ a{color:var(--green-strong);text-decoration:none}
 
 #marketing{
   min-height:100vh;display:none;
-  background:radial-gradient(1100px 500px at 85% -10%,rgba(0,182,122,.12),transparent 60%),
-             radial-gradient(900px 480px at -10% 20%,rgba(0,168,104,.08),transparent 55%),
-             var(--mist);
+  background:
+    radial-gradient(1100px 520px at 88% -12%,rgba(10,51,255,.18),transparent 60%),
+    radial-gradient(900px 480px at -12% 22%,rgba(11,30,138,.10),transparent 55%),
+    var(--mist);
 }
 #marketing.active{display:flex;flex-direction:column}
 .marketing-nav{
@@ -184,14 +190,14 @@ a{color:var(--green-strong);text-decoration:none}
   display:inline-flex;align-items:center;gap:10px;
   font:800 22px/1 var(--display);letter-spacing:-.04em;color:var(--ink);
 }
-.marketing-brand span{color:var(--green-strong)}
+.marketing-brand span{color:var(--ink)}
 .marketing-brand .logo-mark{width:34px;height:34px}
 .marketing-login{
   border:1.5px solid var(--border);background:var(--white);color:var(--ink);
   font:600 14px/1 var(--font);padding:11px 22px;border-radius:999px;
   transition:border-color .12s ease,box-shadow .12s ease;
 }
-.marketing-login:hover{border-color:var(--green-2);box-shadow:var(--shadow-sm)}
+.marketing-login:hover{border-color:var(--blue-2);box-shadow:var(--shadow-sm)}
 .marketing-main{
   flex:1;display:grid;gap:40px;align-items:center;
   grid-template-columns:minmax(0,1fr);
@@ -213,7 +219,7 @@ a{color:var(--green-strong);text-decoration:none}
   min-height:50px;padding:0 26px;border:0;border-radius:13px;
   background:var(--grad);color:var(--white);
   font:700 14.5px/1 var(--display);
-  box-shadow:0 12px 28px -12px rgba(0,168,104,.55);
+  box-shadow:0 12px 28px -12px rgba(10,51,255,.5);
   transition:transform .12s ease,box-shadow .12s ease;
 }
 .marketing-primary:hover{transform:translateY(-1px)}
@@ -221,35 +227,36 @@ a{color:var(--green-strong);text-decoration:none}
   min-height:50px;padding:0 26px;border:1.5px solid var(--border);
   background:var(--white);color:var(--ink);border-radius:13px;
   font:700 14.5px/1 var(--display);
+  box-shadow:0 10px 24px -14px rgba(11,18,32,.24);
 }
-.marketing-secondary:hover{border-color:var(--green-2)}
+.marketing-secondary:hover{border-color:var(--blue);box-shadow:0 14px 30px -16px rgba(11,30,138,.3)}
 .marketing-ledger{
-  background:var(--grad-ink);border-radius:24px;padding:26px 26px 22px;color:var(--white);
-  box-shadow:var(--shadow-lg);position:relative;overflow:hidden;
+  background:var(--grad);border-radius:24px;padding:26px 26px 22px;color:var(--white);
+  box-shadow:0 28px 60px -22px rgba(11,30,138,.5);position:relative;overflow:hidden;
 }
 .marketing-ledger::after{
   content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;
-  background:radial-gradient(circle,rgba(0,182,122,.28),transparent 65%);border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.22),transparent 62%);border-radius:50%;
 }
 .preview-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
 .preview-top strong{font:800 17px/1 var(--display);letter-spacing:-.02em}
 .preview-top button{
-  border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);
   color:var(--white);font:600 11.5px/1 var(--font);padding:9px 14px;border-radius:999px;
   transition:background .12s ease;
 }
-.preview-top button:hover{background:rgba(255,255,255,.16)}
-.preview-label{font:500 12px/1 var(--font);color:rgba(255,255,255,.55);margin:34px 0 8px}
+.preview-top button:hover{background:rgba(255,255,255,.2)}
+.preview-label{font:500 12px/1 var(--font);color:rgba(255,255,255,.6);margin:34px 0 8px}
 .preview-balance{font:800 40px/1 var(--display);letter-spacing:-.04em}
-.ledger-cap{font:600 12px/1 var(--font);color:rgba(255,255,255,.5);margin:30px 0 12px;text-transform:uppercase;letter-spacing:.08em}
+.ledger-cap{font:600 12px/1 var(--font);color:rgba(255,255,255,.55);margin:30px 0 12px;text-transform:uppercase;letter-spacing:.08em}
 .ledger-row{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:13px 0;border-top:1px solid rgba(255,255,255,.08);
-  font:500 13.5px/1.4 var(--font);color:rgba(255,255,255,.82);
+  padding:13px 0;border-top:1px solid rgba(255,255,255,.12);
+  font:500 13.5px/1.4 var(--font);color:rgba(255,255,255,.85);
 }
 .ledger-row strong{font:700 13.5px/1 var(--font);color:var(--white)}
-.ledger-row .preview-credit{color:#3DDC97}
-.ledger-note{font:500 12px/1.5 var(--font);color:rgba(255,255,255,.45);margin-top:16px}
+.ledger-row .preview-credit{color:#9FE8C8}
+.ledger-note{font:500 12px/1.5 var(--font);color:rgba(255,255,255,.5);margin-top:16px}
 .marketing-how{
   padding:clamp(36px,6vw,64px) clamp(20px,6vw,56px);
   border-top:1px solid var(--border);background:var(--white);
@@ -259,12 +266,61 @@ a{color:var(--green-strong);text-decoration:none}
 .marketing-how li{counter-increment:step;padding:20px;border:1px solid var(--border);border-radius:16px;background:var(--mist)}
 .marketing-how li::before{
   content:counter(step);display:inline-flex;align-items:center;justify-content:center;
-  width:30px;height:30px;border-radius:10px;background:var(--green-soft);color:var(--green-strong);
+  width:30px;height:30px;border-radius:10px;background:var(--blue-soft);color:var(--blue-2);
   font:800 14px/1 var(--display);margin-bottom:14px;
 }
 .marketing-how li strong{display:block;font:700 15px/1.3 var(--display);color:var(--ink);margin-bottom:6px}
 .marketing-how li span{font:500 13px/1.55 var(--font);color:var(--graphite)}
-.marketing-trust{padding:28px clamp(20px,6vw,56px);text-align:center}
+
+/* ── Service + pricing board (mass solution–style reseller landing) ── */
+.marketing-services{
+  background:var(--white);border-top:1px solid var(--border);
+  padding:clamp(36px,6vw,64px) clamp(20px,6vw,56px);
+}
+.marketing-section-head{max-width:640px;margin-bottom:30px}
+.marketing-section-head h2{font:800 clamp(24px,3.4vw,36px)/1.1 var(--display);letter-spacing:-.04em}
+.marketing-section-head p{font:500 14.5px/1.6 var(--font);color:var(--graphite);margin-top:10px}
+.marketing-services-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.marketing-service-card{
+  display:flex;flex-direction:column;align-items:flex-start;gap:12px;
+  padding:20px;border:1px solid var(--border);border-radius:18px;
+  background:var(--white);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
+}
+.marketing-service-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#C9D4FF}
+.marketing-service-icon{
+  width:46px;height:46px;border-radius:14px;display:inline-flex;
+  align-items:center;justify-content:center;font:800 18px/1 var(--display);
+}
+.msi-1{background:var(--blue-soft);color:var(--blue)}
+.msi-2{background:#E7EEFB;color:#2F5DC0}
+.msi-3{background:#FFF3E2;color:#E8912D}
+.msi-4{background:#F1EBFE;color:#6C3FCE}
+.msi-5{background:#E8F6F7;color:#0E8E96}
+.msi-6{background:var(--green-soft);color:var(--green-strong)}
+.marketing-service-card strong{font:700 15px/1.2 var(--display);color:var(--ink)}
+.marketing-service-card span{font:500 12.5px/1.5 var(--font);color:var(--mid)}
+.marketing-rates{
+  background:linear-gradient(160deg,#0B1E8A 0%,#0000FF 100%);
+  border-top:4px solid #FFF;padding:clamp(36px,6vw,64px) clamp(20px,6vw,56px);
+  color:var(--white);
+}
+.marketing-rates .marketing-section-head h2{color:var(--white)}
+.marketing-rates .marketing-section-head p{color:rgba(255,255,255,.72)}
+.marketing-rate-table{
+  display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+}
+.marketing-rate-card{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+  border-radius:16px;padding:18px;backdrop-filter:blur(4px);
+}
+.marketing-rate-card .rate-network{font:700 14px/1 var(--display);letter-spacing:-.01em;margin-bottom:14px}
+.marketing-rate-card .rate-list{display:flex;flex-direction:column;gap:9px}
+.marketing-rate-card .rate-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font:500 12.5px/1.3 var(--font);color:rgba(255,255,255,.82);
+}
+.marketing-rate-card .rate-row strong{font:700 12.5px/1 var(--font);color:var(--white);white-space:nowrap}
+.marketing-trust{padding:28px clamp(20px,6vw,56px);text-align:center;background:var(--mist)}
 .marketing-trust p{font:500 13.5px/1.6 var(--font);color:var(--graphite)}
 .marketing-trust strong{color:var(--ink)}
 .marketing-footer{
@@ -278,7 +334,7 @@ a{color:var(--green-strong);text-decoration:none}
    ═══════════════════════════════════════════════════════════════════ */
 #auth-screen{
   min-height:100vh;display:none;
-  background:radial-gradient(1000px 480px at 90% -10%,rgba(0,182,122,.12),transparent 55%),var(--mist);
+  background:radial-gradient(1000px 480px at 90% -10%,rgba(10,51,255,.14),transparent 55%),var(--mist);
   align-items:flex-start;justify-content:center;padding:clamp(24px,6vh,56px) 20px;
 }
 #auth-screen.active{display:flex}
@@ -343,7 +399,7 @@ a{color:var(--green-strong);text-decoration:none}
   display:inline-flex;align-items:center;gap:10px;
   font:800 21px/1 var(--display);letter-spacing:-.04em;color:var(--ink);
 }
-.wordmark span{color:var(--green-strong)}
+.wordmark span{color:var(--blue-2)}
 .wordmark .logo-mark{width:32px;height:32px}
 .workspace-profile{display:flex;align-items:center;gap:12px}
 .header-greeting{font:600 13px/1.3 var(--font);color:var(--graphite);text-align:right}
@@ -353,7 +409,7 @@ a{color:var(--green-strong);text-decoration:none}
   background:var(--grad);color:var(--white);
   font:800 15px/1 var(--display);
   display:inline-flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 18px -8px rgba(0,168,104,.6);
+  box-shadow:0 8px 18px -8px rgba(10,51,255,.55);
   transition:transform .12s ease;
 }
 .header-avatar:hover{transform:translateY(-1px)}
@@ -362,7 +418,7 @@ a{color:var(--green-strong);text-decoration:none}
 .balance-panel{
   display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
   background:var(--grad);border-radius:22px;padding:24px 22px;color:var(--white);
-  box-shadow:0 18px 40px -18px rgba(0,168,104,.55);
+  box-shadow:0 18px 40px -18px rgba(10,51,255,.5);
   position:relative;overflow:hidden;
 }
 .hero-slide{display:none;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;width:100%}
@@ -410,7 +466,7 @@ a{color:var(--green-strong);text-decoration:none}
   display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
 }
 .section-title{font:800 17px/1 var(--display);letter-spacing:-.03em}
-.section-link{border:0;background:transparent;color:var(--green-strong);font:700 13px/1 var(--font);padding:6px 2px}
+.section-link{border:0;background:transparent;color:var(--blue-2);font:700 13px/1 var(--font);padding:6px 2px}
 .section-link:hover{text-decoration:underline}
 
 .service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -490,7 +546,7 @@ a{color:var(--green-strong);text-decoration:none}
   font:700 13.5px/1.3 var(--font);padding:12px 0;text-align:left;
   border-top:1px dashed var(--border);
 }
-.glance-shortcut:hover{color:var(--green-strong)}
+.glance-shortcut:hover{color:var(--blue-2)}
 .glance-pending{
   padding:16px;border:1px solid var(--amber);border-radius:14px;background:var(--amber-soft);
 }
@@ -506,14 +562,14 @@ a{color:var(--green-strong);text-decoration:none}
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:22px 2px 16px;
 }
-.eyebrow{font:700 11px/1 var(--font);color:var(--green-strong);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
+.eyebrow{font:700 11px/1 var(--font);color:var(--blue-2);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
 .history-head h1{font:800 26px/1 var(--display);letter-spacing:-.04em}
 .history-refresh{
   border:1.5px solid var(--border);background:var(--white);color:var(--graphite);
   font:700 13px/1 var(--font);padding:11px 16px;border-radius:11px;
   transition:border-color .12s ease,color .12s ease;
 }
-.history-refresh:hover{border-color:var(--green-2);color:var(--ink)}
+.history-refresh:hover{border-color:var(--blue);color:var(--ink)}
 .filter-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .filter-chip{
   border:1.5px solid var(--border);background:var(--white);color:var(--graphite);
@@ -526,7 +582,7 @@ a{color:var(--green-strong);text-decoration:none}
   background:var(--white);color:var(--ink);font:700 13px/1 var(--font);
   padding:13px 26px;border-radius:12px;
 }
-.load-more:hover{border-color:var(--green-2)}
+.load-more:hover{border-color:var(--blue)}
 
 /* ── Account ─────────────────────────────────────────────────────────── */
 .acct-hero{
@@ -535,11 +591,11 @@ a{color:var(--green-strong);text-decoration:none}
 }
 .acct-hero::after{
   content:"";position:absolute;right:-50px;top:-60px;width:200px;height:200px;
-  background:radial-gradient(circle,rgba(0,182,122,.3),transparent 62%);border-radius:50%;
+  background:radial-gradient(circle,rgba(10,51,255,.3),transparent 62%);border-radius:50%;
 }
 .acct-hero-avatar{
   width:52px;height:52px;border-radius:14px;
-  background:rgba(0,182,122,.22);color:#3DDC97;
+  background:rgba(255,255,255,.18);color:var(--white);
   display:flex;align-items:center;justify-content:center;
   font:800 17px/1 var(--display);margin-bottom:14px;
 }
@@ -561,8 +617,8 @@ a{color:var(--green-strong);text-decoration:none}
 .referral-stat-value{font:800 20px/1 var(--display);color:var(--ink)}
 .referral-stat-label{font:500 12px/1 var(--font);color:var(--mid);margin-top:4px}
 .referral-share-btn{
-  width:100%;border:1.5px solid var(--green-2);background:var(--green-soft);
-  color:var(--green-strong);font:700 13.5px/1 var(--font);
+  width:100%;border:1.5px solid var(--blue);background:var(--blue-soft);
+  color:var(--blue-2);font:700 13.5px/1 var(--font);
   padding:13px;border-radius:12px;
 }
 .referral-share-btn:hover{background:#DCF3E8}
@@ -584,7 +640,7 @@ a{color:var(--green-strong);text-decoration:none}
 .toggle-switch input{opacity:0;width:0;height:0}
 .toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:28px;transition:.3s}
 .toggle-slider::before{content:"";position:absolute;height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
-.toggle-switch input:checked+.toggle-slider{background:var(--green)}
+.toggle-switch input:checked+.toggle-slider{background:var(--blue)}
 .toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
 .account-card{
   background:var(--white);border:1px solid var(--border);border-radius:20px;
@@ -669,7 +725,7 @@ a{color:var(--green-strong);text-decoration:none}
   font:700 13px/1 var(--font);padding:11px 16px;border-radius:11px;
   transition:border-color .12s ease;
 }
-.svc-back:hover{border-color:var(--green-2)}
+.svc-back:hover{border-color:var(--blue)}
 .svc-title{font:800 17px/1 var(--display);letter-spacing:-.03em;flex:1;text-align:center;margin-right:auto}
 .svc-body{
   flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -690,8 +746,8 @@ a{color:var(--green-strong);text-decoration:none}
   transition:background .12s ease,color .12s ease,border-color .12s ease,transform .08s ease;
 }
 .network-chip.selected{
-  background:var(--green-soft);border-color:var(--green-2);color:var(--green-strong);
-  box-shadow:inset 0 0 0 1px var(--green-2);
+  background:var(--blue-soft);border-color:var(--blue);color:var(--blue-2);
+  box-shadow:inset 0 0 0 1px var(--blue);
 }
 .amount-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .amount-preset{
@@ -707,10 +763,10 @@ a{color:var(--green-strong);text-decoration:none}
   padding:15px 16px;cursor:pointer;
   transition:border-color .12s ease,background .12s ease;
 }
-.data-plan:hover{border-color:#CBEBDD}
-.data-plan.selected{border-color:var(--green-2);background:var(--green-soft)}
+.data-plan:hover{border-color:#C9D4FF}
+.data-plan.selected{border-color:var(--blue);background:var(--blue-soft)}
 .plan-name{font:600 14px/1.3 var(--font);color:var(--ink)}
-.plan-price{font:800 14px/1 var(--display);color:var(--green-strong)}
+.plan-price{font:800 14px/1 var(--display);color:var(--blue-2)}
 
 .qty-row{
   display:inline-flex;align-items:center;gap:4px;
@@ -754,7 +810,7 @@ a{color:var(--green-strong);text-decoration:none}
   display:flex;align-items:center;gap:9px;
   font:500 12.5px/1.4 var(--font);color:var(--graphite);margin-bottom:16px;cursor:pointer;
 }
-.save-bfr-label input{width:17px;height:17px;accent-color:var(--green-2)}
+.save-bfr-label input{width:17px;height:17px;accent-color:var(--blue)}
 
 /* ═══════════════════════════════════════════════════════════════════
    RECEIPT OVERLAY
@@ -778,12 +834,12 @@ a{color:var(--green-strong);text-decoration:none}
 .receipt-overlay.open .receipt-card{transform:translateY(0)}
 .receipt-dots{display:flex;justify-content:center;gap:5px;margin-bottom:24px}
 .receipt-dots span{width:6px;height:6px;border-radius:50%;background:var(--border)}
-.receipt-dots span:nth-child(2){background:var(--green-2)}
+.receipt-dots span:nth-child(2){background:var(--blue-2)}
 .receipt-check{
   width:74px;height:74px;margin:0 auto 20px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   background:var(--grad);color:var(--white);
-  font:800 36px/1 var(--display);box-shadow:0 16px 34px -14px rgba(0,168,104,.55);
+  font:800 36px/1 var(--display);box-shadow:0 16px 34px -14px rgba(10,51,255,.5);
   transition:transform .3s cubic-bezier(.2,1.6,.4,1);
 }
 .receipt-check.pop{transform:scale(1.12)}
@@ -797,15 +853,15 @@ a{color:var(--green-strong);text-decoration:none}
   border:1.5px dashed #9FDCC0;border-radius:12px;padding:16px;text-align:center;
 }
 .receipt-pins{
-  background:var(--green-soft);color:var(--green-strong);
+  background:var(--blue-soft);color:var(--blue-2);
   font:800 16px/1.7 var(--font);letter-spacing:.02em;
-  border:1.5px dashed #9FDCC0;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;
+  border:1.5px dashed #8FA6FF;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;
 }
 .copy-pins-btn{
-  border:1.5px solid var(--green-2);background:var(--white);color:var(--green-strong);
+  border:1.5px solid var(--blue);background:var(--white);color:var(--blue-2);
   font:700 13px/1 var(--font);padding:11px 18px;border-radius:10px;margin-bottom:6px;
 }
-.copy-pins-btn:hover{background:var(--green-soft)}
+.copy-pins-btn:hover{background:var(--blue-soft)}
 .receipt-lines{margin:6px 0 22px;text-align:left}
 .receipt-line{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -818,7 +874,7 @@ a{color:var(--green-strong);text-decoration:none}
 .btn-close-receipt{
   width:100%;min-height:50px;border:0;border-radius:13px;
   background:var(--grad);color:var(--white);font:700 14px/1 var(--display);
-  box-shadow:0 10px 24px -10px rgba(0,168,104,.5);
+  box-shadow:0 10px 24px -10px rgba(10,51,255,.45);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -860,7 +916,7 @@ a{color:var(--green-strong);text-decoration:none}
   font:700 20px/1 var(--font);letter-spacing:8px;text-align:center;
   margin-bottom:10px;transition:border-color .12s ease,box-shadow .12s ease;
 }
-.pin-prompt-input:focus{border-color:var(--green);box-shadow:var(--ring)}
+.pin-prompt-input:focus{border-color:var(--blue);box-shadow:var(--ring)}
 .pin-prompt-error{min-height:18px;color:var(--red);font:500 12px/1.4 var(--font);margin-bottom:12px}
 .pin-prompt-confirm{
   width:100%;min-height:50px;border:0;border-radius:12px;
@@ -890,7 +946,7 @@ a{color:var(--green-strong);text-decoration:none}
 <section id="marketing" aria-label="TopFlowNG introduction">
   <nav class="marketing-nav">
     <div class="marketing-brand">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="mlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#008F57"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#mlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="mlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#mlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
       TopFlow<span>NG</span>
     </div>
     <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Log in</button>
@@ -923,6 +979,32 @@ a{color:var(--green-strong);text-decoration:none}
       <li><strong>See the result</strong><span>Your balance and transaction history update in place.</span></li>
     </ol>
   </section>
+  <section class="marketing-services" aria-labelledby="services-heading">
+    <div class="marketing-section-head">
+      <h2 id="services-heading">Everything you pay for daily, in one wallet.</h2>
+      <p>TopFlowNG covers the services you already buy — so you stop juggling apps and cards.</p>
+    </div>
+    <div class="marketing-services-grid">
+      <div class="marketing-service-card"><span class="marketing-service-icon msi-1">A</span><strong>Airtime</strong><span>MTN, Glo, Airtel &amp; 9mobile — instant top-ups.</span></div>
+      <div class="marketing-service-card"><span class="marketing-service-icon msi-2">D</span><strong>Data bundles</strong><span>Daily, weekly &amp; monthly plans from all networks.</span></div>
+      <div class="marketing-service-card"><span class="marketing-service-icon msi-3">E</span><strong>Electricity</strong><span>Prepaid &amp; postpaid for IKEDC, EKEDC, AEDC &amp; more.</span></div>
+      <div class="marketing-service-card"><span class="marketing-service-icon msi-4">T</span><strong>Cable TV</strong><span>DStv, GOtv &amp; StarTimes subscriptions.</span></div>
+      <div class="marketing-service-card"><span class="marketing-service-icon msi-5">B</span><strong>Exam pins</strong><span>WAEC, NECO &amp; JAMB scratch cards.</span></div>
+      <div class="marketing-service-card"><span class="marketing-service-icon msi-6">S</span><strong>Scheduled top-ups</strong><span>Bills and purchases on your schedule.</span></div>
+    </div>
+  </section>
+  <section class="marketing-rates" aria-labelledby="rates-heading">
+    <div class="marketing-section-head">
+      <h2 id="rates-heading">Buy at discounted reseller rates.</h2>
+      <p>Every airtime and data purchase is priced below retail — the more you top up with us, the more you save.</p>
+    </div>
+    <div class="marketing-rate-table" aria-label="Sample network rates">
+      <div class="marketing-rate-card"><div class="rate-network">MTN</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦10</strong></div><div class="rate-row"><span>1GB data</span><strong>₦300</strong></div><div class="rate-row"><span>2GB data</span><strong>₦600</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">Glo</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦10</strong></div><div class="rate-row"><span>1GB data</span><strong>₦280</strong></div><div class="rate-row"><span>2GB data</span><strong>₦560</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">Airtel</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦8</strong></div><div class="rate-row"><span>1GB data</span><strong>₦290</strong></div><div class="rate-row"><span>2GB data</span><strong>₦580</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">9mobile</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦8</strong></div><div class="rate-row"><span>1GB data</span><strong>₦320</strong></div><div class="rate-row"><span>2GB data</span><strong>₦640</strong></div></div></div>
+    </div>
+  </section>
   <section class="marketing-trust" aria-label="Payments and services">
     <p><strong>Payments secured by Paystack.</strong> Pay for MTN, Glo, Airtel, 9mobile, IKEDC, EKEDC, AEDC, DStv, GOtv, and StarTimes.</p>
   </section>
@@ -934,7 +1016,7 @@ a{color:var(--green-strong);text-decoration:none}
   <div>
   <div class="auth-header">
     <div class="auth-logo">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="alg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#008F57"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#alg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="alg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#alg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
       TopFlowNG
     </div>
     <div class="auth-tagline">Pay for the things you use, with your wallet in view.</div>
@@ -1025,7 +1107,7 @@ a{color:var(--green-strong);text-decoration:none}
     <div class="workspace-header">
       <div class="workspace-topline">
         <div class="wordmark">
-          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="wlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#008F57"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#wlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="wlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#wlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
           TopFlow<span>NG</span>
         </div>
         <div class="workspace-profile">
@@ -2512,7 +2594,7 @@ async function loadScheduledPurchases() {
       const next = s.next_run_at ? new Date(s.next_run_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
       item.innerHTML = `<div style="flex:1;min-width:0">
           <div style="font:700 13.5px/1.3 var(--font);color:var(--ink);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
-          <div style="font:500 12px/1.5 var(--font);color:var(--mid);margin-top:3px">Every <b style="color:var(--green-strong);text-transform:capitalize">${s.frequency}</b> · ₦${Number(s.amount).toLocaleString()} · next ${next}</div>
+          <div style="font:500 12px/1.5 var(--font);color:var(--mid);margin-top:3px">Every <b style="color:var(--blue-2);text-transform:capitalize">${s.frequency}</b> · ₦${Number(s.amount).toLocaleString()} · next ${next}</div>
         </div>
         <button class="btn-sched-cancel" onclick="cancelScheduledPurchase(${s.id})" aria-label="Cancel scheduled purchase">✕</button>`;
       list.appendChild(item);
