@@ -1323,6 +1323,8 @@ a{color:var(--blue-2);text-decoration:none}
                 <div style="font:700 14px/1.3 var(--display);color:var(--ink)">Complete your top-up</div>
                 <div style="font:500 12px/1.5 var(--font);color:var(--graphite);margin-top:3px">An auto-recharge of <b><span id="ar-pending-amount">—</span></b> was started for your wallet. Pay to keep service running.</div>
               </div>
+              <button id="ar-pending-dismiss" onclick="dismissPendingAutoRecharge()" title="Dismiss"
+                      style="flex:none;width:30px;height:30px;border-radius:9px;border:1px solid #C9D4FF;background:#fff;color:var(--graphite);cursor:pointer;font:700 15px/1 var(--display)">×</button>
             </div>
             <a id="ar-pending-link" href="#" target="_blank" rel="noopener"
                style="display:inline-block;width:100%;margin-top:12px;background:var(--grad);color:#fff;text-decoration:none;text-align:center;font:700 13.5px/1 var(--display);padding:12px 0;border-radius:11px">Pay now</a>
@@ -2580,9 +2582,27 @@ async function loadPendingAutoRecharge() {
     const s = d && d.session;
     if (!s) { banner.style.display = 'none'; return; }
     document.getElementById('ar-pending-amount').textContent = '₦' + Number(s.amount).toLocaleString();
-    document.getElementById('ar-pending-link').href = s.authorizationUrl;
-    banner.style.display = 'block';
+    document.getElementById('ar-pending-link').href = s.authorization_url;
+    banner.setAttribute('data-ref', s.reference);
+    banner.style.display = sessionDismissed(s.reference) ? 'none' : 'block';
   } catch { /* banner stays hidden on failure */ }
+}
+
+function sessionDismissed(ref) {
+  try {
+    const list = JSON.parse(localStorage.getItem('ar-dismissed') || '[]');
+    return Array.isArray(list) && list.includes(ref);
+  } catch { return false; }
+}
+function dismissPendingAutoRecharge() {
+  document.getElementById('ar-pending-banner').style.display = 'none';
+  const banner = document.getElementById('ar-pending-banner');
+  const ref = banner.getAttribute('data-ref');
+  if (!ref) return;
+  try {
+    const list = JSON.parse(localStorage.getItem('ar-dismissed') || '[]');
+    if (Array.isArray(list) && !list.includes(ref)) { list.push(ref); localStorage.setItem('ar-dismissed', JSON.stringify(list)); }
+  } catch {}
 }
 function toggleAutoRecharge() {
   const on = document.getElementById('ar-toggle').checked;
