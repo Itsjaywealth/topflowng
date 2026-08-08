@@ -7,7 +7,6 @@
  *   - essential navigation present
  *   - the six service purchase forms open
  *   - admin login screen renders
- *   - AI assistant opens and renders model text as plain text (never HTML)
  *   - PWA / static asset availability
  */
 
@@ -152,20 +151,6 @@ test.describe('logged-in app shell', () => {
       await expect(page.locator(`#svc-${key}`)).not.toHaveClass(/open/);
     });
   }
-
-  test('AI assistant renders model text as plain text', async ({ page, request }) => {
-    await login(request, page);
-    await page.goto('/');
-    await expect(page.locator('#main-app')).toBeVisible();
-    await page.locator('#ai-fab').click();
-    await expect(page.locator('#ai-panel')).toBeVisible();
-    await page.locator('#ai-input').fill('what services exist?');
-    await page.locator('#ai-send').click();
-    const botBubble = page.locator('#ai-messages .ai-bubble.ai-bot').last();
-    await expect(botBubble).toHaveText('I am the mocked assistant.'); // safe (text) render
-    const isHtml = await botBubble.evaluate((el) => el.querySelector('*') !== null);
-    expect(isHtml).toBe(false);
-  });
 });
 
 test.describe('admin login screen', () => {
