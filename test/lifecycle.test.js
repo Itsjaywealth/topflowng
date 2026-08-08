@@ -539,7 +539,36 @@ test('18. scheduled purchase executes a real purchase and advances the schedule'
   assert.ok(reloadedOnce.run_count >= 1, 'run_count incremented');
 });
 
-// ── 19. scheduled purchase skips cleanly with insufficient balance ───────────
+// ── 20. auto-recharge initiates a Paystack session, emails the link ─────────
+test('20. auto-recharge emails a top-up link and marks the trigger', async () => {
+  assert.ok(scheduledProcessorHooks.processDueAutoRecharges, 'auto-recharge hook present');
+  h.autoRechargeState.reset();
+  h.emailState.reset();
+  const lowUser = userIdC;  // zero-balance user — definitely below any threshold
+  await db.setAutoRecharge(lowUser, { threshold: 500, amount: 2000 });
+
+  await scheduledProcessorHooks.processDueAutoRecharges();
+
+  assert.strictEqual(h.autoRechargeState.initializeCalls.length, 1, 'Paystack initialize called once');
+  const init = h.autoRechargeState.initializeCalls[0];
+  assert.strictEqual(init.url, 'https://api.paystack.co/transaction/initialize');
+  assert.strictEqual(init.body.amount, 200000, 'amount sent in kobo');
+  assert.strictEqual(init.body.metadata.user_id, lowUser, 'user attached to metadata');
+  assert.strictEqual(init.body.metadata.auto_recharge, true, 'marked as auto-recharge');
+  assert.ok(init.body.reference.startsWith('AR-'), 'reference uses AR- prefix');
+
+  assert.strictEqual(h.emailState.autoRechargeCalls.length, 1, 'top-up link emailed to the user');
+  const emailArgs = h.emailState.autoRechargeCalls[0];
+  assert.strictEqual(emailArgs[0], 'lcchidi' + process.pid + '@example.com', 'link goes to the right address');
+  const info = emailArgs[2];
+  assert.ok(String(info.authorizationUrl).includes('checkout.paystack.com'), 'link points at checkout');
+
+  // Cooldown recorded → a second sweep must NOT create another session.
+  await scheduledProcessorHooks.processDueAutoRecharges();
+  assert.strictEqual(h.autoRechargeState.initializeCalls.length, 1, 'no re-trigger within cooldown');
+
+  await db.deleteAutoRecharge(lowUser);
+});
 test('19. scheduled purchase without balance is skipped, schedule kept intact', async () => {
   h.providerState.reset();
   const sched = await db.createScheduledPurchase(userIdC, {

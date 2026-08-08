@@ -113,7 +113,7 @@ const mockProvider = {
 };
 
 function installMock(relPath, exports) {
-  const abs = path.join(ROOT, relPath);
+  const abs = path.isAbsolute(relPath) ? relPath : path.join(ROOT, relPath);
   require.cache[abs] = { id: abs, filename: abs, loaded: true, exports };
 }
 
@@ -122,7 +122,41 @@ installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},
   async sendOrderStatusEmail() {},
+  async sendAutoRechargeEmail(...args) { emailState.autoRechargeCalls.push(args); },
 });
+
+// ── Mock axios (never dials Paystack) ────────────────────────────────────────
+const emailState = {
+  autoRechargeCalls: [],
+  reset() { emailState.autoRechargeCalls = []; },
+};
+const realAxios = require('axios');
+const mockAxios = {
+  ...realAxios,
+  async post(url, body, config) {
+    if (String(url).includes('/transaction/initialize')) {
+      const reference = body?.reference || `AR-${Date.now()}`;
+      autoRechargeState.initializeCalls.push({ url, body, config });
+      return {
+        data: {
+          status: true,
+          data: {
+            reference,
+            authorization_url: `https://checkout.paystack.com/${reference}`,
+            access_code: 'test-access-code',
+          },
+        },
+      };
+    }
+    throw new Error(`Unexpected axios POST in test: ${url}`);
+  },
+  async get() { throw new Error('Unexpected axios GET in test'); },
+};
+const autoRechargeState = {
+  initializeCalls: [],
+  reset() { autoRechargeState.initializeCalls = []; },
+};
+installMock(require.resolve('axios'), mockAxios);
 
 // ── Boot the real app ────────────────────────────────────────────────────────
 const http = require('http');
@@ -190,5 +224,7 @@ module.exports = {
   api,
   providerState,
   mockProvider,
+  autoRechargeState,
+  emailState,
   cleanup,
 };

@@ -39,7 +39,7 @@ const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
 const { queryClubkonnectOrder, processClubkonnectPurchase } = require('./services/clubkonnect');
-const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail } = require('./services/email');
+const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
 const {
@@ -928,16 +928,30 @@ function schedulePendingOrderSweep() {
       for (const row of due) {
         logger.info('Processing auto-recharge', { userId: row.user_id, amount: row.amount });
         try {
+          const reference = `AR-${Date.now()}-${row.user_id}`;
           const response = await axios.post(`${config.paystack.apiBaseUrl}/transaction/initialize`, {
             email: row.email,
             amount: Math.round(parseFloat(row.amount) * 100),
-            reference: `AR-${Date.now()}-${row.user_id}`,
+            reference,
+            callback_url: `${config.appUrl}/?verified=${reference}`,
             metadata: { user_id: row.user_id, auto_recharge: true },
           }, {
             headers: { Authorization: `Bearer ${config.paystack.secretKey}` },
             timeout: config.paystack.timeoutMs,
           });
-          logger.info('Auto-recharge initiated', { userId: row.user_id, ref: response.data?.data?.reference });
+          const authorizationUrl = response.data?.data?.authorization_url;
+          logger.info('Auto-recharge initiated', { userId: row.user_id, ref: reference });
+
+          // Tell the user how to complete the top-up. Credits arrive via the
+          // Paystack webhook/verify path just like a normal funding.
+          await sendAutoRechargeEmail(row.email, row.full_name, {
+            amount: row.amount, threshold: row.threshold,
+            authorizationUrl, reference,
+          });
+
+          // Record the trigger so the sweeper does not re-initialise another
+          // payment for the same low-balance pocket until the cooldown elapses.
+          await db.markAutoRechargeTriggered(row.user_id);
         } catch (err) {
           logger.error('Auto-recharge failed', { userId: row.user_id, message: err.message });
           await db.pool.query(
@@ -1125,6 +1139,7 @@ function schedulePendingOrderSweep() {
   timer.unref();
   scheduledProcessorHooks.processDueScheduledPurchases = processDueScheduledPurchases;
   scheduledProcessorHooks.computeNextRun = computeNextRun;
+  scheduledProcessorHooks.processDueAutoRecharges = processDueAutoRecharges;
   return timer;
 }
 

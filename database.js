@@ -1028,6 +1028,13 @@ async function getDueAutoRecharges(limit = 20) {
   return rows;
 }
 
+async function markAutoRechargeTriggered(userId) {
+  await pool.query(
+    `UPDATE auto_recharges SET last_triggered_at = NOW(), updated_at = NOW() WHERE user_id = $1`,
+    [userId]
+  );
+}
+
 // ── Scheduled purchases ───────────────────────────────────────────────────────
 async function createScheduledPurchase(userId, data) {
   const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = data;
@@ -1191,6 +1198,7 @@ module.exports = {
   getAutoRecharge,
   deleteAutoRecharge,
   getDueAutoRecharges,
+  markAutoRechargeTriggered,
   createScheduledPurchase,
   getScheduledPurchases,
   deleteScheduledPurchase,
