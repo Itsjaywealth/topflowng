@@ -1,9 +1,10 @@
-// TopFlowNG Service Worker v3
+// TopFlowNG Service Worker v4
 // Network-first for every /api/ request (never cached — tokens and private
-// responses are never stored). Shell-first for navigations; cache-first for
-// static assets. skipWaiting + clients.claim mean a new version takes over on
-// the next load — no stale-asset trap.
-const CACHE = 'topflowng-v3';
+// responses are never stored). Network-first for navigations too, with a
+// cache fallback, so the app shell can never go stale after a deploy.
+// Cache-first for immutable static assets only. skipWaiting + clients.claim
+// mean a new version takes over on the next load — no stale-asset trap.
+const CACHE = 'topflowng-v4';
 const STATIC = [
   '/',
   '/topflowng.html',
@@ -50,10 +51,11 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Serve shell from cache for navigations
+  // Serve shell network-first with cache fallback — deployments must never be
+  // masked by a stale cached copy of the app shell.
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      caches.match('/topflowng.html').then(r => r || fetch(e.request))
+      fetch(e.request).catch(() => caches.match('/topflowng.html'))
     );
     return;
   }
