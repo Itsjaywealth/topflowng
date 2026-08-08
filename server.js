@@ -38,8 +38,8 @@ const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
-const { queryClubkonnectOrder } = require('./services/clubkonnect');
-const { sendEmail, sendOrderStatusEmail } = require('./services/email');
+const { queryClubkonnectOrder, processClubkonnectPurchase } = require('./services/clubkonnect');
+const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
 const {
@@ -960,6 +960,35 @@ function schedulePendingOrderSweep() {
     return d;
   }
 
+  const NETWORK_MAP = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
+
+  function buildScheduledPurchaseParams(row) {
+    const requestId = `SCHED-${row.service_type.toUpperCase()}-${row.id}-${Date.now()}`;
+    const common = { UserID: config.clubkonnect.userId, APIKey: config.clubkonnect.apiKey, RequestID: requestId, CallBackURL: '' };
+    switch (row.service_type) {
+      case 'airtime': {
+        const ck = NETWORK_MAP[String(row.network || '').toUpperCase()];
+        if (!ck) throw new Error(`Unsupported network: ${row.network}`);
+        return { endpoint: config.clubkonnect.airtimeUrl, params: { ...common, MobileNetwork: ck, MobileNumber: row.phone, Amount: Number(row.amount) } };
+      }
+      case 'data': {
+        const ck = NETWORK_MAP[String(row.network || '').toUpperCase()];
+        if (!ck) throw new Error(`Unsupported network: ${row.network}`);
+        if (!row.plan_code) throw new Error('Data plan code missing');
+        return { endpoint: config.clubkonnect.dataUrl, params: { ...common, MobileNetwork: ck, DataPlan: row.plan_code, MobileNumber: row.phone, Amount: Number(row.amount) } };
+      }
+      case 'cable': {
+        if (!row.plan_code) throw new Error('Cable package code missing');
+        return { endpoint: config.clubkonnect.cableUrl, params: { ...common, CableTV: String(row.network || '').toUpperCase(), Package: row.plan_code, SmartCardNo: row.identifier, Amount: Number(row.amount) } };
+      }
+      case 'electricity': {
+        return { endpoint: config.clubkonnect.electricityUrl, params: { ...common, ElectricCompany: String(row.network || '').toUpperCase(), MeterType: 'PREPAID', MeterNumber: row.identifier, Amount: Number(row.amount) } };
+      }
+      default:
+        throw new Error(`Unsupported service type: ${row.service_type}`);
+    }
+  }
+
   async function processDueScheduledPurchases() {
     try {
       const due = await db.getDueScheduledPurchases(20);
@@ -970,12 +999,38 @@ function schedulePendingOrderSweep() {
             continue;
           }
           logger.info('Processing scheduled purchase', { id: row.id, serviceType: row.service_type });
+          const { endpoint, params } = buildScheduledPurchaseParams({ ...row, plan_code: row.plan_code });
+          const result = await processClubkonnectPurchase({
+            userId: row.user_id, requestId: params.RequestID, serviceType: row.service_type,
+            amount: Number(row.amount), description: `${row.service_type} — ${row.phone || row.identifier}`, endpoint, params,
+          });
+
           const nextRun = row.frequency === 'once' ? null : computeNextRun(row.frequency, new Date());
+          if (result.outcome === 'success') {
+            sendPurchaseEmail(row.email, row.full_name, {
+              service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
+              amount: Number(row.amount), reference: params.RequestID, newBalance: result.balance,
+            });
+          } else if (result.outcome === 'pending') {
+            sendOrderStatusEmail(row.email, row.full_name, {
+              service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
+              amount: Number(row.amount), requestId: params.RequestID, status: 'pending',
+            });
+          } else {
+            sendOrderStatusEmail(row.email, row.full_name, {
+              service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
+              amount: Number(row.amount), requestId: params.RequestID, status: 'failed',
+            });
+          }
+
+          // Advance the schedule on success/pending so it does not re-fire on
+          // every sweep. One-off schedules are recorded and then disabled.
           if (nextRun) {
             await db.recordScheduledRun(row.id, nextRun);
           } else {
             await db.disableScheduledPurchase(row.id);
           }
+          logger.info('Scheduled purchase executed', { id: row.id, outcome: result.outcome, requestId: params.RequestID });
         } catch (err) {
           logger.error('Scheduled purchase failed', { id: row.id, message: err.message });
         }
@@ -1068,6 +1123,8 @@ function schedulePendingOrderSweep() {
   firstRun.unref();
   timer = setInterval(sweep, intervalMs);
   timer.unref();
+  scheduledProcessorHooks.processDueScheduledPurchases = processDueScheduledPurchases;
+  scheduledProcessorHooks.computeNextRun = computeNextRun;
   return timer;
 }
 
@@ -1113,6 +1170,7 @@ start().catch((err) => {
   process.exit(1);
 });
 
-// Exported for tests that need to exercise the reconciliation path directly
-// against the real database (test/lifecycle.test.js).
-module.exports = { reconcileVtuOrder };
+// Exported for tests that need to exercise the reconciliation and scheduled
+// purchase paths directly against the real database (test/lifecycle.test.js).
+const scheduledProcessorHooks = {};
+module.exports = { reconcileVtuOrder, scheduledProcessorHooks };

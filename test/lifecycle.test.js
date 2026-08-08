@@ -19,7 +19,7 @@ const { Pool } = require('pg');
 const h = require('./helpers/load-idempotency-app');
 
 let db;
-const { reconcileVtuOrder } = require('../server');
+const { reconcileVtuOrder, scheduledProcessorHooks } = require('../server');
 let tokenA;  // admin session (reconcile tests)
 let tokenB;  // funded non-admin session
 let userIdB; // funded non-admin user
@@ -488,4 +488,75 @@ test('17. auto-reconcile backs off and stops after maxAttempts', async () => {
 
   list = await db.getReconcilablePendingOrders({ backoffMinutes: 0, maxAttempts: 30 });
   assert.ok(list.some((r) => r.request_id === rid2), 'backoff elapsed → reconcilable again');
+});
+
+// ── 18. scheduled purchases actually execute (wallet debit + provider + schedule) ──
+test('18. scheduled purchase executes a real purchase and advances the schedule', async () => {
+  assert.ok(scheduledProcessorHooks.processDueScheduledPurchases, 'scheduler hook present');
+  h.providerState.reset();
+  const balBefore = await walletOf(userIdB);
+
+  // Funded airtime schedule due now.
+  const sched = await db.createScheduledPurchase(userIdB, {
+    serviceType: 'airtime',
+    planCode: null,
+    phone: '08136601888',
+    identifier: null,
+    network: 'MTN',
+    amount: 2000,
+    frequency: 'daily',
+    nextRunAt: new Date(Date.now() - 1000),
+  });
+  assert.ok(sched.id, 'schedule created');
+
+  await scheduledProcessorHooks.processDueScheduledPurchases();
+
+  const after = await walletOf(userIdB);
+  assert.strictEqual(after, balBefore - 2000, 'wallet debited exactly once by scheduled purchase');
+
+  const orders = await db.getVtuOrdersByUser(userIdB, { limit: 20 });
+  const mine = orders.filter((o) => o.description === 'airtime — 08136601888');
+  assert.ok(mine.length >= 1, 'a real VTU order was created for the schedule');
+  assert.ok(mine.some((o) => o.status === 'completed' || o.status === 'pending'), 'order reached a real terminal/pending state');
+
+  // Frequency schedules should have advanced next_run_at; one-off should be disabled.
+  const oneOff = await db.createScheduledPurchase(userIdB, {
+    serviceType: 'airtime',
+    planCode: null,
+    phone: '08136601889',
+    identifier: null,
+    network: 'MTN',
+    amount: 1500,
+    frequency: 'once',
+    nextRunAt: new Date(Date.now() - 1000),
+  });
+  await scheduledProcessorHooks.processDueScheduledPurchases();
+
+  const reloadedDaily = await db.getScheduledPurchaseById(userIdB, sched.id);
+  assert.ok(new Date(reloadedDaily.next_run_at) > new Date(), 'daily schedule advanced');
+  const reloadedOnce = await db.getScheduledPurchaseById(userIdB, oneOff.id);
+  assert.strictEqual(reloadedOnce.active, false, 'once schedule disabled after running');
+  assert.ok(reloadedOnce.run_count >= 1, 'run_count incremented');
+});
+
+// ── 19. scheduled purchase skips cleanly with insufficient balance ───────────
+test('19. scheduled purchase without balance is skipped, schedule kept intact', async () => {
+  h.providerState.reset();
+  const sched = await db.createScheduledPurchase(userIdC, {
+    serviceType: 'airtime',
+    planCode: null,
+    phone: '08136602000',
+    identifier: null,
+    network: 'MTN',
+    amount: 20000,
+    frequency: 'weekly',
+    nextRunAt: new Date(Date.now() - 1000),
+  });
+
+  await scheduledProcessorHooks.processDueScheduledPurchases();
+
+  const row = await db.getScheduledPurchaseById(userIdC, sched.id);
+  assert.strictEqual(row.active, true, 'still active after insufficient-balance skip');
+  assert.strictEqual(row.run_count, 0, 'no run counted for a skipped schedule');
+  assert.strictEqual(await walletOf(userIdC), 0, 'zero-balance user never debited');
 });

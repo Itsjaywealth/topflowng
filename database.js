@@ -1079,9 +1079,27 @@ async function recordScheduledRun(id, nextRun) {
 
 async function disableScheduledPurchase(id) {
   await pool.query(
-    `UPDATE scheduled_purchases SET active = false, updated_at = NOW() WHERE id = $1`,
+    `UPDATE scheduled_purchases
+     SET active = false, last_run_at = NOW(), run_count = run_count + 1, updated_at = NOW()
+     WHERE id = $1`,
     [id]
   );
+}
+
+async function getScheduledPurchaseById(userId, id) {
+  const { rows: [row] } = await pool.query(
+    'SELECT * FROM scheduled_purchases WHERE id = $1 AND user_id = $2',
+    [id, userId]
+  );
+  return row || null;
+}
+
+async function getVtuOrdersByUser(userId, { limit = 20 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT * FROM vtu_orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit]
+  );
+  return rows;
 }
 
 // ── Financial reconciliation ────────────────────────────────────────────────
@@ -1179,4 +1197,6 @@ module.exports = {
   getDueScheduledPurchases,
   recordScheduledRun,
   disableScheduledPurchase,
+  getScheduledPurchaseById,
+  getVtuOrdersByUser,
 };
