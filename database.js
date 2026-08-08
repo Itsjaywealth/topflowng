@@ -1035,6 +1035,36 @@ async function markAutoRechargeTriggered(userId) {
   );
 }
 
+// ── Pending auto-recharge checkout sessions ──────────────────────────────────
+async function createAutoRechargeSession(userId, { reference, authorizationUrl, amount }) {
+  const { rows } = await pool.query(
+    `INSERT INTO auto_recharge_sessions (user_id, reference, authorization_url, amount)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (reference) DO NOTHING
+     RETURNING *`,
+    [userId, reference, authorizationUrl, amount]
+  );
+  return rows[0] || null;
+}
+
+async function getPendingAutoRechargeSession(userId) {
+  const { rows } = await pool.query(
+    `SELECT id, user_id, reference, authorization_url, amount, created_at
+     FROM auto_recharge_sessions
+     WHERE user_id = $1 AND status = 'pending'
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+async function completeAutoRechargeSession(reference) {
+  await pool.query(
+    `UPDATE auto_recharge_sessions SET status = 'completed', updated_at = NOW() WHERE reference = $1`,
+    [reference]
+  );
+}
+
 // ── Scheduled purchases ───────────────────────────────────────────────────────
 async function createScheduledPurchase(userId, data) {
   const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = data;
@@ -1199,6 +1229,9 @@ module.exports = {
   deleteAutoRecharge,
   getDueAutoRecharges,
   markAutoRechargeTriggered,
+  createAutoRechargeSession,
+  getPendingAutoRechargeSession,
+  completeAutoRechargeSession,
   createScheduledPurchase,
   getScheduledPurchases,
   deleteScheduledPurchase,

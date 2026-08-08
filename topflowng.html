@@ -1315,6 +1315,19 @@ a{color:var(--blue-2);text-decoration:none}
           <button class="btn-confirm" id="btn-save-ar" onclick="saveAutoRecharge()" style="flex:none;min-height:44px;padding:0 18px;font-size:13px;width:100%">Save settings</button>
           <div id="ar-msg" class="auth-error" style="margin-top:8px;display:none"></div>
         </div>
+        <div id="ar-pending-banner" style="display:none;margin-top:14px">
+          <div style="background:var(--blue-soft);border:1px solid #C9D4FF;border-radius:14px;padding:14px 16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:38px;height:38px;flex:none;border-radius:11px;background:var(--blue);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:800 16px/1 var(--display)">₦</span>
+              <div style="flex:1;min-width:0">
+                <div style="font:700 14px/1.3 var(--display);color:var(--ink)">Complete your top-up</div>
+                <div style="font:500 12px/1.5 var(--font);color:var(--graphite);margin-top:3px">An auto-recharge of <b><span id="ar-pending-amount">—</span></b> was started for your wallet. Pay to keep service running.</div>
+              </div>
+            </div>
+            <a id="ar-pending-link" href="#" target="_blank" rel="noopener"
+               style="display:inline-block;width:100%;margin-top:12px;background:var(--grad);color:#fff;text-decoration:none;text-align:center;font:700 13.5px/1 var(--display);padding:12px 0;border-radius:11px">Pay now</a>
+          </div>
+        </div>
       </div>
 
       <!-- Scheduled purchases -->
@@ -2557,6 +2570,19 @@ async function loadAutoRecharge() {
     config.style.display = s && s.active ? 'block' : 'none';
     if (s) { document.getElementById('ar-threshold').value = s.threshold; document.getElementById('ar-amount').value = s.amount; }
   } catch {}
+  loadPendingAutoRecharge();
+}
+
+async function loadPendingAutoRecharge() {
+  try {
+    const d = await api('GET', '/api/auto-recharge/pending');
+    const banner = document.getElementById('ar-pending-banner');
+    const s = d && d.session;
+    if (!s) { banner.style.display = 'none'; return; }
+    document.getElementById('ar-pending-amount').textContent = '₦' + Number(s.amount).toLocaleString();
+    document.getElementById('ar-pending-link').href = s.authorizationUrl;
+    banner.style.display = 'block';
+  } catch { /* banner stays hidden on failure */ }
 }
 function toggleAutoRecharge() {
   const on = document.getElementById('ar-toggle').checked;

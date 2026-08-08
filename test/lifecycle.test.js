@@ -563,6 +563,17 @@ test('20. auto-recharge emails a top-up link and marks the trigger', async () =>
   const info = emailArgs[2];
   assert.ok(String(info.authorizationUrl).includes('checkout.paystack.com'), 'link points at checkout');
 
+  // In-app fallback: a pending session must exist and be fetchable for the user.
+  const pending = await db.getPendingAutoRechargeSession(lowUser);
+  assert.ok(pending, 'pending auto-recharge session persisted for the user');
+  assert.ok(pending.reference.startsWith('AR-'), 'session carries the AR- reference');
+  assert.ok(pending.authorization_url.includes('checkout.paystack.com'), 'session carries the checkout link');
+  assert.strictEqual(Number(pending.amount), 2000, 'session carries the top-up amount');
+
+  // Completion clears the session (reflects the webhook credited path).
+  await db.completeAutoRechargeSession(pending.reference);
+  assert.strictEqual(await db.getPendingAutoRechargeSession(lowUser), null, 'session cleared once paid');
+
   // Cooldown recorded → a second sweep must NOT create another session.
   await scheduledProcessorHooks.processDueAutoRecharges();
   assert.strictEqual(h.autoRechargeState.initializeCalls.length, 1, 'no re-trigger within cooldown');

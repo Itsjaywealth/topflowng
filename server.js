@@ -448,6 +448,9 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
   monitorUncreditedPaystackPayment(reference);
   const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
   logger.info(`Paystack payment ${result.credited ? 'credited' : 'already credited'}: user ${payment.userId} +₦${payment.amount} [${reference}]`);
+  if (reference.startsWith('AR-')) {
+    await db.completeAutoRechargeSession(reference).catch(() => {});
+  }
   return { ...result, userId: payment.userId };
 }
 
@@ -833,6 +836,16 @@ app.get('/api/auto-recharge', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/auto-recharge/pending', authMiddleware, async (req, res) => {
+  try {
+    const session = await db.getPendingAutoRechargeSession(req.user.id);
+    res.json({ session: session || null });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch pending auto-recharge');
+  }
+});
+
 app.post('/api/auto-recharge', authMiddleware, async (req, res) => {
   try {
     const { threshold, amount } = req.body;
@@ -941,6 +954,16 @@ function schedulePendingOrderSweep() {
           });
           const authorizationUrl = response.data?.data?.authorization_url;
           logger.info('Auto-recharge initiated', { userId: row.user_id, ref: reference });
+
+          // Persist the checkout session so the user can complete the top-up from
+          // the account screen too (in-app fallback beyond the email link).
+          if (authorizationUrl) {
+            await db.createAutoRechargeSession(row.user_id, {
+              reference,
+              authorizationUrl,
+              amount: row.amount,
+            });
+          }
 
           // Tell the user how to complete the top-up. Credits arrive via the
           // Paystack webhook/verify path just like a normal funding.
