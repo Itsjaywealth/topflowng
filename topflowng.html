@@ -611,6 +611,18 @@ a{color:var(--green-strong);text-decoration:none}
 }
 .btn-logout:hover{background:#FADFE0}
 
+.sched-item{
+  display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.sched-item:last-child{border-bottom:0}
+.btn-sched-cancel{
+  flex:none;width:32px;height:32px;border-radius:10px;border:0;
+  background:var(--red-soft);color:var(--red);font:700 15px/1 var(--font);
+  cursor:pointer;transition:background .12s ease;
+}
+.btn-sched-cancel:hover{background:#FADFE0}
+
 /* ── Bottom nav ──────────────────────────────────────────────────────── */
 .bottom-nav{
   position:fixed;left:50%;transform:translateX(-50%);
@@ -1203,6 +1215,34 @@ a{color:var(--green-strong);text-decoration:none}
         <div id="pin-msg" class="auth-error" style="margin-top:8px"></div>
       </div>
 
+      <!-- Auto-recharge -->
+      <div class="pin-section" id="auto-recharge-section">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+          <div style="flex:1"><h4 style="margin-bottom:0">Auto-recharge</h4></div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ar-toggle" onchange="toggleAutoRecharge()" aria-label="Enable auto-recharge">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <p>Automatically buy airtime when your balance drops below your threshold.</p>
+        <div id="ar-config" style="display:none">
+          <div class="pin-row" style="margin-bottom:8px">
+            <input type="number" id="ar-threshold" class="field-input" placeholder="Threshold (₦)" min="100" style="min-width:0">
+            <input type="number" id="ar-amount" class="field-input" placeholder="Top-up amount (₦)" min="100" max="1000000" style="min-width:0">
+          </div>
+          <button class="btn-confirm" id="btn-save-ar" onclick="saveAutoRecharge()" style="flex:none;min-height:44px;padding:0 18px;font-size:13px;width:100%">Save settings</button>
+          <div id="ar-msg" class="auth-error" style="margin-top:8px;display:none"></div>
+        </div>
+      </div>
+
+      <!-- Scheduled purchases -->
+      <div class="pin-section" id="scheduled-section">
+        <h4>Scheduled purchases</h4>
+        <p>Recurring airtime, data or bill payments — daily, weekly or monthly.</p>
+        <div id="scheduled-list"><div class="txn-empty" style="padding:14px 0">Loading…</div></div>
+        <button class="btn-confirm" onclick="openScheduledModal()" style="flex:none;min-height:44px;padding:0 18px;font-size:13px;width:100%;margin-top:4px">Schedule a purchase</button>
+      </div>
+
       <!-- Account actions -->
       <div class="account-card">
         <div class="account-item" onclick="openFundModal()">
@@ -1492,6 +1532,45 @@ a{color:var(--green-strong);text-decoration:none}
     </div>
     <button class="btn-primary" id="btn-cp" onclick="handleChangePassword()">Update password</button>
     <button class="btn-cancel" onclick="closeChangePassword()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════ SCHEDULED PURCHASE MODAL ══════════════ -->
+<div class="modal-overlay" id="sched-modal" role="dialog" aria-modal="true" aria-labelledby="sched-modal-title">
+  <div class="modal-card">
+    <div class="modal-title" id="sched-modal-title">Schedule a purchase</div>
+    <div class="modal-sub">Recurring airtime, data or bills — charged from your wallet.</div>
+    <div id="sched-msg" class="auth-error" style="display:none"></div>
+    <div class="field"><label for="sched-service">Service</label>
+      <select id="sched-service" class="field-input" onchange="updateSchedPlan()">
+        <option value="airtime">Airtime</option>
+        <option value="data">Data</option>
+        <option value="electricity">Electricity</option>
+        <option value="cable">Cable TV</option>
+      </select>
+    </div>
+    <div class="field"><label for="sched-target">Phone number / smart card / meter</label>
+      <input type="text" id="sched-target" class="field-input" placeholder="08031234567" maxlength="20">
+    </div>
+    <div class="field"><label for="sched-amount">Amount (₦)</label>
+      <input type="number" id="sched-amount" class="field-input" placeholder="500" min="50" max="1000000">
+    </div>
+    <div class="field" id="sched-plan-field" style="display:none"><label for="sched-plan">Data plan (optional)</label>
+      <select id="sched-plan" class="field-input"></select>
+    </div>
+    <div class="field"><label for="sched-frequency">Frequency</label>
+      <select id="sched-frequency" class="field-input">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <div class="field"><label for="sched-date">First run</label>
+      <input type="datetime-local" id="sched-date" class="field-input">
+    </div>
+    <input type="hidden" id="sched-plan-code">
+    <button class="btn-primary" id="btn-sched-save" onclick="createScheduledPurchase()">Schedule payment</button>
+    <button class="btn-cancel" onclick="closeScheduledModal()">Cancel</button>
   </div>
 </div>
 
@@ -1945,7 +2024,7 @@ async function buyAirtime() {
   btn.textContent = btn.dataset.label;
   setLoading('btn-buy-airtime', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/airtime', {network, phone, amount, pin});
+    const data = await api('POST', '/api/vtu/airtime', Object.assign({network, phone, amount}, pin ? {pin} : {}));
     if (data.pending) {
       closeService('airtime');
       showReceipt({ title: 'Airtime pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -1979,7 +2058,7 @@ async function buyData() {
   btn.dataset.label = 'Buy data';
   setLoading('btn-buy-data', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/data', {network, phone, planCode: selectedDataPlan.code, amount: selectedDataPlan.price, pin});
+    const data = await api('POST', '/api/vtu/data', Object.assign({network, phone, planCode: selectedDataPlan.code, amount: selectedDataPlan.price}, pin ? {pin} : {}));
     if (data.pending) {
       closeService('data');
       showReceipt({ title: 'Data purchase pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -2014,7 +2093,7 @@ async function buyElectricity() {
   btn.dataset.label = `Pay ${fmt(amount)} electricity`;
   setLoading('btn-pay-elec', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/electricity', {disco, meterNumber, meterType, amount, pin});
+    const data = await api('POST', '/api/vtu/electricity', Object.assign({disco, meterNumber, meterType, amount}, pin ? {pin} : {}));
     if (data.pending) {
       closeService('electricity');
       showReceipt({ title: 'Electricity payment pending', sub: data.message, pending: true, lines: [['Disco', disco], ['Meter', meterNumber], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -2047,7 +2126,7 @@ async function buyCable() {
   btn.dataset.label = 'Pay subscription';
   setLoading('btn-pay-cable', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/cable', {provider, smartCardNumber, planCode: selectedCablePlan.code, amount: selectedCablePlan.price, pin});
+    const data = await api('POST', '/api/vtu/cable', Object.assign({provider, smartCardNumber, planCode: selectedCablePlan.code, amount: selectedCablePlan.price}, pin ? {pin} : {}));
     if (data.pending) {
       closeService('cable');
       showReceipt({ title: `${provider} payment pending`, sub: data.message, pending: true, lines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
@@ -2218,7 +2297,7 @@ async function buyExamPin() {
   document.getElementById('btn-buy-exam').dataset.label = 'Purchase Exam PIN';
   setLoading('btn-buy-exam', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/exam-pin', { examBody, quantity, pin });
+    const data = await api('POST', '/api/vtu/exam-pin', Object.assign({ examBody, quantity }, pin ? { pin } : {}));
     if (data.pending) {
       closeService('exam');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Exam body', examBody], ['Quantity', quantity], ['Amount', fmt(amount)], ['Reference', data.reference]] });
@@ -2274,7 +2353,7 @@ async function buyRechargePin() {
   document.getElementById('btn-buy-recharge').dataset.label = 'Generate Recharge PINs';
   setLoading('btn-buy-recharge', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/recharge-pin', { network, amount, quantity, pin });
+    const data = await api('POST', '/api/vtu/recharge-pin', Object.assign({ network, amount, quantity }, pin ? { pin } : {}));
     if (data.pending) {
       closeService('recharge');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Network', network], ['Denomination', fmt(amount)], ['Quantity', quantity], ['Reference', data.reference]] });
@@ -2373,6 +2452,8 @@ function goTab(tab) {
     loadAnalytics();
     loadPinStatus();
     loadAllBeneficiaries();
+    loadAutoRecharge();
+    loadScheduledPurchases();
   }
 }
 
@@ -2411,6 +2492,85 @@ async function saveAutoRecharge() {
     msg.textContent = 'Auto-recharge enabled!'; msg.style.display='block'; msg.style.color='var(--green)';
   } catch(e) { msg.textContent = e.message; msg.style.display='block'; msg.style.color=''; }
   setTimeout(() => { msg.style.display='none'; }, 3000);
+}
+
+// ── SCHEDULED PURCHASES ───────────────────────────────────────────────────
+async function loadScheduledPurchases() {
+  const list = document.getElementById('scheduled-list');
+  try {
+    const data = await api('GET', '/api/scheduled-purchases');
+    const rows = data.scheduled || [];
+    list.innerHTML = '';
+    if (!rows.length) {
+      list.innerHTML = '<div class="txn-empty" style="padding:14px 0">No scheduled purchases yet.</div>';
+      return;
+    }
+    rows.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'sched-item';
+      const label = (s.service_type || '').replace(/-/g, ' ') + (s.phone || s.identifier ? ' — ' + (s.phone || s.identifier) : '');
+      const next = s.next_run_at ? new Date(s.next_run_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+      item.innerHTML = `<div style="flex:1;min-width:0">
+          <div style="font:700 13.5px/1.3 var(--font);color:var(--ink);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+          <div style="font:500 12px/1.5 var(--font);color:var(--mid);margin-top:3px">Every <b style="color:var(--green-strong);text-transform:capitalize">${s.frequency}</b> · ₦${Number(s.amount).toLocaleString()} · next ${next}</div>
+        </div>
+        <button class="btn-sched-cancel" onclick="cancelScheduledPurchase(${s.id})" aria-label="Cancel scheduled purchase">✕</button>`;
+      list.appendChild(item);
+    });
+  } catch {
+    list.innerHTML = '<div class="txn-empty" style="padding:14px 0">Could not load schedules.</div>';
+  }
+}
+
+async function cancelScheduledPurchase(id) {
+  if (!confirm('Cancel this scheduled purchase?')) return;
+  try {
+    await api('DELETE', '/api/scheduled-purchases/' + id);
+    loadScheduledPurchases();
+  } catch (e) { alert(e.message || 'Could not cancel schedule'); }
+}
+
+function openScheduledModal() {
+  const m = document.getElementById('sched-modal');
+  if (m) m.classList.add('open');
+}
+function closeScheduledModal() {
+  const m = document.getElementById('sched-modal');
+  if (m) m.classList.remove('open');
+}
+async function createScheduledPurchase() {
+  const service = document.getElementById('sched-service').value;
+  const amount = parseFloat(document.getElementById('sched-amount').value);
+  const frequency = document.getElementById('sched-frequency').value;
+  const target = document.getElementById('sched-target').value.trim();
+  const nextRunAt = document.getElementById('sched-date').value;
+  const msg = document.getElementById('sched-msg');
+  if (!amount || amount < 50) { msg.textContent = 'Enter a valid amount (min ₦50)'; msg.style.display='block'; return; }
+  if (!target) { msg.textContent = 'Enter a phone number or smart card'; msg.style.display='block'; return; }
+  if (!nextRunAt) { msg.textContent = 'Pick the first run date & time'; msg.style.display='block'; return; }
+  const body = { serviceType: service, amount, frequency, nextRunAt: new Date(nextRunAt).toISOString() };
+  if (service === 'airtime' || service === 'data') body.phone = target;
+  else body.identifier = target;
+  if (service === 'data') body.planCode = document.getElementById('sched-plan').value || null;
+  try {
+    await api('POST', '/api/scheduled-purchases', body);
+    msg.textContent = 'Scheduled!'; msg.style.color = 'var(--green)'; msg.style.display='block';
+    closeScheduledModal();
+    loadScheduledPurchases();
+  } catch (e) { msg.textContent = e.message; msg.style.display='block'; }
+  setTimeout(() => { msg.style.display='none'; msg.style.color=''; }, 3000);
+}
+function updateSchedPlan() {
+  const field = document.getElementById('sched-plan-field');
+  const plans = document.getElementById('sched-plan');
+  if (!field || !plans) return;
+  const service = document.getElementById('sched-service').value;
+  field.style.display = service === 'data' ? 'block' : 'none';
+  if (service === 'data' && !plans.options.length) {
+    ['MTN1GB','MTN2GB','MTN5GB','GLO1GB','GLO2GB','AIRTEL1GB','9MOBILE1GB'].forEach(c => {
+      plans.appendChild(new Option(c, c));
+    });
+  }
 }
 
 // ── TRANSACTION SEARCH ────────────────────────────────────────────────────

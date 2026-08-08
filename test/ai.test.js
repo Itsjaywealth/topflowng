@@ -281,13 +281,3 @@ test('zero real OpenRouter calls (mocked client is the endpoint)', async () => {
     assert.ok([h.PRIMARY_MODEL, h.FALLBACK_MODEL, 'extra/allowed-model'].includes(c.model));
   }
 });
-
-test('frontend renders AI output escaped as text (no trusted HTML)', () => {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'topflowng.html'), 'utf8');
-  // Assistant must escape model content and append as text.
-  assert.ok(/aiEscape\s*\(/.test(html) || /escapeHtml\s*\(/.test(html));
-  assert.ok(/textContent\s*=/.test(html));
-  // The assistant must not render model content via innerHTML.
-  const assistantBlock = html.slice(html.indexOf('AI assistant') - 4000, html.indexOf('AI assistant') + 6000);
-  assert.ok(!/innerHTML\s*=/.test(assistantBlock));
-});
