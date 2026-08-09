@@ -1,17 +1,13 @@
-// TopFlowNG Service Worker v4
+// TopFlowNG Service Worker v5
 // Network-first for every /api/ request (never cached — tokens and private
-// responses are never stored). Network-first for navigations too, with a
-// cache fallback, so the app shell can never go stale after a deploy.
+// responses are never stored). Navigations are network-only so a previously
+// cached app shell can never hide a deployment.
 // Cache-first for immutable static assets only. skipWaiting + clients.claim
 // mean a new version takes over on the next load — no stale-asset trap.
-const CACHE = 'topflowng-v4';
+const CACHE = 'topflowng-v5';
 const STATIC = [
-  '/',
-  '/topflowng.html',
-  '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
 ];
 
 self.addEventListener('install', e => {
@@ -51,12 +47,10 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Serve shell network-first with cache fallback — deployments must never be
-  // masked by a stale cached copy of the app shell.
+  // Never cache or fall back for page navigations. An installed PWA must show
+  // the current server-rendered shell on every successful load.
   if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('/topflowng.html'))
-    );
+    e.respondWith(fetch(e.request));
     return;
   }
 
