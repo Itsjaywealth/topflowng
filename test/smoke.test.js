@@ -12,6 +12,7 @@
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
+const http = require('node:http');
 
 const h = require('./helpers/load-app');
 
@@ -39,6 +40,17 @@ test('static: whitelisted SPA shell is served', async () => {
   assert.strictEqual(res.status, 200);
   const html = await res.text();
   assert.ok(html.includes('<!DOCTYPE html>'));
+});
+
+test('canonical host: www redirects to bare domain and preserves path/query', async () => {
+  const res = await new Promise((resolve, reject) => {
+    const request = http.get(h.BASE_URL + '/account?tab=wallet', {
+      headers: { host: 'www.topflowng.com' },
+    }, resolve);
+    request.on('error', reject);
+  });
+  assert.strictEqual(res.statusCode, 308);
+  assert.strictEqual(res.headers.location, 'https://topflowng.com/account?tab=wallet');
 });
 
 test('static: admin page is served', async () => {

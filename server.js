@@ -88,6 +88,17 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// Keep one canonical origin. Railway terminates TLS and forwards the original
+// Host header, so redirect the optional www hostname before CORS, auth, static
+// assets, or API middleware can handle the request.
+app.use((req, res, next) => {
+  const hostname = (req.get('host') || '').split(':', 1)[0].toLowerCase();
+  if (hostname === 'www.topflowng.com') {
+    return res.redirect(308, `https://topflowng.com${req.originalUrl}`);
+  }
+  next();
+});
+
 app.use(cors({
   origin: config.corsOrigin,
   credentials: true,
