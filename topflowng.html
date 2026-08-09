@@ -6,7 +6,7 @@
 <title>TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Subscriptions in Nigeria</title>
 <meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and 9mobile airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#0000FF">
+<meta name="theme-color" content="#00B67A">
 <link rel="canonical" href="https://topflowng.com/">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -67,11 +67,11 @@
   --green-strong:#008F57;
   --green-soft:#E7F8F0;
   --green-softer:#F1FBF6;
-  --blue:#0000FF;
-  --blue-2:#0A33FF;
-  --blue-strong:#0B1E8A;
-  --blue-soft:#E8ECFF;
-  --blue-softer:#F4F6FF;
+  --blue:#00A868;
+  --blue-2:#00B67A;
+  --blue-strong:#008F57;
+  --blue-soft:#E7F8F0;
+  --blue-softer:#F1FBF6;
   --red:#E5484D;
   --amber:#E8912D;
   --amber-soft:#FEF3E6;
@@ -84,14 +84,14 @@
   --white:#FFFFFF;
   --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --display:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --grad:linear-gradient(135deg,#0A33FF 0%,#0000FF 55%,#0B1E8A 100%);
+  --grad:linear-gradient(135deg,#00B67A 0%,#00A868 55%,#00915B 100%);
   --grad-ink:linear-gradient(150deg,#0B1220 0%,#101A30 100%);
   --radius:18px;
   --radius-sm:12px;
   --shadow-sm:0 1px 2px rgba(11,18,32,.05),0 2px 8px rgba(11,18,32,.04);
   --shadow-md:0 8px 28px -8px rgba(11,18,32,.14);
   --shadow-lg:0 24px 60px -24px rgba(11,18,32,.28);
-  --ring:0 0 0 4px rgba(10,51,255,.16);
+  --ring:0 0 0 4px rgba(0,168,104,.14);
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -117,17 +117,17 @@ a{color:var(--blue-2);text-decoration:none}
   width:100%;min-height:52px;border:0;border-radius:14px;
   background:var(--grad);color:var(--white);
   font:700 15px/1 var(--display);letter-spacing:-.01em;
-  box-shadow:0 10px 24px -10px rgba(10,51,255,.5);
+  box-shadow:0 10px 24px -10px rgba(0,168,104,.5);
   transition:transform .12s ease,box-shadow .12s ease,opacity .12s ease;
 }
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px rgba(10,51,255,.55)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px rgba(0,168,104,.55)}
 .btn-primary:active{transform:translateY(0)}
 .btn-primary:disabled{opacity:.65;cursor:default;transform:none}
 .btn-confirm{
   width:100%;min-height:52px;border:0;border-radius:14px;
   background:var(--grad);color:var(--white);
   font:700 15px/1 var(--display);letter-spacing:-.01em;
-  box-shadow:0 10px 24px -10px rgba(10,51,255,.45);
+  box-shadow:0 10px 24px -10px rgba(0,168,104,.5);
   transition:transform .12s ease,opacity .12s ease;
 }
 .btn-confirm:hover{transform:translateY(-1px)}
@@ -177,8 +177,8 @@ a{color:var(--blue-2);text-decoration:none}
 #marketing{
   min-height:100vh;display:none;
   background:
-    radial-gradient(1100px 520px at 88% -12%,rgba(10,51,255,.18),transparent 60%),
-    radial-gradient(900px 480px at -12% 22%,rgba(11,30,138,.10),transparent 55%),
+    radial-gradient(1100px 520px at 88% -12%,rgba(0,182,122,.12),transparent 60%),
+    radial-gradient(900px 480px at -12% 22%,rgba(0,168,104,.08),transparent 55%),
     var(--mist);
 }
 #marketing.active{display:flex;flex-direction:column}
@@ -204,7 +204,7 @@ a{color:var(--blue-2);text-decoration:none}
 @media (max-width:640px){.marketing-nav-links{display:none}}
 .marketing-eyebrow{
   display:inline-block;font:700 12.5px/1 var(--font);color:var(--blue-2);
-  background:var(--blue-soft);border:1px solid #C9D4FF;border-radius:999px;
+  background:var(--blue-soft);border:1px solid #B7E6D2;border-radius:999px;
   padding:8px 14px;margin-bottom:18px;text-transform:uppercase;letter-spacing:.08em;
 }
 .marketing-main{
@@ -228,7 +228,7 @@ a{color:var(--blue-2);text-decoration:none}
   min-height:50px;padding:0 26px;border:0;border-radius:13px;
   background:var(--grad);color:var(--white);
   font:700 14.5px/1 var(--display);
-  box-shadow:0 12px 28px -12px rgba(10,51,255,.5);
+  box-shadow:0 12px 28px -12px rgba(0,168,104,.5);
   transition:transform .12s ease,box-shadow .12s ease;
 }
 .marketing-primary:hover{transform:translateY(-1px)}
@@ -238,10 +238,10 @@ a{color:var(--blue-2);text-decoration:none}
   font:700 14.5px/1 var(--display);
   box-shadow:0 10px 24px -14px rgba(11,18,32,.24);
 }
-.marketing-secondary:hover{border-color:var(--blue);box-shadow:0 14px 30px -16px rgba(11,30,138,.3)}
+.marketing-secondary:hover{border-color:var(--blue);box-shadow:0 14px 30px -16px rgba(0,168,104,.5)}
 .marketing-ledger{
   background:var(--grad);border-radius:24px;padding:26px 26px 22px;color:var(--white);
-  box-shadow:0 28px 60px -22px rgba(11,30,138,.5);position:relative;overflow:hidden;
+  box-shadow:0 28px 60px -22px rgba(0,168,104,.55);position:relative;overflow:hidden;
 }
 .marketing-ledger::after{
   content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;
@@ -308,7 +308,7 @@ a{color:var(--blue-2);text-decoration:none}
   border:1px solid var(--border);border-radius:16px;background:var(--white);
   transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
 }
-.marketing-why-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#C9D4FF}
+.marketing-why-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#B7E6D2}
 .marketing-why-card strong{font:700 15px/1.2 var(--display);color:var(--ink)}
 .marketing-why-card span{font:500 13px/1.55 var(--font);color:var(--graphite)}
 .marketing-cta{
@@ -357,13 +357,13 @@ a{color:var(--blue-2);text-decoration:none}
   padding:20px;border:1px solid var(--border);border-radius:18px;
   background:var(--white);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
 }
-.marketing-service-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#C9D4FF}
+.marketing-service-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#B7E6D2}
 .marketing-service-icon{
   width:46px;height:46px;border-radius:14px;display:inline-flex;
   align-items:center;justify-content:center;font:800 18px/1 var(--display);
 }
 .msi-1{background:var(--blue-soft);color:var(--blue)}
-.msi-2{background:#E7EEFB;color:#2F5DC0}
+.msi-2{background:#E8F5ED;color:#008F57}
 .msi-3{background:#FFF3E2;color:#E8912D}
 .msi-4{background:#F1EBFE;color:#6C3FCE}
 .msi-5{background:#E8F6F7;color:#0E8E96}
@@ -371,7 +371,7 @@ a{color:var(--blue-2);text-decoration:none}
 .marketing-service-card strong{font:700 15px/1.2 var(--display);color:var(--ink)}
 .marketing-service-card span{font:500 12.5px/1.5 var(--font);color:var(--mid)}
 .marketing-rates{
-  background:linear-gradient(160deg,#0B1E8A 0%,#0000FF 100%);
+  background:linear-gradient(160deg,#008F57 0%,#00A868 100%);
   border-top:4px solid #FFF;padding:clamp(36px,6vw,64px) clamp(20px,6vw,56px);
   color:var(--white);
 }
@@ -400,7 +400,7 @@ a{color:var(--blue-2);text-decoration:none}
    ═══════════════════════════════════════════════════════════════════ */
 #auth-screen{
   min-height:100vh;display:none;
-  background:radial-gradient(1000px 480px at 90% -10%,rgba(10,51,255,.14),transparent 55%),var(--mist);
+  background:radial-gradient(1000px 480px at 90% -10%,rgba(0,182,122,.12),transparent 55%),var(--mist);
   align-items:flex-start;justify-content:center;padding:clamp(24px,6vh,56px) 20px;
 }
 #auth-screen.active{display:flex}
@@ -475,7 +475,7 @@ a{color:var(--blue-2);text-decoration:none}
   background:var(--grad);color:var(--white);
   font:800 15px/1 var(--display);
   display:inline-flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 18px -8px rgba(10,51,255,.55);
+  box-shadow:0 8px 18px -8px rgba(0,168,104,.55);
   transition:transform .12s ease;
 }
 .header-avatar:hover{transform:translateY(-1px)}
@@ -484,7 +484,7 @@ a{color:var(--blue-2);text-decoration:none}
 .balance-panel{
   display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
   background:var(--grad);border-radius:22px;padding:24px 22px;color:var(--white);
-  box-shadow:0 18px 40px -18px rgba(10,51,255,.5);
+  box-shadow:0 18px 40px -18px rgba(0,168,104,.5);
   position:relative;overflow:hidden;
 }
 .hero-slide{display:none;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;width:100%}
@@ -657,7 +657,7 @@ a{color:var(--blue-2);text-decoration:none}
 }
 .acct-hero::after{
   content:"";position:absolute;right:-50px;top:-60px;width:200px;height:200px;
-  background:radial-gradient(circle,rgba(10,51,255,.3),transparent 62%);border-radius:50%;
+  background:radial-gradient(circle,rgba(0,182,122,.3),transparent 62%);border-radius:50%;
 }
 .acct-hero-avatar{
   width:52px;height:52px;border-radius:14px;
@@ -829,7 +829,7 @@ a{color:var(--blue-2);text-decoration:none}
   padding:15px 16px;cursor:pointer;
   transition:border-color .12s ease,background .12s ease;
 }
-.data-plan:hover{border-color:#C9D4FF}
+.data-plan:hover{border-color:#B7E6D2}
 .data-plan.selected{border-color:var(--blue);background:var(--blue-soft)}
 .plan-name{font:600 14px/1.3 var(--font);color:var(--ink)}
 .plan-price{font:800 14px/1 var(--display);color:var(--blue-2)}
@@ -905,7 +905,7 @@ a{color:var(--blue-2);text-decoration:none}
   width:74px;height:74px;margin:0 auto 20px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   background:var(--grad);color:var(--white);
-  font:800 36px/1 var(--display);box-shadow:0 16px 34px -14px rgba(10,51,255,.5);
+  font:800 36px/1 var(--display);box-shadow:0 16px 34px -14px rgba(0,168,104,.5);
   transition:transform .3s cubic-bezier(.2,1.6,.4,1);
 }
 .receipt-check.pop{transform:scale(1.12)}
@@ -940,7 +940,7 @@ a{color:var(--blue-2);text-decoration:none}
 .btn-close-receipt{
   width:100%;min-height:50px;border:0;border-radius:13px;
   background:var(--grad);color:var(--white);font:700 14px/1 var(--display);
-  box-shadow:0 10px 24px -10px rgba(10,51,255,.45);
+  box-shadow:0 10px 24px -10px rgba(0,168,104,.5);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1012,7 +1012,7 @@ a{color:var(--blue-2);text-decoration:none}
 <section id="marketing" aria-label="TopFlowNG introduction">
   <nav class="marketing-nav">
     <div class="marketing-brand">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="mlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#mlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="mlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#mlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
       TopFlow<span>NG</span>
     </div>
     <div class="marketing-nav-links" id="marketing-nav-links">
@@ -1119,7 +1119,7 @@ a{color:var(--blue-2);text-decoration:none}
     <div class="marketing-footer-cols">
       <div class="marketing-footer-brand">
         <div class="marketing-brand">
-          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="flg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#flg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="flg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#flg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
           TopFlow<span>NG</span>
         </div>
         <p>Nigeria's most user-friendly platform for airtime, data, electricity and cable TV payments.</p>
@@ -1149,7 +1149,7 @@ a{color:var(--blue-2);text-decoration:none}
   <div>
   <div class="auth-header">
     <div class="auth-logo">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="alg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#alg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="alg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#alg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
       TopFlowNG
     </div>
     <div class="auth-tagline">Pay for the things you use, with your wallet in view.</div>
@@ -1240,7 +1240,7 @@ a{color:var(--blue-2);text-decoration:none}
     <div class="workspace-header">
       <div class="workspace-topline">
         <div class="wordmark">
-          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="wlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A33FF"/><stop offset="1" stop-color="#0B1E8A"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#wlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="wlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#wlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
           TopFlow<span>NG</span>
         </div>
         <div class="workspace-profile">
@@ -1449,7 +1449,7 @@ a{color:var(--blue-2);text-decoration:none}
           <div id="ar-msg" class="auth-error" style="margin-top:8px;display:none"></div>
         </div>
         <div id="ar-pending-banner" style="display:none;margin-top:14px">
-          <div style="background:var(--blue-soft);border:1px solid #C9D4FF;border-radius:14px;padding:14px 16px">
+          <div style="background:var(--blue-soft);border:1px solid #B7E6D2;border-radius:14px;padding:14px 16px">
             <div style="display:flex;align-items:center;gap:12px">
               <span style="width:38px;height:38px;flex:none;border-radius:11px;background:var(--blue);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:800 16px/1 var(--display)">₦</span>
               <div style="flex:1;min-width:0">
@@ -1457,7 +1457,7 @@ a{color:var(--blue-2);text-decoration:none}
                 <div style="font:500 12px/1.5 var(--font);color:var(--graphite);margin-top:3px">An auto-recharge of <b><span id="ar-pending-amount">—</span></b> was started for your wallet. Pay to keep service running.</div>
               </div>
               <button id="ar-pending-dismiss" onclick="dismissPendingAutoRecharge()" title="Dismiss"
-                      style="flex:none;width:30px;height:30px;border-radius:9px;border:1px solid #C9D4FF;background:#fff;color:var(--graphite);cursor:pointer;font:700 15px/1 var(--display)">×</button>
+                      style="flex:none;width:30px;height:30px;border-radius:9px;border:1px solid #B7E6D2;background:#fff;color:var(--graphite);cursor:pointer;font:700 15px/1 var(--display)">×</button>
             </div>
             <a id="ar-pending-link" href="#" target="_blank" rel="noopener"
                style="display:inline-block;width:100%;margin-top:12px;background:var(--grad);color:#fff;text-decoration:none;text-align:center;font:700 13.5px/1 var(--display);padding:12px 0;border-radius:11px">Pay now</a>
