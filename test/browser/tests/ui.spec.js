@@ -145,12 +145,30 @@ test.describe('logged-in app shell', () => {
       await page.locator('.service-tile').first().waitFor({ state: 'visible' });
       await page.evaluate((k) => openService(k), key);
       await expect(page.locator(`#svc-${key}`)).toHaveClass(/open/);
+      await expect(page.locator(`#svc-${key}`)).toHaveAttribute('role', 'dialog');
+      await expect(page.locator(`#svc-${key}`)).toHaveAttribute('aria-hidden', 'false');
       await expect(page.locator(`#svc-${key} .svc-title`)).toHaveText(title);
+      await expect(page.locator(`#svc-${key} .svc-back`)).toBeFocused();
       // back returns to dashboard
       await page.locator(`#svc-${key} .svc-back`).click();
       await expect(page.locator(`#svc-${key}`)).not.toHaveClass(/open/);
+      await expect(page.locator(`#svc-${key}`)).toHaveAttribute('aria-hidden', 'true');
     });
   }
+
+  test('button-like controls support keyboard activation and Escape closes service panels', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    await page.locator('.service-tile').first().click();
+    await expect(page.locator('#svc-airtime .svc-back')).toBeFocused();
+    const glo = page.locator('#svc-airtime .network-chip', { hasText: 'Glo' });
+    await glo.focus();
+    await glo.press('Enter');
+    await expect(glo).toHaveClass(/selected/);
+    await expect(glo).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#svc-airtime')).toHaveAttribute('aria-hidden', 'true');
+  });
 });
 
 test.describe('admin login screen', () => {

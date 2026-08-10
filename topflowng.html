@@ -1012,8 +1012,14 @@ a{color:var(--blue-2);text-decoration:none}
   .receipt-card,.modal-card,.panel-card{border-radius:24px;transform:translateY(14px)}
   .receipt-overlay.open .receipt-card,.modal-overlay.open .modal-card,
   .panel-overlay.open .panel-card{transform:translateY(0)}
-  /* ai removed */
-    box-shadow:0 30px 80px -30px rgba(11,18,32,.4)}
+}
+@media (min-width:1280px){
+  .bottom-nav{
+    left:max(18px,calc(50% - 710px));top:196px;bottom:auto;
+    transform:none;width:112px;grid-template-columns:1fr;
+    border-radius:16px;padding:8px;background:var(--white);
+  }
+  .nav-item{padding:12px 6px}
 }
 
 /* ── 2026 public-site refinement ─────────────────────────────────────
@@ -1576,10 +1582,10 @@ a{color:var(--blue-2);text-decoration:none}
 <!-- ══════════════ SERVICE SCREENS ══════════════ -->
 
 <!-- Airtime -->
-<div class="service-screen" id="svc-airtime">
+<div class="service-screen" id="svc-airtime" role="dialog" aria-modal="true" aria-labelledby="svc-airtime-title" aria-hidden="true">
   <div class="svc-header">
     <button class="svc-back" onclick="closeService('airtime')">← Back</button>
-    <div class="svc-title">Buy airtime</div>
+    <div class="svc-title" id="svc-airtime-title">Buy airtime</div>
   </div>
   <div class="svc-body">
     <div id="svc-airtime-error" class="svc-error" role="alert"></div>
@@ -1612,10 +1618,10 @@ a{color:var(--blue-2);text-decoration:none}
 </div>
 
 <!-- Data -->
-<div class="service-screen" id="svc-data">
+<div class="service-screen" id="svc-data" role="dialog" aria-modal="true" aria-labelledby="svc-data-title" aria-hidden="true">
   <div class="svc-header">
     <button class="svc-back" onclick="closeService('data')">← Back</button>
-    <div class="svc-title">Buy data</div>
+    <div class="svc-title" id="svc-data-title">Buy data</div>
   </div>
   <div class="svc-body">
     <div id="svc-data-error" class="svc-error" role="alert"></div>
@@ -1640,10 +1646,10 @@ a{color:var(--blue-2);text-decoration:none}
 </div>
 
 <!-- Electricity -->
-<div class="service-screen" id="svc-electricity">
+<div class="service-screen" id="svc-electricity" role="dialog" aria-modal="true" aria-labelledby="svc-electricity-title" aria-hidden="true">
   <div class="svc-header">
     <button class="svc-back" onclick="closeService('electricity')">← Back</button>
-    <div class="svc-title">Pay electricity</div>
+    <div class="svc-title" id="svc-electricity-title">Pay electricity</div>
   </div>
   <div class="svc-body">
     <div id="svc-electricity-error" class="svc-error" role="alert"></div>
@@ -1683,10 +1689,10 @@ a{color:var(--blue-2);text-decoration:none}
 </div>
 
 <!-- Cable TV -->
-<div class="service-screen" id="svc-cable">
+<div class="service-screen" id="svc-cable" role="dialog" aria-modal="true" aria-labelledby="svc-cable-title" aria-hidden="true">
   <div class="svc-header">
     <button class="svc-back" onclick="closeService('cable')">← Back</button>
-    <div class="svc-title">Pay cable TV</div>
+    <div class="svc-title" id="svc-cable-title">Pay cable TV</div>
   </div>
   <div class="svc-body">
     <div id="svc-cable-error" class="svc-error" role="alert"></div>
@@ -1710,10 +1716,10 @@ a{color:var(--blue-2);text-decoration:none}
 </div>
 
 <!-- Exam PINs -->
-<div class="service-screen" id="svc-exam">
+<div class="service-screen" id="svc-exam" role="dialog" aria-modal="true" aria-labelledby="svc-exam-title" aria-hidden="true">
   <div class="svc-header">
     <button class="svc-back" onclick="closeService('exam')">← Back</button>
-    <div class="svc-title">Buy Exam PINs</div>
+    <div class="svc-title" id="svc-exam-title">Buy Exam PINs</div>
   </div>
   <div class="svc-body">
     <div id="svc-exam-error" class="svc-error" role="alert"></div>
@@ -1742,10 +1748,10 @@ a{color:var(--blue-2);text-decoration:none}
 </div>
 
 <!-- Recharge Cards -->
-<div class="service-screen" id="svc-recharge">
+<div class="service-screen" id="svc-recharge" role="dialog" aria-modal="true" aria-labelledby="svc-recharge-title" aria-hidden="true">
   <div class="svc-header">
     <button class="svc-back" onclick="closeService('recharge')">← Back</button>
-    <div class="svc-title">Recharge Cards</div>
+    <div class="svc-title" id="svc-recharge-title">Recharge Cards</div>
   </div>
   <div class="svc-body">
     <div id="svc-recharge-error" class="svc-error" role="alert"></div>
@@ -1881,6 +1887,7 @@ let selectedDataPlan = null;
 let selectedCablePlan = null;
 let resetToken = null;
 let pendingPaymentReference = null;
+let serviceReturnFocus = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 async function api(method, path, body, noAuth) {
@@ -2231,18 +2238,33 @@ let txnFilter = 'all';
 
 // ── SERVICE SCREENS ───────────────────────────────────────────────────────
 function openService(name) {
-  document.getElementById('svc-' + name).classList.add('open');
+  const screen = document.getElementById('svc-' + name);
+  serviceReturnFocus = document.activeElement;
+  screen.classList.add('open');
+  screen.setAttribute('aria-hidden', 'false');
+  screen.querySelectorAll('[role="button"].selected').forEach(control => control.setAttribute('aria-pressed', 'true'));
+  document.body.style.overflow = 'hidden';
+  window.setTimeout(() => screen.querySelector('.svc-back')?.focus(), 220);
 }
 
 function closeService(name) {
-  document.getElementById('svc-' + name).classList.remove('open');
+  const screen = document.getElementById('svc-' + name);
+  screen.classList.remove('open');
+  screen.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
   const errEl = document.getElementById('svc-'+name+'-error');
   if (errEl) errEl.classList.remove('show');
+  if (serviceReturnFocus && typeof serviceReturnFocus.focus === 'function') serviceReturnFocus.focus();
+  serviceReturnFocus = null;
 }
 
 function selectNet(el, group) {
-  el.closest('.network-chips').querySelectorAll('.network-chip').forEach(c => c.classList.remove('selected'));
+  el.closest('.network-chips').querySelectorAll('.network-chip').forEach(c => {
+    c.classList.remove('selected');
+    c.setAttribute('aria-pressed', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-pressed', 'true');
 }
 
 function getSelected(container) {
@@ -2251,8 +2273,12 @@ function getSelected(container) {
 }
 
 function selectAmt(el, inputId) {
-  el.closest('.amount-presets').querySelectorAll('.amount-preset').forEach(p => p.classList.remove('selected'));
+  el.closest('.amount-presets').querySelectorAll('.amount-preset').forEach(p => {
+    p.classList.remove('selected');
+    p.setAttribute('aria-pressed', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-pressed', 'true');
   document.getElementById(inputId).value = parseFloat(el.textContent.replace(/[₦,]/g, ''));
 }
 
@@ -2985,6 +3011,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('pin-prompt-input');
   if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitPinPrompt(); });
 });
+
+document.addEventListener('keydown', e => {
+  const buttonLike = e.target && typeof e.target.closest === 'function'
+    ? e.target.closest('[role="button"][tabindex="0"]')
+    : null;
+  if (buttonLike && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    buttonLike.click();
+    return;
+  }
+  if (e.key === 'Escape') {
+    const openServiceScreen = document.querySelector('.service-screen.open');
+    if (openServiceScreen) closeService(openServiceScreen.id.replace('svc-', ''));
+  }
+}, true);
 
 
 // ── BENEFICIARIES ─────────────────────────────────────────────────────────────
