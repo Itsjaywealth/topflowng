@@ -58,9 +58,6 @@ router.get('/plans', (_req, res) => {
   res.json(getCatalog());
 });
 
-// ── VTU — Pricing catalog (server-side) ────────────────────────────────────
-router.get('/plans', (_req, res) => { res.json(getCatalog()); });
-
 // ── VTU — Airtime ────────────────────────────────────────────────────────────
 router.post('/airtime', authMiddleware, apiLimiter, validate(airtimeSchema), withTracing('vtu.airtime', async (req, res) => {
   try {
