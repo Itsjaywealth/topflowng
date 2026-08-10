@@ -1015,6 +1015,62 @@ a{color:var(--blue-2);text-decoration:none}
   /* ai removed */
     box-shadow:0 30px 80px -30px rgba(11,18,32,.4)}
 }
+
+/* ── 2026 public-site refinement ─────────────────────────────────────
+   A restrained retail-finance surface: true white, ruled sections,
+   square controls and open layouts instead of decorative SaaS effects. */
+#marketing{background:var(--white)}
+.marketing-nav{max-width:1280px;width:100%;margin:0 auto;padding:18px clamp(20px,5vw,64px);border-bottom:1px solid var(--border)}
+.marketing-brand{color:var(--green-strong)}
+.marketing-brand span{color:var(--green-strong)}
+.marketing-brand .logo-mark{display:none}
+.marketing-login{border-radius:7px;padding:11px 18px}
+.marketing-create{border:1px solid var(--green);border-radius:7px;background:var(--green);color:#fff;font:700 13px/1 var(--font);padding:12px 18px}
+.marketing-main{width:100%;max-width:1280px;margin:0 auto;padding:clamp(56px,8vw,104px) clamp(20px,5vw,64px);background:#fff}
+.marketing-copy{max-width:640px}
+.marketing-copy h1{font-size:clamp(42px,6vw,76px);line-height:1.02;letter-spacing:-.055em}
+.marketing-copy>p{max-width:590px;font-size:16px;line-height:1.65}
+.marketing-eyebrow{display:none}
+.marketing-primary,.marketing-secondary{border-radius:7px;box-shadow:none}
+.marketing-primary{background:var(--green);border-color:var(--green)}
+.marketing-primary:hover,.marketing-secondary:hover{transform:none;box-shadow:none}
+.marketing-ledger{background:#fff;color:var(--ink);border:1px solid var(--border);border-radius:8px;box-shadow:0 22px 55px -40px rgba(11,18,32,.45)}
+.marketing-ledger::after{display:none}
+.preview-top strong,.preview-balance,.ledger-row strong{color:var(--ink)}
+.preview-top button{background:var(--green);border-color:var(--green);border-radius:6px;color:#fff}
+.preview-label,.ledger-cap,.ledger-note{color:var(--mid)}
+.ledger-row{color:var(--graphite);border-top-color:var(--border)}
+.ledger-row .preview-credit{color:var(--green-strong)}
+.marketing-about,.marketing-services,.marketing-how,.marketing-why,.marketing-rates{padding:clamp(48px,7vw,88px) max(clamp(20px,5vw,64px),calc((100vw - 1280px)/2 + 64px));background:#fff}
+.marketing-about,.marketing-services,.marketing-how,.marketing-why,.marketing-rates{border-top:1px solid var(--border)}
+.marketing-about-stats{border-top:1px solid var(--border);border-bottom:1px solid var(--border);gap:0}
+.marketing-stat{border:0;border-right:1px solid var(--border);border-radius:0;background:#fff;padding:24px 18px}
+.marketing-stat:last-child{border-right:0}
+.marketing-stat span,.marketing-footer-head{letter-spacing:.02em;text-transform:none}
+.marketing-services-grid{gap:0;border-top:1px solid var(--border);border-left:1px solid var(--border)}
+.marketing-service-card{border:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;background:#fff;padding:24px;box-shadow:none}
+.marketing-service-card:hover,.marketing-why-card:hover{transform:none;box-shadow:none;border-color:var(--border);background:var(--green-softer)}
+.marketing-service-icon,.why-icon{border-radius:7px;background:transparent;border:1px solid #B7E6D2}
+.marketing-how ol{gap:0;border-top:1px solid var(--border)}
+.marketing-how li{border:0;border-bottom:1px solid var(--border);border-radius:0;background:#fff;padding:24px 20px}
+.marketing-how li::before{border-radius:50%;background:var(--green);color:#fff}
+.marketing-why-grid{gap:0;border-top:1px solid var(--border);border-left:1px solid var(--border)}
+.marketing-why-card{border:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;background:#fff;padding:24px}
+.marketing-rates .marketing-section-head h2{color:var(--ink)}
+.marketing-rates .marketing-section-head p{color:var(--graphite)}
+.marketing-rate-table{gap:0;border-top:1px solid var(--border);border-left:1px solid var(--border)}
+.marketing-rate-card{background:#fff;border:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;color:var(--ink)}
+.marketing-rate-card .rate-row{border-top-color:var(--border);color:var(--graphite)}
+.marketing-rate-card .rate-row strong{color:var(--ink)}
+.marketing-cta{background:var(--ink);max-width:1280px;width:calc(100% - 40px);margin:48px auto;border-radius:8px}
+.marketing-cta .marketing-primary{border-radius:7px}
+@media(max-width:720px){
+  .marketing-nav{padding:14px 20px}.marketing-create{display:none}
+  .marketing-main{padding-top:52px}.marketing-copy h1{font-size:44px}
+  .marketing-about-stats{grid-template-columns:1fr 1fr}.marketing-stat:nth-child(2){border-right:0}
+  .marketing-stat:nth-child(-n+2){border-bottom:1px solid var(--border)}
+  .marketing-cta{width:calc(100% - 32px);margin:32px 16px}
+}
 </style>
 </head>
 <body>
@@ -1028,22 +1084,20 @@ a{color:var(--blue-2);text-decoration:none}
       TopFlow<span>NG</span>
     </div>
     <div class="marketing-nav-links" id="marketing-nav-links">
-      <a href="#about">About</a>
       <a href="#services">Services</a>
-      <a href="#how">How it works</a>
-      <a href="#why">Why TopFlowNG</a>
       <a href="#rates">Rates</a>
+      <a href="#how">How it works</a>
+      <button type="button" class="marketing-create" onclick="openAuthFromMarketing('register')">Create free account</button>
     </div>
-    <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Log in</button>
+    <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Sign in</button>
   </nav>
   <main class="marketing-main">
     <div class="marketing-copy">
-      <p class="marketing-eyebrow">Airtime · Data · Bills in Naira</p>
       <h1>Recharge any network at reseller prices.</h1>
-      <p>MTN, Glo, Airtel and 9mobile airtime and data — plus electricity and cable TV bills — paid from one Naira wallet, at rates below retail.</p>
+      <p>Buy airtime, data and everyday bills from one funded wallet. Clear naira pricing and a receipt for every completed purchase.</p>
       <div class="marketing-actions">
-        <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Create free account</button>
-        <button type="button" class="marketing-secondary" onclick="openAuthFromMarketing('login')">Log in to your wallet</button>
+        <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Get started</button>
+        <a class="marketing-secondary" href="#rates">View rates</a>
       </div>
     </div>
     <aside class="marketing-ledger" aria-label="TopFlowNG wallet preview">
@@ -1093,14 +1147,14 @@ a{color:var(--blue-2);text-decoration:none}
   </section>
   <section class="marketing-why" id="why" aria-labelledby="why-heading">
     <div class="marketing-section-head">
-      <h2 id="why-heading">Rates you'd normally need a reseller account to get.</h2>
-      <p>Below-retail prices on every airtime and data purchase, with the safety of a Paystack-backed wallet.</p>
+      <h2 id="why-heading">Built for repeat purchases, not one-off checkout forms.</h2>
+      <p>Fund once, protect purchases with a transaction PIN, and keep each result in one searchable history.</p>
     </div>
     <div class="marketing-why-grid">
-      <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.9 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r=".8" fill="currentColor"/></svg></span><strong>Cheapest rates</strong><span>Every airtime &amp; data purchase priced below retail.</span></div>
+      <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.9 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r=".8" fill="currentColor"/></svg></span><strong>Visible pricing</strong><span>See the naira amount before you approve a purchase.</span></div>
       <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg></span><strong>Instant delivery</strong><span>Auto-processed and delivered in seconds.</span></div>
       <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><path d="M12 14.5v2"/></svg></span><strong>Secure wallet</strong><span>Topped up by Paystack; PIN-protected transactions.</span></div>
-      <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="10" r="5"/><circle cx="15.5" cy="13" r="4.5"/><path d="M3 20a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6M15 20a4 4 0 0 1 4-4"/></svg></span><strong>Small budget friendly</strong><span>Top up as low as ₦100 on your schedule.</span></div>
+      <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="10" r="5"/><circle cx="15.5" cy="13" r="4.5"/><path d="M3 20a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6M15 20a4 4 0 0 1 4-4"/></svg></span><strong>Useful at any size</strong><span>Buy a small top-up or schedule the bills you repeat.</span></div>
       <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><rect x="3.5" y="13" width="4" height="5" rx="1.5"/><rect x="16.5" y="13" width="4" height="5" rx="1.5"/><path d="M20 18h1a1 1 0 0 1 0 2h-1M4 18H3a1 1 0 0 0 0 2h1M12 21v-1"/></svg></span><strong>Support that answers</strong><span>A real team that reads your feedback.</span></div>
       <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M4 9h16M9 2.5v5M15 2.5v5"/></svg></span><strong>Easy to use</strong><span>A simple, flexible design you learn in seconds.</span></div>
     </div>
@@ -1108,13 +1162,13 @@ a{color:var(--blue-2);text-decoration:none}
   <section class="marketing-rates" id="rates" aria-labelledby="rates-heading">
     <div class="marketing-section-head">
       <h2 id="rates-heading">Sample rates you'll pay today.</h2>
-      <p>Every purchase is priced below retail — the more you top up, the more you save.</p>
+      <p>Examples from the same server-side catalogue used at checkout.</p>
     </div>
     <div class="marketing-rate-table" aria-label="Sample network rates">
-      <div class="marketing-rate-card"><div class="rate-network">MTN</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦10</strong></div><div class="rate-row"><span>1GB data</span><strong>₦300</strong></div><div class="rate-row"><span>2GB data</span><strong>₦600</strong></div></div></div>
-      <div class="marketing-rate-card"><div class="rate-network">Glo</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦10</strong></div><div class="rate-row"><span>1GB data</span><strong>₦280</strong></div><div class="rate-row"><span>2GB data</span><strong>₦560</strong></div></div></div>
-      <div class="marketing-rate-card"><div class="rate-network">Airtel</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦8</strong></div><div class="rate-row"><span>1GB data</span><strong>₦290</strong></div><div class="rate-row"><span>2GB data</span><strong>₦580</strong></div></div></div>
-      <div class="marketing-rate-card"><div class="rate-network">9mobile</div><div class="rate-list"><div class="rate-row"><span>₦500 airtime</span><strong>saves ₦8</strong></div><div class="rate-row"><span>1GB data</span><strong>₦320</strong></div><div class="rate-row"><span>2GB data</span><strong>₦640</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">MTN</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦350</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦600</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">Glo</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦400</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦650</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">Airtel</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦350</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦600</strong></div></div></div>
+      <div class="marketing-rate-card"><div class="rate-network">9mobile</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦400</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦700</strong></div></div></div>
     </div>
   </section>
   <section class="marketing-cta" aria-labelledby="cta-heading">
@@ -2074,7 +2128,7 @@ async function checkPendingOrders() {
     if (data.hasPending && data.orders.length) {
       const text = document.getElementById('glance-pending-text');
       const n = data.orders.length;
-      const amt = '₦' + fmt(data.orders.reduce((s, o) => s + Number(o.amount || 0), 0));
+      const amt = fmt(data.orders.reduce((s, o) => s + Number(o.amount || 0), 0));
       text.textContent = n === 1
         ? `One purchase of ${amt} is awaiting provider confirmation. Your wallet has not been debited — it resolves automatically.`
         : `${n} purchases (${amt} total) are awaiting provider confirmation. Your wallet has not been debited — they resolve automatically.`;
