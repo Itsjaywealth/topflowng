@@ -24,7 +24,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@sentry/node": "^8.0.0",
+    "@sentry/node": "^10.70.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
