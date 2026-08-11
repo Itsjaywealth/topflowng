@@ -343,7 +343,7 @@ async function acquireVtuIdempotency({ requestId, userId, serviceType, amount, d
          (request_id, user_id, service_type, amount, description, idempotency_key,
           request_fingerprint, idempotency_key_created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-       ON CONFLICT (request_id) DO NOTHING
+       ON CONFLICT DO NOTHING
        RETURNING request_id`,
       [requestId, userId, serviceType, amount, description, idempotencyKey, requestFingerprint]
     );
