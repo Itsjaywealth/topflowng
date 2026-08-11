@@ -114,8 +114,52 @@ function sendPurchaseEmail(userEmail, userName, { service, description, amount, 
   }).catch(e => logger.error('Purchase email error', { message: e.message }));
 }
 
-function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authorizationUrl, reference }) {
-  const formatted = `₦${parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompany }) {
+  const fmt = (n) => `₦${parseFloat(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const rows = (invoice.items || []).map(item => `
+    <tr>
+      <td style="padding:10px 8px;border-bottom:1px solid #EEF2F6">${item.desc || 'Item'}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #EEF2F6;text-align:center">${item.qty || 1}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #EEF2F6;text-align:right">${fmt(item.price)}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #EEF2F6;text-align:right;font-weight:600">${fmt((item.qty || 1) * (item.price || 0))}</td>
+    </tr>`).join('');
+  const due = invoice.due ? `<tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Due date</td><td style="padding:8px 0;font-size:13px;text-align:right">${new Date(invoice.due).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>` : '';
+  sendEmail({
+    to: clientEmail,
+    subject: `Invoice #${invoice.id} from ${ownerCompany || 'Your business'} — ${fmt(invoice.total)}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+        <h2 style="color:#0E2235;margin:0 0 4px">Invoice #${invoice.id}</h2>
+        <p style="margin:0;color:#6B7280;font-size:13px">From ${ownerName || ownerCompany || 'Your business'}</p>
+        <p style="margin:4px 0 20px;color:#6B7280;font-size:13px">To ${client.name || invoice.clientName}</p>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;font-size:12px;color:#6B7280;padding:8px;border-bottom:2px solid #E5E7EB">Description</th>
+              <th style="text-align:center;font-size:12px;color:#6B7280;padding:8px;border-bottom:2px solid #E5E7EB">Qty</th>
+              <th style="text-align:right;font-size:12px;color:#6B7280;padding:8px;border-bottom:2px solid #E5E7EB">Price</th>
+              <th style="text-align:right;font-size:12px;color:#6B7280;padding:8px;border-bottom:2px solid #E5E7EB">Amount</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <table style="width:100%;border-collapse:collapse;margin-top:12px">
+          <tr><td style="padding:6px 8px;color:#6B7280;font-size:13px">Subtotal</td><td style="padding:6px 8px;font-size:13px;text-align:right">${fmt(invoice.subtotal)}</td></tr>
+          <tr><td style="padding:6px 8px;color:#6B7280;font-size:13px">VAT (7.5%)</td><td style="padding:6px 8px;font-size:13px;text-align:right">${fmt(invoice.vat)}</td></tr>
+          <tr>
+            <td style="padding:10px 8px;border-top:2px solid #E5E7EB;font-weight:700;color:#0E2235">Total</td>
+            <td style="padding:10px 8px;border-top:2px solid #E5E7EB;font-weight:700;color:#0E2235;text-align:right">${fmt(invoice.total)}</td>
+          </tr>
+          ${due}
+        </table>
+        ${invoice.notes ? `<p style="margin:16px 0 0;color:#374151;font-size:13px">${invoice.notes}</p>` : ''}
+        <p style="font-size:12px;color:#9CA3AF;margin:24px 0 0">This invoice was sent from TopFlowNG BizFlow. If you have any questions, reply to this email.</p>
+      </div>
+    `,
+  });
+}
+
+function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authorizationUrl, reference }) {  const formatted = `₦${parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
   const thresh = `₦${parseFloat(threshold).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
   sendEmail({
     to: userEmail,
@@ -143,4 +187,4 @@ function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authori
   }).catch(e => logger.error('Auto-recharge email error', { message: e.message }));
 }
 
-module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail };
+module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail };

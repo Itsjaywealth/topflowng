@@ -123,12 +123,17 @@ installMock('services/email.js', {
   async sendPurchaseEmail() {},
   async sendOrderStatusEmail() {},
   async sendAutoRechargeEmail(...args) { emailState.autoRechargeCalls.push(args); },
+  async sendInvoiceEmail(...args) { emailState.invoiceCalls.push(args); },
 });
 
 // ── Mock axios (never dials Paystack) ────────────────────────────────────────
 const emailState = {
   autoRechargeCalls: [],
-  reset() { emailState.autoRechargeCalls = []; },
+  invoiceCalls: [],
+  reset() {
+    emailState.autoRechargeCalls = [];
+    emailState.invoiceCalls = [];
+  },
 };
 const realAxios = require('axios');
 const mockAxios = {

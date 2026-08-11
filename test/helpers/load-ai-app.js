@@ -84,6 +84,7 @@ installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},
   async sendOrderStatusEmail() {},
+  async sendInvoiceEmail() {},
 });
 
 // ── Mock OpenRouter (scriptable — the ONLY OpenRouter contact point) ────────

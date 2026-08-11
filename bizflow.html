@@ -814,6 +814,7 @@ function renderInvoices() {
       <td>
         <div style="display:flex;gap:4px">
           ${inv.status !== 'paid' ? `<button class="btn btn-sm" style="background:#ECFDF5;color:#065F46;border:0" onclick="markPaid('${inv.id}')">Mark paid</button>` : ''}
+          ${inv.status !== 'paid' ? `<button class="btn btn-sm" style="background:#EFF6FF;color:#1D4ED8;border:0" onclick="sendInvoice('${inv.id}', this)" aria-label="Send by email"><svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>Send</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="deleteInvoice('${inv.id}')" aria-label="Delete"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
         </div>
       </td>
@@ -898,6 +899,37 @@ function saveInvoice(status) {
 function markPaid(id) {
   const inv = invoices.find(i => String(i.id) === String(id));
   if (inv) { inv.status = 'paid'; save(); renderInvoices(); renderDashboard(); }
+}
+
+async function sendInvoice(id, btn) {
+  const inv = invoices.find(i => String(i.id) === String(id));
+  if (!inv) return;
+  const client = clients.find(c => String(c.id) === String(inv.clientId));
+  if (!client?.email) {
+    alert('Add an email to this client first (CRM → Edit client).');
+    return;
+  }
+  if (btn) {
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.textContent = 'Sending…';
+  }
+  try {
+    await api('POST', '/api/bizflow/invoices/' + encodeURIComponent(id) + '/send');
+    inv.status = 'sent';
+    save();
+    renderInvoices();
+    renderDashboard();
+    alert('Invoice #' + id + ' sent to ' + client.email);
+  } catch (e) {
+    alert('Could not send invoice: ' + e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      const original = btn.dataset.orig || 'Send';
+      btn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>Send';
+    }
+  }
 }
 
 function deleteInvoice(id) {

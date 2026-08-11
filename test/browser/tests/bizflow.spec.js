@@ -59,3 +59,50 @@ test('bizflow data persists server-side across devices', async ({ page, browser 
   await ctx1.close();
   await ctx2.close();
 });
+
+test('invoice can be sent to the client by email', async ({ page, browser }) => {
+  const email = `bizsend${Date.now()}@test.local`;
+  const reg = await page.request.post('/api/auth/register', {
+    data: { fullName: 'BizFlow Sender', email, phone: '080' + String(Date.now()).slice(-8), password: 'bizflowSecret123' },
+  });
+  expect(reg.status()).toBe(201);
+  const { token } = await reg.json();
+
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await p.addInitScript((t) => localStorage.setItem('tf_token', t), token);
+  await p.goto('/bizflow.html');
+  await p.waitForTimeout(1200);
+
+  // Client WITH email.
+  await p.click('#nav-crm');
+  await p.locator('#page-crm').getByRole('button', { name: '+ Add Client' }).first().click();
+  await p.waitForTimeout(300);
+  await p.fill('#cl-name', 'Email Co');
+  await p.fill('#cl-email', 'client@emailco.test');
+  await p.locator('#client-modal').getByRole('button', { name: 'Save client' }).click();
+  await p.waitForTimeout(300);
+
+  // Invoice (draft).
+  await p.click('#nav-invoices');
+  await p.locator('#page-invoices').getByRole('button', { name: '+ New Invoice' }).first().click();
+  await p.waitForTimeout(300);
+  await p.selectOption('#inv-client', { label: 'Email Co' });
+  await p.fill('#invoice-items-body input[type="text"]', 'Design');
+  const nums = p.locator('#invoice-items-body input[type="number"]');
+  await nums.nth(0).fill('1');
+  await nums.nth(1).fill('25000');
+  await p.locator('#invoice-modal').getByRole('button', { name: 'Save draft' }).click();
+  await p.waitForTimeout(2500); // allow debounced cloud PUT to land
+
+  // Click per-row "Send" and await the API response.
+  const respPromise = p.waitForResponse(r => r.url().includes('/api/bizflow/invoices/') && r.url().endsWith('/send') && r.request().method() === 'POST');
+  await p.getByRole('button', { name: /Send/ }).first().click();
+  const resp = await respPromise;
+  expect(resp.status()).toBe(200);
+
+  await p.waitForTimeout(800);
+  // Status badge now shows "Sent".
+  await expect(p.locator('#page-invoices')).toContainText('Sent');
+  await ctx.close();
+});

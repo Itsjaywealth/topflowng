@@ -39,7 +39,7 @@ const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
 const { queryClubkonnectOrder, processClubkonnectPurchase } = require('./services/clubkonnect');
-const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail } = require('./services/email');
+const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
 const {
@@ -838,6 +838,37 @@ app.get('/api/bizflow/data', authMiddleware, async (req, res) => {
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch bizflow data');
+  }
+});
+
+// Send a BizFlow invoice to the client by email. Looks the invoice up in the
+// user's persisted document, requires the linked client to have an email,
+// delivers via the configured provider, and marks the invoice 'sent'.
+app.post('/api/bizflow/invoices/:id/send', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getBizflowData(req.user.id);
+    const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
+    const clients = Array.isArray(data?.clients) ? data.clients : [];
+    const inv = invoices.find(i => String(i.id) === String(req.params.id));
+    if (!inv) return sendError(res, 404, 'Invoice not found');
+    const client = clients.find(c => String(c.id) === String(inv.clientId));
+    const clientEmail = (client?.email || inv.clientEmail || '').trim();
+    if (!clientEmail) return sendError(res, 400, 'The linked client has no email address on file');
+
+    const user = await db.findUserById(req.user.id);
+    await sendInvoiceEmail(clientEmail, {
+      invoice: inv,
+      client: client || { name: inv.clientName },
+      ownerName: user.full_name,
+      ownerCompany: 'TopFlowNG BizFlow',
+    });
+
+    if (inv.status !== 'paid') inv.status = 'sent';
+    await db.saveBizflowData(req.user.id, data);
+    res.json({ message: 'Invoice sent.', status: inv.status });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to send invoice');
   }
 });
 
