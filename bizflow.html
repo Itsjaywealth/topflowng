@@ -407,7 +407,7 @@ textarea:focus-visible,[role="button"]:focus-visible{
     <div class="topbar-title">Payroll</div>
     <div class="topbar-actions">
       <select class="field-input field-select" id="payroll-month" onchange="renderPayroll()" style="min-height:36px;padding:0 32px 0 10px;font-size:13px">
-        <option>August 2026</option><option>July 2026</option><option>June 2026</option>
+        <option value="2026-08">August 2026</option><option value="2026-07">July 2026</option><option value="2026-06">June 2026</option>
       </select>
       <button class="btn btn-primary" onclick="runPayroll()">Run Payroll</button>
     </div>
@@ -661,6 +661,8 @@ let invoices = JSON.parse(localStorage.getItem('bf_invoices') || '[]');
 let clients  = JSON.parse(localStorage.getItem('bf_clients')  || '[]');
 let staff    = JSON.parse(localStorage.getItem('bf_staff')    || '[]');
 let invoiceCounter = parseInt(localStorage.getItem('bf_inv_counter') || '1000');
+let payrollPaid = JSON.parse(localStorage.getItem('bf_payroll_paid') || '{}'); // { "2026-08": { staffId: 'paid' } }
+let payrollProcessed = JSON.parse(localStorage.getItem('bf_payroll_processed') || '{}'); // { "2026-08": true }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const fmtN = n => '₦' + parseFloat(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -672,6 +674,8 @@ const save = () => {
   localStorage.setItem('bf_clients',  JSON.stringify(clients));
   localStorage.setItem('bf_staff',    JSON.stringify(staff));
   localStorage.setItem('bf_inv_counter', String(invoiceCounter));
+  localStorage.setItem('bf_payroll_paid', JSON.stringify(payrollPaid));
+  localStorage.setItem('bf_payroll_processed', JSON.stringify(payrollProcessed));
 };
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
@@ -928,7 +932,15 @@ function invoiceForClient(clientId) {
 }
 
 // ── PAYROLL ───────────────────────────────────────────────────────────────────
+function payrollMonth() {
+  const sel = document.getElementById('payroll-month');
+  return sel ? sel.value : '2026-08';
+}
+
 function renderPayroll() {
+  const month = payrollMonth();
+  const paidSet = payrollPaid[month] || {};
+
   const totalGross = staff.reduce((s,m) => s + (parseFloat(m.salary)||0), 0);
   const nhf = totalGross * 0.025;     // NHF 2.5%
   const pension = totalGross * 0.08;  // Pension 8%
@@ -937,29 +949,37 @@ function renderPayroll() {
 
   document.getElementById('pr-total').textContent = fmtN(netTotal);
   document.getElementById('pr-count').textContent = staff.length;
+  const processed = !!payrollProcessed[month] || staff.every(m => paidSet[m.id] === 'paid');
+  document.getElementById('pr-status').innerHTML = processed
+    ? '<span class="badge badge-green">Processed</span>'
+    : '<span class="badge badge-amber">Pending</span>';
 
   const tbody = document.getElementById('payroll-list');
   tbody.innerHTML = staff.length ? staff.map(m => {
     const gross = parseFloat(m.salary)||0;
     const ded = gross * 0.105;
     const net = gross - ded;
+    const isPaid = paidSet[m.id] === 'paid';
     return `<tr>
       <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${initials(m.name)}</span><strong>${m.name}</strong></div></td>
       <td>${m.role||'—'}</td>
       <td>${fmtN(gross)}</td>
       <td><span style="color:var(--red)">${fmtN(ded)}</span></td>
       <td><strong>${fmtN(net)}</strong></td>
-      <td><span class="badge badge-amber">Pending</span></td>
-      <td><button class="btn btn-sm" style="background:#ECFDF5;color:#065F46;border:0" onclick="markStaffPaid(this)">Mark paid</button></td>
+      <td>${isPaid ? '<span class="badge badge-green">Paid</span>' : '<span class="badge badge-amber">Pending</span>'}</td>
+      <td>${isPaid ? '<span style="font:400 12px/1 var(--font);color:var(--muted)">—</span>' : `<button class="btn btn-sm" style="background:#ECFDF5;color:#065F46;border:0" onclick="markStaffPaid(this, '${m.id}')">Mark paid</button>`}</td>
     </tr>`;
   }).join('') :
     `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></div><div class="empty-title">No staff yet</div><div class="empty-sub">Add staff in HR to generate payroll</div><button class="btn btn-primary" onclick="goPage('hr');openModal('staff-modal')">+ Add Staff</button></div></td></tr>`;
 }
 
-function markStaffPaid(btn) {
-  const td = btn.closest('td').previousElementSibling;
-  td.innerHTML = '<span class="badge badge-green">Paid</span>';
-  btn.remove();
+function markStaffPaid(btn, staffId) {
+  const month = payrollMonth();
+  const paidSet = payrollPaid[month] || {};
+  paidSet[staffId] = 'paid';
+  payrollPaid[month] = paidSet;
+  save();
+  renderPayroll();
 }
 
 function runPayroll() {
@@ -976,9 +996,13 @@ function runPayroll() {
 
 function processPayroll() {
   closeModal('payroll-modal');
-  document.getElementById('pr-status').innerHTML = '<span class="badge badge-green">Processed</span>';
-  document.querySelectorAll('#payroll-list .badge-amber').forEach(b => { b.className='badge badge-green'; b.textContent='Paid'; });
-  document.querySelectorAll('#payroll-list button').forEach(b => b.remove());
+  const month = payrollMonth();
+  const paidSet = payrollPaid[month] || {};
+  staff.forEach(m => { paidSet[m.id] = 'paid'; });
+  payrollPaid[month] = paidSet;
+  payrollProcessed[month] = true;
+  save();
+  renderPayroll();
 }
 
 // ── HR ────────────────────────────────────────────────────────────────────────

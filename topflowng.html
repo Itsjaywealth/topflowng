@@ -1107,7 +1107,7 @@ a{color:var(--blue-2);text-decoration:none}
       </div>
     </div>
     <aside class="marketing-ledger" aria-label="TopFlowNG wallet preview">
-      <div class="preview-top"><strong>TopFlowNG</strong><button type="button">+ Fund wallet</button></div>
+      <div class="preview-top"><strong>TopFlowNG</strong><button type="button" onclick="openAuthFromMarketing('register')">+ Fund wallet</button></div>
       <div class="preview-label">Available balance</div>
       <div class="preview-balance">₦24,850.00</div>
       <div class="ledger-cap">Recent activity</div>
@@ -1451,7 +1451,6 @@ a{color:var(--blue-2);text-decoration:none}
       <div class="txn-list" id="all-txns">
         <div class="txn-empty">Loading...</div>
       </div>
-      <button class="load-more" id="btn-load-more" onclick="loadMoreTxns()" style="display:none">Load more</button>
     </div>
 
     <div class="screen" id="screen-account">
@@ -2126,6 +2125,36 @@ function launchApp() {
   checkPendingOrders();
   loadPinStatus();
   loadAllBeneficiaries();
+  setupHeroSlider();
+}
+
+function setupHeroSlider() {
+  const slider = document.getElementById('hero-slider');
+  if (!slider) return;
+  const slides = Array.from(slider.querySelectorAll('.hero-slide'));
+  if (slides.length < 2) return;
+  const dotsWrap = document.getElementById('hero-dots');
+  dotsWrap.innerHTML = '';
+  let current = 0, timer = null;
+  const labels = ['Balance', 'Auto-recharge', 'Scheduled purchases'];
+  const show = (i) => {
+    current = (i + slides.length) % slides.length;
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current));
+    Array.from(dotsWrap.children).forEach((d, idx) => d.classList.toggle('active', idx === current));
+  };
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'hero-dot' + (i === 0 ? ' active' : '');
+    dot.type = 'button';
+    dot.setAttribute('aria-label', `Show ${labels[i] || 'slide ' + (i + 1)}`);
+    dot.onclick = () => { show(i); restart(); };
+    dotsWrap.appendChild(dot);
+  });
+  const advance = () => show(current + 1);
+  const restart = () => { if (timer) clearInterval(timer); timer = setInterval(advance, 7000); };
+  dotsWrap.addEventListener('mouseenter', () => { if (timer) clearInterval(timer); });
+  dotsWrap.addEventListener('mouseleave', restart);
+  restart();
 }
 
 async function checkPendingOrders() {
@@ -2734,6 +2763,7 @@ async function loadAnalytics() {
 async function loadPinStatus() {
   try {
     const data = await api('GET', '/api/auth/pin-status');
+    _userHasPin = data.hasPin;
     const text = document.getElementById('pin-status-text');
     const btn  = document.getElementById('btn-set-pin');
     if (data.hasPin) {
@@ -2745,7 +2775,7 @@ async function loadPinStatus() {
       btn.textContent = 'Set PIN';
       btn.dataset.label = 'Set PIN';
     }
-  } catch { /* non-critical */ }
+  } catch { _userHasPin = false; }
 }
 
 async function setTransactionPin() {
@@ -2968,13 +2998,6 @@ async function loadAllTxns(reset) {
 // ── TRANSACTION PIN PROMPT ────────────────────────────────────────────────
 let _pinResolve = null, _pinReject = null;
 let _userHasPin = null; // cached: null = unknown, true/false
-
-async function loadPinStatus() {
-  try {
-    const data = await api('GET', '/api/auth/pin-status');
-    _userHasPin = data.hasPin;
-  } catch { _userHasPin = false; }
-}
 
 async function requestTransactionPin() {
   if (_userHasPin === null) await loadPinStatus();
