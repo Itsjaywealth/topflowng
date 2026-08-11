@@ -814,6 +814,33 @@ app.delete('/api/beneficiaries/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ── BizFlow user data (per-user JSONB document) ─────────────────────────────
+// The business suite persists invoices/clients/staff/payroll as one document
+// and can outgrow the default 10kb body limit, so this route parses its own.
+app.put('/api/bizflow/data', authMiddleware, express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return sendError(res, 400, 'Expected a bizflow data document');
+    }
+    await db.saveBizflowData(req.user.id, data);
+    res.json({ saved: true });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to save bizflow data');
+  }
+});
+
+app.get('/api/bizflow/data', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getBizflowData(req.user.id);
+    res.json({ data });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch bizflow data');
+  }
+});
+
 // ── Referral ──────────────────────────────────────────────────────────────────
 app.get('/api/referral', authMiddleware, async (req, res) => {
   try {

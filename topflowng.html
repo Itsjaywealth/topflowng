@@ -2000,6 +2000,8 @@ async function handleLogin() {
     token = data.token;
     user  = data.user;
     localStorage.setItem('tf_token', token);
+    const nx = new URLSearchParams(window.location.search).get('next');
+    if (nx) { window.location.href = nx; return; }
     launchApp();
     await completePendingPayment();
   } catch (e) {
@@ -2026,6 +2028,8 @@ async function handleRegister() {
     token = data.token;
     user  = data.user;
     localStorage.setItem('tf_token', token);
+    const nx = new URLSearchParams(window.location.search).get('next');
+    if (nx) { window.location.href = nx; return; }
     launchApp();
     await completePendingPayment();
   } catch (e) {
@@ -2105,6 +2109,8 @@ async function init() {
   try {
     const data = await api('GET', '/api/user/profile');
     user = data;
+    const nx = new URLSearchParams(window.location.search).get('next');
+    if (nx) { window.location.href = nx; return; }
     launchApp();
     await completePendingPayment();
   } catch {

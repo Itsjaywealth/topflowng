@@ -143,11 +143,13 @@ test('migration 001 applies successfully', async () => {
   assert.match(out, /applied 004_auto_recharge\.sql/);
   assert.match(out, /applied 005_scheduled_purchases\.sql/);
   assert.match(out, /applied 006_auto_recharge_sessions\.sql/);
+  assert.match(out, /applied 007_bizflow_data\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
   assert.deepStrictEqual(rows.map((r) => r.version), [
     '001_vtu_idempotency', '002_vtu_reconcile_attempts', '003_search_indexes',
     '004_auto_recharge', '005_scheduled_purchases', '006_auto_recharge_sessions',
+    '007_bizflow_data',
   ]);
 
   const cols = await q(
@@ -174,6 +176,25 @@ test('migration 002 adds reconciliation attempt tracking columns', async () => {
   assert.strictEqual(byName.reconcile_attempts.column_default, '0', 'defaults to 0');
   assert.ok(byName.last_reconciled_at, 'last_reconciled_at column exists');
   assert.strictEqual(byName.last_reconciled_at.data_type, 'timestamp with time zone');
+});
+
+test('migration 007 creates the bizflow per-user document store', async () => {
+  const u = await insertUser('Biz', 'biz@example.com', '08000000009');
+  await q(
+    `INSERT INTO bizflow_data (user_id, data) VALUES ($1, $2::jsonb)`,
+    [u, JSON.stringify({ invoices: [], clients: [], staff: [], invoiceCounter: 1000 })]
+  );
+  const row = (await q('SELECT data FROM bizflow_data WHERE user_id = $1', [u]))[0];
+  assert.ok(row, 'bizflow_data row persists');
+  assert.strictEqual(row.data.invoiceCounter, 1000, 'JSONB document round-trips');
+
+  await q(
+    `INSERT INTO bizflow_data (user_id, data) VALUES ($1, $2::jsonb)
+     ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data`,
+    [u, JSON.stringify({ invoices: [], clients: [], staff: [], invoiceCounter: 1001 })]
+  );
+  const after = (await q('SELECT data FROM bizflow_data WHERE user_id = $1', [u]))[0];
+  assert.strictEqual(after.data.invoiceCounter, 1001, 'upsert replaces the document');
 });
 
 test('re-running migrations is a no-op', async () => {

@@ -656,6 +656,28 @@ textarea:focus-visible,[role="button"]:focus-visible{
 </div>
 
 <script>
+// ── API + AUTH ───────────────────────────────────────────────────────────────
+// BizFlow shares the consumer-app session: same origin, same tf_token.
+let token = localStorage.getItem('tf_token');
+
+async function api(method, path, body, noAuth) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (!noAuth && token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const raw = await r.text();
+  let json = {};
+  if (raw) { try { json = JSON.parse(raw); } catch {} }
+  if (!r.ok) throw new Error(json.error || 'Request failed');
+  return json;
+}
+
+function requireAuth() {
+  if (token) return;
+  const here = location.pathname.split('/').pop() || 'bizflow.html';
+  location.href = 'topflowng.html?next=' + encodeURIComponent(here);
+}
+
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let invoices = JSON.parse(localStorage.getItem('bf_invoices') || '[]');
 let clients  = JSON.parse(localStorage.getItem('bf_clients')  || '[]');
@@ -669,6 +691,25 @@ const fmtN = n => '₦' + parseFloat(n||0).toLocaleString('en-NG',{minimumFracti
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
 const initials = name => (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 const isOverdue = inv => inv.status !== 'paid' && inv.status !== 'draft' && inv.due && new Date(inv.due) < new Date();
+
+// Cloud sync: keep localStorage as the fast local cache, then debounce a PUT
+// to the server so data survives across devices. Offline/session failures are
+// swallowed — the next mutation retries.
+let cloudSaveTimer = null;
+const cloudSave = async () => {
+  if (!token) return;
+  try {
+    await api('PUT', '/api/bizflow/data', {
+      invoices, clients, staff, invoiceCounter, payrollPaid, payrollProcessed,
+    });
+  } catch (e) { /* offline or stale session; last-write-wins locally */ }
+};
+const scheduleCloudSave = () => {
+  if (!token) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(cloudSave, 800);
+};
+
 const save = () => {
   localStorage.setItem('bf_invoices', JSON.stringify(invoices));
   localStorage.setItem('bf_clients',  JSON.stringify(clients));
@@ -676,6 +717,7 @@ const save = () => {
   localStorage.setItem('bf_inv_counter', String(invoiceCounter));
   localStorage.setItem('bf_payroll_paid', JSON.stringify(payrollPaid));
   localStorage.setItem('bf_payroll_processed', JSON.stringify(payrollProcessed));
+  scheduleCloudSave();
 };
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
@@ -1059,15 +1101,40 @@ function deleteStaff(id) {
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
-document.getElementById('biz-user-name').textContent = 'Business Owner';
-document.getElementById('biz-avatar').textContent = 'BZ';
+// Show the real sign-in screen in topflowng.html when unauthenticated, then
+// hydrate from the server (falling back to the localStorage cache offline).
+async function boot() {
+  requireAuth();
 
-// Set today as default due date (+30 days)
-const d = new Date(); d.setDate(d.getDate()+30);
-document.getElementById('inv-due').value = d.toISOString().split('T')[0];
-document.getElementById('st-start').valueAsDate = new Date();
+  const defaults = { invoices, clients, staff, invoiceCounter, payrollPaid, payrollProcessed };
 
-renderDashboard();
+  try {
+    const prof = await api('GET', '/api/user/profile');
+    document.getElementById('biz-user-name').textContent = prof.fullName || 'Business Owner';
+    document.getElementById('biz-avatar').textContent = initials(prof.fullName || 'BZ');
+
+    const res = await api('GET', '/api/bizflow/data');
+    if (res.data && res.data !== null) {
+      invoices         = Array.isArray(res.data.invoices)  ? res.data.invoices  : invoices;
+      clients          = Array.isArray(res.data.clients)   ? res.data.clients   : clients;
+      staff            = Array.isArray(res.data.staff)     ? res.data.staff     : staff;
+      invoiceCounter   = Number.isFinite(res.data.invoiceCounter) ? res.data.invoiceCounter : invoiceCounter;
+      payrollPaid      = res.data.payrollPaid  && typeof res.data.payrollPaid  === 'object' ? res.data.payrollPaid  : payrollPaid;
+      payrollProcessed = res.data.payrollProcessed && typeof res.data.payrollProcessed === 'object' ? res.data.payrollProcessed : payrollProcessed;
+      save();
+    } else if (JSON.stringify(defaults) !== JSON.stringify({ invoices, clients, staff, invoiceCounter, payrollPaid, payrollProcessed })) {
+      scheduleCloudSave();
+    }
+  } catch (e) { /* offline: keep the localStorage cache */ }
+
+  // Set today as default due date (+30 days)
+  const d = new Date(); d.setDate(d.getDate()+30);
+  document.getElementById('inv-due').value = d.toISOString().split('T')[0];
+  document.getElementById('st-start').valueAsDate = new Date();
+
+  renderDashboard();
+}
+boot();
 </script>
 </body>
 </html>

@@ -1,0 +1,61 @@
+'use strict';
+const { test, expect } = require('@playwright/test');
+
+// ── BizFlow backend integration ───────────────────────────────────────────────
+// Verifies: unauthenticated visitors are routed to topflowng auth, and a signed
+// in user's invoices/clients persist server-side across "devices".
+
+test('unauthenticated bizflow redirects to auth with next= return path', async ({ page }) => {
+  await page.goto('/bizflow.html');
+  await page.waitForURL(/topflowng\.html\?next=bizflow\.html/, { timeout: 10000 });
+  expect(new URL(page.url()).searchParams.get('next')).toBe('bizflow.html');
+});
+
+test('bizflow data persists server-side across devices', async ({ page, browser }) => {
+  const email = `bizflow${Date.now()}@test.local`;
+  const reg = await page.request.post('/api/auth/register', {
+    data: { fullName: 'BizFlow Owner', email, phone: '070' + String(Date.now()).slice(-8), password: 'bizflowSecret123' },
+  });
+  expect(reg.status()).toBe(201);
+  const { token } = await reg.json();
+
+  // "Device 1": signed in, create a client + invoice.
+  const ctx1 = await browser.newContext();
+  const p2 = await ctx1.newPage();
+  await p2.addInitScript((t) => localStorage.setItem('tf_token', t), token);
+  await p2.goto('/bizflow.html');
+  await p2.waitForTimeout(1200);
+  expect((await p2.locator('#biz-user-name').textContent()).trim()).toBe('BizFlow Owner');
+
+  await p2.click('#nav-crm');
+  await p2.locator('#page-crm').getByRole('button', { name: '+ Add Client' }).first().click();
+  await p2.waitForTimeout(300);
+  await p2.fill('#cl-name', 'Acme Ltd');
+  await p2.locator('#client-modal').getByRole('button', { name: 'Save client' }).click();
+  await p2.waitForTimeout(300);
+
+  await p2.click('#nav-invoices');
+  await p2.locator('#page-invoices').getByRole('button', { name: '+ New Invoice' }).first().click();
+  await p2.waitForTimeout(300);
+  await p2.selectOption('#inv-client', { label: 'Acme Ltd' });
+  await p2.fill('#invoice-items-body input[type="text"]', 'Consulting');
+  const nums = p2.locator('#invoice-items-body input[type="number"]');
+  await nums.nth(0).fill('1');
+  await nums.nth(1).fill('5000');
+  await p2.locator('#invoice-modal').getByRole('button', { name: 'Send invoice' }).click();
+  await p2.waitForTimeout(2000); // allow debounced cloud PUT
+  await expect(p2.locator('#page-invoices')).toContainText('Acme Ltd');
+
+  // "Device 2": fresh context, same token, no local data.
+  const ctx2 = await browser.newContext();
+  const p3 = await ctx2.newPage();
+  await p3.addInitScript((t) => localStorage.setItem('tf_token', t), token);
+  await p3.goto('/bizflow.html');
+  await p3.waitForTimeout(1200);
+  await p3.click('#nav-invoices');
+  await p3.waitForTimeout(400);
+  await expect(p3.locator('#page-invoices')).toContainText('Acme Ltd');
+
+  await ctx1.close();
+  await ctx2.close();
+});

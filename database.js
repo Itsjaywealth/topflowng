@@ -907,6 +907,27 @@ async function getAnalyticsSummary(userId) {
   return rows[0];
 }
 
+// ── BizFlow user data (per-user JSONB document) ─────────────────────────────
+async function getBizflowData(userId) {
+  const { rows } = await pool.query(
+    'SELECT data FROM bizflow_data WHERE user_id = $1',
+    [userId]
+  );
+  return rows[0] ? rows[0].data : null;
+}
+
+async function saveBizflowData(userId, data) {
+  const { rows } = await pool.query(
+    `INSERT INTO bizflow_data (user_id, data, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (user_id)
+     DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+     RETURNING data`,
+    [userId, JSON.stringify(data)]
+  );
+  return rows[0].data;
+}
+
 async function getPendingVtuOrders(userId) {
   const { rows } = await pool.query(
     `SELECT request_id, service_type, amount, description, provider_order_id, created_at
@@ -1219,6 +1240,8 @@ module.exports = {
   addBeneficiary,
   deleteBeneficiary,
   getAnalyticsSummary,
+  getBizflowData,
+  saveBizflowData,
   getPendingVtuOrders,
   expireStaleVtuOrders,
   cleanStaleSubmittedOrders,
