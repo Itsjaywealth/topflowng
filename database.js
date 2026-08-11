@@ -330,20 +330,27 @@ async function createVtuAttempt({ requestId, userId, serviceType, amount, descri
 }
 
 async function acquireVtuIdempotency({ requestId, userId, serviceType, amount, description, idempotencyKey, requestFingerprint }) {
-  // Atomically reserve an idempotency slot on vtu_orders using the partial unique
-  // index (user_id, idempotency_key) from migration 001. Rows without a key are
-  // exempt; only the first request for a given (user_id, key) is created here;
-  // every subsequent/concurrent request for the same key blocks on the index until the
-  // first commits, then returns the existing row for the caller to resolve.
+  // Reserve an idempotency slot on vtu_orders. The same logical slot is
+  // covered by TWO unique constraints — request_id AND the partial unique
+  // index (user_id, idempotency_key) — so under concurrent same-key requests
+  // Postgres may report the violation against either one, and an ON CONFLICT
+  // arbiter can only ever match one index (raising 23505 when it hits the
+  // other). Instead of suppressing every unique violation, we serialize the
+  // claim with a transaction-scoped advisory lock keyed to the request id:
+  // only one transaction at a time attempts the INSERT, so the arbiter on
+  // request_id is always the one that fires. Rows without a key are exempt;
+  // every subsequent/concurrent request for the same key blocks on the lock,
+  // observes the committed row, and returns it for the caller to resolve.
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [requestId]);
     const inserted = await client.query(
       `INSERT INTO vtu_orders
          (request_id, user_id, service_type, amount, description, idempotency_key,
           request_fingerprint, idempotency_key_created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-       ON CONFLICT DO NOTHING
+       ON CONFLICT (request_id) DO NOTHING
        RETURNING request_id`,
       [requestId, userId, serviceType, amount, description, idempotencyKey, requestFingerprint]
     );
