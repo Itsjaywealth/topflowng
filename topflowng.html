@@ -922,6 +922,7 @@ a{color:var(--blue-2);text-decoration:none}
 .receipt-check svg{width:34px;height:34px}
 .receipt-check.pop{transform:scale(1.12)}
 .receipt-check.pending{background:var(--amber);box-shadow:0 16px 34px -14px rgba(232,145,45,.5)}
+.receipt-check.failed{background:var(--red);box-shadow:0 16px 34px -14px rgba(229,72,77,.5)}
 .receipt-title{font:800 22px/1.15 var(--display);letter-spacing:-.03em;margin-bottom:8px}
 .receipt-sub{font:500 13.5px/1.55 var(--font);color:var(--graphite);margin-bottom:22px}
 .receipt-token{margin:0 auto 20px}
@@ -2132,6 +2133,12 @@ function launchApp() {
   loadPinStatus();
   loadAllBeneficiaries();
   setupHeroSlider();
+  // Keep pending purchases resolving themselves live: refresh the glance widget
+  // (and statuses) every 15s so a confirmed/failed order shows up without a
+  // manual reload even when no receipt is open.
+  setInterval(() => {
+    if (document.getElementById('main-app').classList.contains('active')) checkPendingOrders();
+  }, 15000);
 }
 
 function setupHeroSlider() {
@@ -2390,7 +2397,9 @@ async function buyAirtime() {
     const data = await api('POST', '/api/vtu/airtime', Object.assign({network, phone, amount}, pin ? {pin} : {}));
     if (data.pending) {
       closeService('airtime');
-      showReceipt({ title: 'Airtime pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+      const baseLines = [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference]];
+      showReceipt({ title: 'Airtime pending', sub: data.message, pending: true, lines: baseLines.concat([['Provider order', data.orderId || 'Not yet assigned']]) });
+      pollPendingOrder(data.reference, (res) => flipPendingOrder(res, { successTitle: 'Airtime sent!', successSub: `₦${amount} ${network} airtime sent to ${phone}`, baseLines: [['Network', network], ['Phone', phone], ['Amount', fmt(amount)], ['Reference', data.reference]] }));
     } else {
       if (data.balance !== undefined) updateBalance(data.balance);
       closeService('airtime');
@@ -2425,6 +2434,7 @@ async function buyData() {
     if (data.pending) {
       closeService('data');
       showReceipt({ title: 'Data purchase pending', sub: data.message, pending: true, lines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+      pollPendingOrder(data.reference, (res) => flipPendingOrder(res, { successTitle: 'Data activated!', successSub: `Data bundle activated for ${phone}`, baseLines: [['Network', network], ['Phone', phone], ['Plan', selectedDataPlan.code], ['Amount', fmt(selectedDataPlan.price)], ['Reference', data.reference]] }));
     } else {
       if (data.balance !== undefined) updateBalance(data.balance);
       closeService('data');
@@ -2460,6 +2470,7 @@ async function buyElectricity() {
     if (data.pending) {
       closeService('electricity');
       showReceipt({ title: 'Electricity payment pending', sub: data.message, pending: true, lines: [['Disco', disco], ['Meter', meterNumber], ['Amount', fmt(amount)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+      pollPendingOrder(data.reference, (res) => flipPendingOrder(res, { successTitle: 'Electricity paid!', successSub: 'Token sent below', baseLines: [['Disco', disco], ['Meter', meterNumber], ['Type', meterType], ['Amount', fmt(amount)], ['Reference', data.reference]] }));
     } else {
       if (data.balance !== undefined) updateBalance(data.balance);
       closeService('electricity');
@@ -2493,6 +2504,7 @@ async function buyCable() {
     if (data.pending) {
       closeService('cable');
       showReceipt({ title: `${provider} payment pending`, sub: data.message, pending: true, lines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference], ['Provider order', data.orderId || 'Not yet assigned']] });
+      pollPendingOrder(data.reference, (res) => flipPendingOrder(res, { successTitle: `${provider} activated!`, successSub: `${provider} subscription activated`, baseLines: [['Provider', provider], ['Card', smartCardNumber], ['Package', selectedCablePlan.code], ['Amount', fmt(selectedCablePlan.price)], ['Reference', data.reference]] }));
     } else {
       if (data.balance !== undefined) updateBalance(data.balance);
       closeService('cable');
@@ -2507,14 +2519,63 @@ async function buyCable() {
 }
 
 // ── RECEIPT ───────────────────────────────────────────────────────────────
-function showReceipt({ title, sub, lines, token: elecToken, pending = false }) {
+let pendingOrderPollTimer = null;
+
+function stopPendingOrderPoll() {
+  if (pendingOrderPollTimer) { clearTimeout(pendingOrderPollTimer); pendingOrderPollTimer = null; }
+}
+
+// While a purchase receipt shows a pending status, the provider is usually
+// still working on a legitimate order (it often confirms within seconds).
+// Poll the order on the server — which fast-reconciles traceable orders — and
+// flip the receipt to confirmed/failed as soon as it resolves, so users are
+// not left staring at a stuck "pending" screen.
+function pollPendingOrder(reference, flip) {
+  stopPendingOrderPoll();
+  let waited = 0;
+  const tick = async () => {
+    try {
+      const data = await api('GET', `/api/vtu/orders/${encodeURIComponent(reference)}`);
+      if (data.status === 'completed' || data.status === 'failed') {
+        flip(data);
+        return;
+      }
+    } catch { /* server unreachable — keep waiting */ }
+    waited += 4000;
+    if (waited > 3 * 60 * 1000) return; // give up after ~3 min; sweeper continues
+    pendingOrderPollTimer = setTimeout(tick, 4000);
+  };
+  pendingOrderPollTimer = setTimeout(tick, 4000);
+}
+
+// Renders a resolved order onto the open receipt and refreshes the live
+// balance/activity/pending widgets in one place.
+function flipPendingOrder(data, { successTitle, successSub, baseLines, pendingTitle }) {
+  stopPendingOrderPoll();
+  const failed = data.status === 'failed';
+  const lines = baseLines.concat([['Provider order', data.providerOrderId || '—'], ['Status', failed ? 'Failed' : 'Completed']]);
+  showReceipt({
+    title: failed ? 'Order not confirmed' : (successTitle || 'Confirmed'),
+    sub: failed ? (data.message || 'The provider did not confirm this order. Your wallet has not been debited.') : (successSub || (data.message || 'Your order was completed and your wallet was debited once.')),
+    lines,
+    failed,
+  });
+  if (!failed) loadBalance();
+  loadRecentTxns();
+  checkPendingOrders();
+}
+
+function showReceipt({ title, sub, lines, token: elecToken, pending = false, failed = false }) {
   document.getElementById('receipt-title').textContent = title;
   document.getElementById('receipt-sub').textContent = sub;
   document.getElementById('receipt-check').classList.remove('pop');
   document.getElementById('receipt-check').classList.toggle('pending', pending);
+  document.getElementById('receipt-check').classList.toggle('failed', failed);
   document.getElementById('receipt-check').innerHTML = pending
     ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>'
-    : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+    : failed
+      ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10M17 7 7 17"/></svg>'
+      : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
   document.getElementById('receipt-token').innerHTML = elecToken
     ? `<div class="receipt-token">${escHtml(elecToken)}</div>` : '';
   const linesEl = document.getElementById('receipt-lines');
@@ -2530,6 +2591,7 @@ function showReceipt({ title, sub, lines, token: elecToken, pending = false }) {
 }
 
 function closeReceipt() {
+  stopPendingOrderPoll();
   document.getElementById('receipt-overlay').classList.remove('open');
   goTab('home');
 }
@@ -2666,6 +2728,7 @@ async function buyExamPin() {
     if (data.pending) {
       closeService('exam');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Exam body', examBody], ['Quantity', quantity], ['Amount', fmt(amount)], ['Reference', data.reference]] });
+      pollPendingOrder(data.reference, (res) => flipPendingOrder(res, { successTitle: `${examBody} PIN${quantity > 1 ? 's' : ''} ready!`, successSub: `${quantity} PIN${quantity > 1 ? 's' : ''} purchased successfully.`, baseLines: [['Exam body', examBody], ['Quantity', quantity], ['Amount', fmt(amount)], ['Reference', data.reference]] }));
     } else {
       if (data.balance !== undefined) updateBalance(data.balance);
       closeService('exam');
@@ -2722,6 +2785,7 @@ async function buyRechargePin() {
     if (data.pending) {
       closeService('recharge');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Network', network], ['Denomination', fmt(amount)], ['Quantity', quantity], ['Reference', data.reference]] });
+      pollPendingOrder(data.reference, (res) => flipPendingOrder(res, { successTitle: `${network} Recharge PIN${quantity > 1 ? 's' : ''} ready!`, successSub: 'Recharge PIN(s) generated.', baseLines: [['Network', network], ['Denomination', fmt(amount)], ['Quantity', quantity], ['Reference', data.reference]] }));
     } else {
       if (data.balance !== undefined) updateBalance(data.balance);
       closeService('recharge');

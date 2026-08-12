@@ -120,10 +120,11 @@ const config = {
     rechargeUrl: str(process.env.CLUBKONNECT_RECHARGE_URL, 'https://www.nellobytesystems.com/APIRechargeCard.asp'),
     timeoutMs: num(process.env.CLUBKONNECT_TIMEOUT_MS, 30_000),
     maxPurchaseAmount: num(process.env.MAX_PURCHASE_AMOUNT, 1_000_000),
-    pendingOrderExpiryMinutes: num(process.env.PENDING_ORDER_EXPIRY_MINUTES, 10),
-    sweepIntervalMs: num(process.env.PENDING_ORDER_SWEEP_INTERVAL_MS, 5 * 60 * 1000),
-    reconcileBackoffMinutes: num(process.env.PENDING_ORDER_RECONCILE_BACKOFF_MINUTES, 10),
+    pendingOrderExpiryMinutes: num(process.env.PENDING_ORDER_EXPIRY_MINUTES, 6),
+    sweepIntervalMs: num(process.env.PENDING_ORDER_SWEEP_INTERVAL_MS, 30_000),
+    reconcileBackoffMinutes: num(process.env.PENDING_ORDER_RECONCILE_BACKOFF_MINUTES, 2),
     reconcileMaxAttempts: num(process.env.PENDING_ORDER_RECONCILE_MAX_ATTEMPTS, 30),
+    reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
   },
 };
 

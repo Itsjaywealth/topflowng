@@ -490,6 +490,64 @@ test('17. auto-reconcile backs off and stops after maxAttempts', async () => {
   assert.ok(list.some((r) => r.request_id === rid2), 'backoff elapsed → reconcilable again');
 });
 
+// ── 17b. GET /api/vtu/orders/:requestId resolves pending orders on demand ──
+async function ageReconciliation(requestId) {
+  const pool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    await pool.query(
+      `UPDATE vtu_orders SET last_reconciled_at = NOW() - INTERVAL '1 minute' WHERE request_id = $1`,
+      [requestId]
+    );
+  } finally {
+    await pool.end();
+  }
+}
+
+test('17b. status endpoint fast-reconciles a traceable pending order', async () => {
+  h.providerState.reset();
+  const rid = orderId('POLLOK');
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: true });
+
+  // Provider still reports pending → endpoint keeps status pending, no debit.
+  h.providerState.queryOutcome = 'pending';
+  const r1 = await h.api('GET', `/api/vtu/orders/${rid}`, { token: tokenB });
+  assert.strictEqual(r1.status, 200);
+  assert.strictEqual(r1.data.status, 'pending');
+  assert.ok(h.providerState.queryCalls >= 1, 'on-demand query fired');
+
+  // Age the last reconcile so the cooldown passes, then confirm.
+  await ageReconciliation(rid);
+  h.providerState.queryOutcome = 'success';
+  const r2 = await h.api('GET', `/api/vtu/orders/${rid}`, { token: tokenB });
+  assert.strictEqual(r2.status, 200);
+  assert.strictEqual(r2.data.status, 'completed');
+  assert.ok(r2.data.providerOrderId, 'provider order id surfaced');
+
+  // Settled exactly once: wallet debited a single time.
+  const settled = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(settled.status, 'completed');
+  const debits = await debitRows(rid);
+  assert.strictEqual(debits.find(d => d.status === 'completed')?.n || 0, 1);
+});
+
+test('17c. status endpoint rejects unknown or foreign orders', async () => {
+  h.providerState.reset();
+  const rid = orderId('POLL401');
+  await createPendingOrder(rid, userIdB, 2000, { withProviderId: true });
+
+  // Unauthenticated.
+  const anon = await h.api('GET', `/api/vtu/orders/${rid}`, {});
+  assert.strictEqual(anon.status, 401);
+
+  // Different user's order is not exposed.
+  const other = await h.api('GET', `/api/vtu/orders/${rid}`, { token: tokenA });
+  assert.strictEqual(other.status, 404);
+
+  // Unknown request id.
+  const missing = await h.api('GET', '/api/vtu/orders/does-not-exist', { token: tokenB });
+  assert.strictEqual(missing.status, 404);
+});
+
 // ── 18. scheduled purchases actually execute (wallet debit + provider + schedule) ──
 test('18. scheduled purchase executes a real purchase and advances the schedule', async () => {
   assert.ok(scheduledProcessorHooks.processDueScheduledPurchases, 'scheduler hook present');

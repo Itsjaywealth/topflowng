@@ -552,6 +552,59 @@ async function processWebhookRetries() {
 }
 
 // ── VTU Routes (mounted /api/vtu/*) ──────────────────────────────────────────
+// User-facing order status. Lets the app resolve a purchase quickly: if the
+// order is still pending and traceable, it triggers an immediate provider
+// query (throttled by reconcilePollCooldownMs) instead of making the user wait
+// for the background sweeper. Registered BEFORE the purchase-limiter mount so
+// rapid status polling never trips the 10 req/min purchase bucket. Exactly-once
+// settlement is unchanged — the same reconcileVtuOrder path (row lock +
+// terminal-state guard) is used.
+app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
+  const requestId = String(req.params.requestId || '').trim();
+  try {
+    const order = await db.getVtuOrderByRequestId(requestId);
+    if (!order || String(order.user_id) !== String(req.user.id)) {
+      return sendError(res, 404, 'VTU order not found');
+    }
+
+    let current = order;
+    if (order.status === 'pending' && order.provider_order_id) {
+      const lastReconciled = order.last_reconciled_at
+        ? new Date(order.last_reconciled_at).getTime()
+        : 0;
+      const cooldownMs = config.clubkonnect.reconcilePollCooldownMs;
+      if (Date.now() - lastReconciled >= cooldownMs) {
+        try {
+          await reconcileVtuOrder(requestId);
+          current = await db.getVtuOrderByRequestId(requestId) || order;
+        } catch (err) {
+          logger.error(`On-demand VTU reconcile failed for ${requestId}`, { message: err.message });
+        }
+      }
+    }
+
+    const body = {
+      requestId: current.request_id,
+      status: current.status,
+      serviceType: current.service_type,
+      amount: Number(current.amount),
+      description: current.description,
+      providerOrderId: current.provider_order_id || null,
+      providerStatus: current.provider_status || null,
+      providerRemark: current.provider_remark || null,
+      message: current.status === 'pending'
+        ? 'Your request is pending provider confirmation. Your wallet has not been debited.'
+        : current.status === 'failed'
+          ? 'The provider did not confirm this order. Your wallet has not been debited.'
+          : 'This order was completed and your wallet was debited once.',
+    };
+    res.json(body);
+  } catch (err) {
+    logger.error('VTU order status lookup failed', { requestId, message: err.message });
+    sendError(res, 500, 'Failed to check this order');
+  }
+});
+
 // Purchase rate limiter (per-user, default 10 req/min) applies to all VTU
 // purchase endpoints — airtime, data, cable, electricity, exam, recharge pins.
 app.use('/api/vtu', purchaseLimiter, vtuRouter);
