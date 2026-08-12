@@ -66,9 +66,13 @@ function normalizeClubkonnectResponse(raw) {
   // All documented ORDER_ERROR and ORDER_CANCELLED responses are terminal.
   // Authentication errors are also terminal even when this legacy endpoint
   // returns a text-only status rather than a numeric statusCode.
+  // MISSING_*/INVALID_* responses are permanent validation rejections (the
+  // provider declines the request, e.g. MISSING_PHONE_NUMBER) — never a
+  // pending/resolvable state. Treating them as 'pending' surfaced a misleading
+  // "awaiting provider confirmation" receipt to users.
   if ((statusCode >= 400 && statusCode <= 599 && statusCode !== 412)
     || ['ORDER_ERROR', 'ORDER_CANCELLED'].includes(status)
-    || /AUTHENTICATION_FAILED|INVALID.*(?:KEY|CREDENTIAL|USER)|UNAUTHORIZED/i.test(`${status} ${remark} ${description}`)) {
+    || /^(MISSING|INVALID)_|AUTHENTICATION_FAILED|INVALID.*(?:KEY|CREDENTIAL|USER)|UNAUTHORIZED/i.test(`${status} ${remark} ${description}`)) {
     return { outcome: 'failed', statusCode, status, remark, description, orderId, raw: data };
   }
 

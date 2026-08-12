@@ -65,3 +65,17 @@ test('orders with a captured reference become traceable (provider_order_id persi
   assert.strictEqual(out.outcome, 'success');
   assert.strictEqual(out.orderId, 'T-500111');
 });
+
+test('MISSING_/INVALID_ statuses are terminal failures, not pending', () => {
+  const missingPhone = normalizeClubkonnectResponse({ status: 'MISSING_PHONE_NUMBER' });
+  assert.strictEqual(missingPhone.outcome, 'failed');
+
+  const invalidCredentials = normalizeClubkonnectResponse({ status: 'INVALID_CREDENTIALS' });
+  assert.strictEqual(invalidCredentials.outcome, 'failed');
+
+  const authFailed = normalizeClubkonnectResponse({ status: 'AUTHENTICATION_FAILED_1' });
+  assert.strictEqual(authFailed.outcome, 'failed');
+
+  const missingCreds = normalizeClubkonnectResponse({ status: 'MISSING_CREDENTIALS' });
+  assert.strictEqual(missingCreds.outcome, 'failed');
+});
