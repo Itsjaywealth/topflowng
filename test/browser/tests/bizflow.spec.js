@@ -106,3 +106,51 @@ test('invoice can be sent to the client by email', async ({ page, browser }) => 
   await expect(p.locator('#page-invoices')).toContainText('Sent');
   await ctx.close();
 });
+
+test('payroll month selector is a rolling 6-month list derived from today', async ({ page, browser }) => {
+  const email = `bizpay${Date.now()}@test.local`;
+  const reg = await page.request.post('/api/auth/register', {
+    data: { fullName: 'BizFlow Payroll', email, phone: '090' + String(Date.now()).slice(-8), password: 'bizflowSecret123' },
+  });
+  expect(reg.status()).toBe(201);
+  const { token } = await reg.json();
+
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await p.addInitScript((t) => localStorage.setItem('tf_token', t), token);
+  await p.goto('/bizflow.html');
+  await p.waitForTimeout(1200);
+  await p.click('#nav-payroll');
+  await p.waitForTimeout(300);
+
+  const sel = p.locator('#payroll-month');
+  const opts = sel.locator('option');
+  const count = await opts.count();
+  expect(count).toBe(6);
+
+  const expected = [];
+  const now = new Date();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    expected.push({
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('en-NG', { month: 'long', year: 'numeric' }),
+    });
+  }
+
+  const first = await opts.nth(0).textContent();
+  const last = await opts.nth(5).textContent();
+  expect(first.trim()).toBe(expected[0].label);
+  expect(last.trim()).toBe(expected[5].label);
+  await expect(sel).toHaveValue(expected[0].value);
+  await expect(sel.locator(`option[value="${expected[5].value}"]`)).toHaveCount(1);
+
+  // Selecting a different month re-renders payroll for that month.
+  await sel.selectOption(expected[5].value);
+  await expect(sel).toHaveValue(expected[5].value);
+
+  // Option values are exactly the rolling 6-month set — no hardcoded months.
+  const values = await sel.locator('option').evaluateAll(os => os.map(o => o.value));
+  expect(values).toEqual(expected.map(e => e.value));
+  await ctx.close();
+});
