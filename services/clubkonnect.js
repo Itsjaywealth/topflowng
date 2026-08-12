@@ -36,7 +36,19 @@ function normalizeClubkonnectResponse(raw) {
   const status = String(data.status ?? data.Status ?? '').trim().toUpperCase();
   const remark = String(data.remark ?? data.Remark ?? '').trim();
   const description = String(data.description ?? data.Description ?? data.message ?? data.Message ?? '').trim();
-  const orderId = data.orderId ?? data.OrderID ?? data.OrderId ?? null;
+  // Nellobyte/Clubkonnect responses also report the reference as ordernumber.
+  // Accept the first present value that looks like a real provider reference —
+  // never a placeholder such as '0', 'undefined' or an empty string, which
+  // would make an untraceable order falsely 'traceable' and burn query calls.
+  const orderIdCandidates = [
+    data.orderId, data.OrderID, data.OrderId,
+    data.OrderNumber, data.ordernumber, data.orderNumber,
+    data.order_id, data.OrderNo, data.orderno,
+  ];
+  const orderId = orderIdCandidates
+    .map((v) => String(v ?? '').trim())
+    .find((v) => v && v !== '0' && v.toLowerCase() !== 'undefined' && v.toLowerCase() !== 'null')
+    || null;
 
   // Clubkonnect documents 200 as the only terminal delivery success. The
   // legacy API response format sometimes reports it as status: '200'.
