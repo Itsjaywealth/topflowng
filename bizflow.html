@@ -406,9 +406,7 @@ textarea:focus-visible,[role="button"]:focus-visible{
   <div class="topbar">
     <div class="topbar-title">Payroll</div>
     <div class="topbar-actions">
-      <select class="field-input field-select" id="payroll-month" onchange="renderPayroll()" style="min-height:36px;padding:0 32px 0 10px;font-size:13px">
-        <option value="2026-08">August 2026</option><option value="2026-07">July 2026</option><option value="2026-06">June 2026</option>
-      </select>
+      <select class="field-input field-select" id="payroll-month" onchange="renderPayroll()" style="min-height:36px;padding:0 32px 0 10px;font-size:13px"></select>
       <button class="btn btn-primary" onclick="runPayroll()">Run Payroll</button>
     </div>
   </div>
@@ -1006,9 +1004,30 @@ function invoiceForClient(clientId) {
 }
 
 // ── PAYROLL ───────────────────────────────────────────────────────────────────
+// Derive a rolling 6-month payroll selector from the current date so a new
+// month is always available and stale hardcoded options can't break payroll
+// after their month passes.
+function populatePayrollMonths() {
+  const sel = document.getElementById('payroll-month');
+  if (!sel) return;
+  const prev = sel.value;
+  const months = [];
+  const now = new Date();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-NG', { month: 'long', year: 'numeric' });
+    months.push({ value, label });
+  }
+  sel.innerHTML = months.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+  if (prev && months.some(m => m.value === prev)) sel.value = prev;
+}
+
 function payrollMonth() {
   const sel = document.getElementById('payroll-month');
-  return sel ? sel.value : '2026-08';
+  if (sel && sel.value) return sel.value;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function renderPayroll() {
@@ -1164,6 +1183,7 @@ async function boot() {
   document.getElementById('inv-due').value = d.toISOString().split('T')[0];
   document.getElementById('st-start').valueAsDate = new Date();
 
+  populatePayrollMonths();
   renderDashboard();
 }
 boot();
