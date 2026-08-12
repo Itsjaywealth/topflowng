@@ -945,6 +945,59 @@ async function getPendingVtuOrders(userId) {
   return rows;
 }
 
+// ── Provider reference backfill (rescue of previously-untraceable orders) ──
+// Before the ordernumber extraction fix, a legitimate pending order could be
+// stored with provider_order_id NULL even though its raw provider response
+// (provider_response jsonb) DID carry the reference under ordernumber /
+// OrderNumber / order_id etc. Those orders were untraceable and would be
+// auto-expired as 'failed - not charged'. This pass rescues them by re-reading
+// the stored raw payload and persisting the extracted reference, so the
+// reconcile sweep and the on-demand status endpoint can trace and settle them
+// like any other pending order. Tentative pending orders are handled first.
+async function backfillVtuOrderProviderIds({ limit = 50 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT request_id, provider_response
+     FROM vtu_orders
+     WHERE status = 'pending'
+       AND (provider_order_id IS NULL OR provider_order_id = '')
+       AND provider_response IS NOT NULL
+       AND provider_response <> '{}'::jsonb
+     ORDER BY created_at ASC
+     LIMIT $1`,
+    [limit]
+  );
+
+  let recovered = 0;
+  for (const row of rows) {
+    const ref = extractOrderReference(row.provider_response);
+    if (!ref) continue;
+    await pool.query(
+      `UPDATE vtu_orders SET provider_order_id = $2, updated_at = NOW()
+       WHERE request_id = $1 AND (provider_order_id IS NULL OR provider_order_id = '')`,
+      [row.request_id, ref]
+    );
+    recovered += 1;
+  }
+  return { scanned: rows.length, recovered };
+}
+
+// Extract the first genuine provider reference from a raw response object.
+// Accepts the same key set as normalizeClubkonnectResponse and rejects
+// placeholders ('0', '', 'undefined', 'null') so no order is made falsely
+// 'traceable'.
+function extractOrderReference(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const candidates = [
+    raw.orderId, raw.OrderID, raw.OrderId,
+    raw.OrderNumber, raw.ordernumber, raw.orderNumber,
+    raw.order_id, raw.OrderNo, raw.orderno,
+  ];
+  const value = candidates
+    .map((v) => (v === null || v === undefined ? '' : String(v).trim()))
+    .find((v) => v && v !== '0' && v.toLowerCase() !== 'undefined' && v.toLowerCase() !== 'null');
+  return value || null;
+}
+
 // ── Stale pending order expiry (auto-resolution) ────────────────────────────
 // Clubkonnect never returned a provider order ID for these, so they are
 // untraceable and their wallets were NEVER debited (that only happens on a
@@ -1250,6 +1303,7 @@ module.exports = {
   getBizflowData,
   saveBizflowData,
   getPendingVtuOrders,
+  backfillVtuOrderProviderIds,
   expireStaleVtuOrders,
   cleanStaleSubmittedOrders,
   getReconcilablePendingOrders,

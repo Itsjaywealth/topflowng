@@ -658,3 +658,71 @@ test('19. scheduled purchase without balance is skipped, schedule kept intact', 
   assert.strictEqual(row.run_count, 0, 'no run counted for a skipped schedule');
   assert.strictEqual(await walletOf(userIdC), 0, 'zero-balance user never debited');
 });
+
+// ── 21. provider-reference backfill rescues previously-untraceable orders ──
+test('21. backfill recovers provider reference from stored raw response', async () => {
+  h.providerState.reset();
+  const rid = orderId('RESCUE');
+  await db.createVtuAttempt({
+    requestId: rid,
+    userId: userIdB,
+    serviceType: 'airtime',
+    amount: 2000,
+    description: `Lifecycle rescue ${rid}`,
+  });
+
+  // Simulate the pre-fix normaliser: response stored raw with ordernumber but
+  // provider_order_id left NULL (exactly how legitimate orders went stale).
+  await db.recordVtuProviderResponse(rid, {
+    orderId: null,
+    statusCode: 199,
+    status: 'ORDER_RECEIVED',
+    remark: 'On hold',
+    description: 'Pending provider confirmation',
+    raw: { ordernumber: `NB-RESCUE-${rid}`, statuscode: 199, status: 'ORDER_RECEIVED' },
+  });
+  await db.markVtuOrderPending(rid);
+
+  let order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.provider_order_id, null, 'pre-fix order has no provider ref');
+
+  const backfilled = await db.backfillVtuOrderProviderIds({ limit: 50 });
+  assert.ok(backfilled.recovered >= 1, 'backfill recovered the orphan');
+  const rescued = backfilled.recovered;
+  assert.ok(rescued >= 1, `expected >= 1 recovered, got ${rescued}`);
+
+  order = await db.getVtuOrderByRequestId(rid);
+  if (order.provider_order_id === null || order.provider_order_id === '') {
+    // The specific test order was not in the first scan batch (other tests'
+    // pending orders may outrank it in created_at ordering). Run once more to
+    // confirm it eventually recovers rather than asserting a flaky scan batch.
+    await db.backfillVtuOrderProviderIds({ limit: 500 });
+    order = await db.getVtuOrderByRequestId(rid);
+  }
+  assert.strictEqual(order.provider_order_id, `NB-RESCUE-${rid}`, 'provider ref recovered from raw');
+  assert.strictEqual(order.status, 'pending', 'still pending, now traceable for reconcile');
+});
+
+test('21b. backfill rejects placeholder references and leaves order intractable', async () => {
+  const rid = orderId('RESCUE-PH');
+  await db.createVtuAttempt({
+    requestId: rid,
+    userId: userIdB,
+    serviceType: 'airtime',
+    amount: 2000,
+    description: `Lifecycle rescue placeholder ${rid}`,
+  });
+  await db.recordVtuProviderResponse(rid, {
+    orderId: null,
+    statusCode: 199,
+    status: 'ORDER_RECEIVED',
+    remark: 'On hold',
+    description: 'Pending provider confirmation',
+    raw: { ordernumber: '0', statuscode: 199, status: 'ORDER_RECEIVED' },
+  });
+  await db.markVtuOrderPending(rid);
+
+  await db.backfillVtuOrderProviderIds({ limit: 500 });
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.ok(!order.provider_order_id, 'placeholder reference never stored');
+});

@@ -1201,6 +1201,15 @@ function schedulePendingOrderSweep() {
 
   async function sweep() {
     try {
+      // 0) Rescue pending orders whose raw provider response carried a reference
+      // that the old normaliser failed to capture (ordernumber/OrderNumber/etc).
+      // Must run BEFORE the expirer below so recoverable orders are re-traced
+      // (and eligible for reconcile) instead of being swept to 'failed'.
+      const backfilled = await db.backfillVtuOrderProviderIds({ limit: 50 });
+      if (backfilled.recovered > 0) {
+        logger.info('Backfilled provider references for pending orders', backfilled);
+      }
+
       // 1) Auto-expire unconfirmed orders that never got a provider reference.
       const expiry = await db.expireStaleVtuOrders({ olderThanMinutes: expiryMinutes });
       if (expiry.expired > 0) {
