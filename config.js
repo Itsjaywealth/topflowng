@@ -6,7 +6,6 @@
  * safe defaults so the app can still boot for local work and automated checks.
  * Secrets are never logged or exposed to the frontend.
  */
-
 'use strict';
 
 require('dotenv').config();
