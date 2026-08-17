@@ -3,7 +3,7 @@
  * Recharge Card, Pending orders).
  *
  * Extracted from server.js without behaviour change. All provider interaction
- * goes through services/clubkonnect.js; rate limiting via shared middleware.
+ * goes through services/vtpass.js; rate limiting via shared middleware.
  */
 
 'use strict';
@@ -15,7 +15,7 @@ const db = require('../database');
 const logger = require('../lib/logger');
 const { authMiddleware, checkTransactionPin } = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rate-limit');
-const { processClubkonnectPurchase, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/clubkonnect');
+const { processVtpassPurchase, productFor, buildRequestId, VtpassProductError, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/vtpass');
 const { validatePlanAmount, getCatalog } = require('../services/pricing');
 const { sendPurchaseEmail } = require('../services/email');
 const { resolveRequest, recordRequest } = require('../services/idempotency');
@@ -32,9 +32,16 @@ function withTracing(name, handler) {
   };
 }
 
-const NETWORK_MAP = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
 const EXAM_BODY_MAP = { WAEC: 'WAEC', NECO: 'NECO', NABTEB: 'NABTEB', JAMB: 'JAMB' };
 const EXAM_PRICES = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
+
+function productErrorResponse(err, res) {
+  if (err instanceof VtpassProductError) {
+    res.status(400).json({ error: err.message });
+    return true;
+  }
+  return false;
+}
 
 function pinErrorResponse(err, res) {
   if (err.code === 'PIN_REQUIRED') {
@@ -66,36 +73,26 @@ router.post('/airtime', authMiddleware, apiLimiter, validate(airtimeSchema), wit
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
-    const ckNetwork = NETWORK_MAP[network.toUpperCase()];
-    if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
     const desc = `${network} airtime — ${phone}`;
 
     const resolved = await resolveRequest({
       req, res, userId: req.user.id, serviceType: 'airtime',
-      payload: { network: ckNetwork, phone, amount: cost },
+      payload: { network: network.toUpperCase(), phone, amount: cost },
       amount: cost, description: desc,
     });
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
     const isIdempotent = resolved.kind === 'proceed';
-    const requestId = isIdempotent ? resolved.requestId : `AIR-${Date.now()}-${req.user.id}`;
+    const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const params = {
-      UserID: config.clubkonnect.userId,
-      APIKey: config.clubkonnect.apiKey,
-      MobileNetwork: ckNetwork,
-      Amount: cost,
-      MobileNumber: phone,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
+    const product = productFor('airtime', { network, phone, amount: cost });
 
-    const result = await processClubkonnectPurchase({
+    const result = await processVtpassPurchase({
       userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
-      description: desc, endpoint: config.clubkonnect.airtimeUrl, params,
+      description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
@@ -128,36 +125,32 @@ router.post('/data', authMiddleware, apiLimiter, validate(dataSchema), withTraci
     await checkTransactionPin(req.user.id, pin);
     try { validatePlanAmount(network, planCode, cost); } catch (e) { return sendError(res, 400, e.message); }
 
-    const ckNetwork = NETWORK_MAP[network.toUpperCase()];
-    if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
     const desc = `${network} data ${planCode} — ${phone}`;
 
     const resolved = await resolveRequest({
       req, res, userId: req.user.id, serviceType: 'data',
-      payload: { network: ckNetwork, planCode, phone, amount: cost },
+      payload: { network: network.toUpperCase(), planCode, phone, amount: cost },
       amount: cost, description: desc,
     });
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
     const isIdempotent = resolved.kind === 'proceed';
-    const requestId = isIdempotent ? resolved.requestId : `DATA-${Date.now()}-${req.user.id}`;
+    const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const params = {
-      UserID: config.clubkonnect.userId,
-      APIKey: config.clubkonnect.apiKey,
-      MobileNetwork: ckNetwork,
-      DataPlan: planCode,
-      MobileNumber: phone,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
+    let product;
+    try {
+      product = productFor('data', { network, planCode, phone });
+    } catch (err) {
+      if (productErrorResponse(err, res)) return;
+      throw err;
+    }
 
-    const result = await processClubkonnectPurchase({
+    const result = await processVtpassPurchase({
       userId: req.user.id, requestId, serviceType: 'data', amount: cost,
-      description: desc, endpoint: config.clubkonnect.dataUrl, params,
+      description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
@@ -200,24 +193,25 @@ router.post('/cable', authMiddleware, apiLimiter, validate(cableSchema), withTra
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
     const isIdempotent = resolved.kind === 'proceed';
-    const requestId = isIdempotent ? resolved.requestId : `CABLE-${Date.now()}-${req.user.id}`;
+    const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const params = {
-      UserID: config.clubkonnect.userId,
-      APIKey: config.clubkonnect.apiKey,
-      CableTV: ckProvider,
-      Package: planCode,
-      SmartCardNo: smartCardNumber,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
+    let product;
+    try {
+      product = productFor('cable', {
+        provider: ckProvider, planCode, smartCardNumber,
+        phone: req.user.phone || '',
+      });
+    } catch (err) {
+      if (productErrorResponse(err, res)) return;
+      throw err;
+    }
 
-    const result = await processClubkonnectPurchase({
+    const result = await processVtpassPurchase({
       userId: req.user.id, requestId, serviceType: 'cable', amount: cost,
-      description: desc, endpoint: config.clubkonnect.cableUrl, params,
+      description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
@@ -261,30 +255,30 @@ router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySche
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
     const isIdempotent = resolved.kind === 'proceed';
-    const requestId = isIdempotent ? resolved.requestId : `ELEC-${Date.now()}-${req.user.id}`;
+    const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const params = {
-      UserID: config.clubkonnect.userId,
-      APIKey: config.clubkonnect.apiKey,
-      ElectricCompany: ckDisco,
-      MeterType: ckMeterType,
-      MeterNumber: meterNumber,
-      Amount: cost,
-      RequestID: requestId,
-      CallBackURL: '',
-    };
+    let product;
+    try {
+      product = productFor('electricity', {
+        disco: ckDisco, meterType, meterNumber, amount: cost,
+        phone: req.user.phone || '',
+      });
+    } catch (err) {
+      if (productErrorResponse(err, res)) return;
+      throw err;
+    }
 
-    const result = await processClubkonnectPurchase({
+    const result = await processVtpassPurchase({
       userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
-      description: desc, endpoint: config.clubkonnect.electricityUrl, params,
+      description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Electricity', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      const body = { success: true, message: 'Electricity token sent', token: result.provider.raw.token || result.provider.raw.Token || '', balance: result.balance, reference: requestId, orderId: result.orderId };
+      const body = { success: true, message: 'Electricity token sent', token: result.provider?.token || result.provider?.purchasedCode || '', balance: result.balance, reference: requestId, orderId: result.orderId };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
     }
@@ -321,27 +315,28 @@ router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), wi
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
     const isIdempotent = resolved.kind === 'proceed';
-    const requestId = isIdempotent ? resolved.requestId : `EXAM-${Date.now()}-${req.user.id}`;
+    const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < amount) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const result = await processClubkonnectPurchase({
+    let product;
+    try {
+      product = productFor('exam-pin', { examBody: ckBody, quantity: qty });
+    } catch (err) {
+      if (productErrorResponse(err, res)) return;
+      throw err;
+    }
+
+    const result = await processVtpassPurchase({
       userId: req.user.id, requestId, serviceType: 'exam-pin', amount, description,
-      endpoint: config.clubkonnect.examUrl,
-      params: {
-        UserID: config.clubkonnect.userId,
-        APIKey: config.clubkonnect.apiKey,
-        ExamBody: ckBody,
-        Quantity: qty,
-        RequestID: requestId,
-      },
+      product,
     });
 
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Exam PIN', description, amount, reference: requestId, newBalance: result.balance });
-      const body = { success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId };
+      const body = { success: true, message: `${ckBody} PIN(s) purchased.`, pins: result.provider?.purchasedCode || result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
     }
@@ -364,8 +359,6 @@ router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), wi
 router.post('/recharge-pin', authMiddleware, apiLimiter, validate(rechargePinSchema), withTracing('vtu.recharge-pin', async (req, res) => {
   try {
     const { network, amount, quantity, pin } = req.validated;
-    const ckNetwork = NETWORK_MAP[network.toUpperCase()];
-    if (!ckNetwork) return sendError(res, 400, `Unsupported network: ${network}`);
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
     const amt = parseValidatedAmount(amount);
@@ -375,34 +368,37 @@ router.post('/recharge-pin', authMiddleware, apiLimiter, validate(rechargePinSch
 
     const resolved = await resolveRequest({
       req, res, userId: req.user.id, serviceType: 'recharge-pin',
-      payload: { network: ckNetwork, amount: amt, quantity: qty, totalAmount },
+      payload: { network: network.toUpperCase(), amount: amt, quantity: qty, totalAmount },
       amount: totalAmount, description,
     });
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
     const isIdempotent = resolved.kind === 'proceed';
-    const requestId = isIdempotent ? resolved.requestId : `RPIN-${Date.now()}-${req.user.id}`;
+    const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
     if (balance < totalAmount) return sendError(res, 402, 'Insufficient wallet balance');
 
-    const result = await processClubkonnectPurchase({
+    let product;
+    try {
+      product = productFor('recharge-pin', {
+        network, amount: amt, quantity: qty,
+        phone: req.user.phone || '',
+      });
+    } catch (err) {
+      if (productErrorResponse(err, res)) return;
+      throw err;
+    }
+
+    const result = await processVtpassPurchase({
       userId: req.user.id, requestId, serviceType: 'recharge-pin', amount: totalAmount, description,
-      endpoint: config.clubkonnect.rechargeUrl,
-      params: {
-        UserID: config.clubkonnect.userId,
-        APIKey: config.clubkonnect.apiKey,
-        MobileNetwork: ckNetwork,
-        Amount: amt,
-        Quantity: qty,
-        RequestID: requestId,
-      },
+      product,
     });
 
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Recharge Card', description, amount: totalAmount, reference: requestId, newBalance: result.balance });
-      const body = { success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId };
+      const body = { success: true, message: 'Recharge PIN(s) generated.', pins: result.provider?.purchasedCode || result.provider?.token || result.provider?.remark, balance: result.balance, reference: requestId };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
     }

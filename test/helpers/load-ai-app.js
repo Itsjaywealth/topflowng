@@ -73,13 +73,13 @@ const mockProvider = {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : null;
   },
-  CK_PENDING_CODES: new Set([100, 199, 299]),
-  normalizeClubkonnectResponse: (raw) => ({ ...raw }),
-  queryClubkonnectOrder: async () => ({ outcome: 'pending' }),
-  processClubkonnectPurchase: async () => ({ outcome: 'success', balance: 0, requestId: 'x', orderId: 'PRV-1', provider: { raw: {} } }),
+  VTPASS_SUCCESS_CODES: new Set(['000']),
+  normalizeVtpassResponse: (raw) => ({ ...raw, status: raw.code, remark: raw.response_description }),
+  queryVtpassOrder: async () => ({ outcome: 'pending' }),
+  processVtpassPurchase: async () => ({ outcome: 'success', balance: 0, requestId: 'x', orderId: 'VTP-1', provider: { raw: {} } }),
 };
 
-installMock('services/clubkonnect.js', mockProvider);
+installMock('services/vtpass.js', mockProvider);
 installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},

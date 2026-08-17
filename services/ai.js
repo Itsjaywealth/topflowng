@@ -33,7 +33,7 @@ function offensiveRedact(text) {
     config.ai.openRouterApiKey,
     config.jwt && config.jwt.secret,
     config.paystack && config.paystack.secretKey,
-    config.clubkonnect && config.clubkonnect.apiKey,
+    config.vtpass && config.vtpass.secretKey,
   ].filter((s) => typeof s === 'string' && s.length > 4);
   let out = String(text == null ? '' : text);
   for (const s of secrets) {

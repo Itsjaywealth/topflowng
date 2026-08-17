@@ -25,8 +25,9 @@ validation only guarantees a value was supplied:
 | `JWT_SECRET` | JWT signing secret (≥64 random chars) |
 | `APP_URL` | Canonical origin — CORS allow-list, callbacks, reset links |
 | `PAYSTACK_SECRET_KEY` | Paystack payments (`sk_live_…`) |
-| `CLUBKONNECT_USER_ID` | VTU provider account |
-| `CLUBKONNECT_API_KEY` | VTU provider key |
+| `VTPASS_API_KEY` | VTU provider API key |
+| `VTPASS_SECRET_KEY` | VTU provider secret key |
+| `VTPASS_PUBLIC_KEY` | VTU provider public key |
 
 **OPTIONAL — feature degraded / disabled when absent:**
 
@@ -40,8 +41,8 @@ validation only guarantees a value was supplied:
 **Tuning (all optional):** `PORT` (default 3000), `TRUST_PROXY` (default 1),
 `BODY_LIMIT` (10kb), `JWT_EXPIRES_IN` (7d), `AUTH_RATE_WINDOW_MS`,
 `AUTH_RATE_MAX`, `API_RATE_WINDOW_MS`, `API_RATE_MAX`, `LOG_LEVEL`
-(debug|info|warn|error), `SENTRY_TRACES_SAMPLE_RATE`, `CLUBKONNECT_*` endpoints
-and `CLUBKONNECT_TIMEOUT_MS`, `MAX_PURCHASE_AMOUNT`, `RESEND_FROM`,
+(debug|info|warn|error), `SENTRY_TRACES_SAMPLE_RATE`, `VTPASS_TIMEOUT_MS`,
+`VTPASS_PRODUCT_MAP`, `MAX_PURCHASE_AMOUNT`, `RESEND_FROM`,
 `RESEND_URL`, `RESEND_TIMEOUT_MS`, `PAYSTACK_API_BASE_URL`,
 `PAYSTACK_TIMEOUT_MS`, `OPENROUTER_*` family, `AI_*` family.
 
@@ -55,7 +56,8 @@ with non-secret placeholders.
 ## 2. Production configuration checklist
 
 - [ ] `NODE_ENV=production` and all REQUIRED vars set (DATABASE_URL, JWT_SECRET,
-      APP_URL, PAYSTACK_SECRET_KEY, CLUBKONNECT_USER_ID, CLUBKONNECT_API_KEY).
+      APP_URL, PAYSTACK_SECRET_KEY, VTPASS_API_KEY, VTPASS_SECRET_KEY,
+      VTPASS_PUBLIC_KEY).
 - [ ] `JWT_SECRET` is a fresh random ≥64 char value, never the default.
 - [ ] `APP_URL` matches the real public origin (HTTPS).
 - [ ] `DATABASE_URL` points at the production Postgres with proper `sslmode`.
@@ -93,7 +95,7 @@ Alert matrix**, at minimum:
 - failed Paystack webhook signature verifications (`Invalid Paystack webhook
   signature`)
 - pending-order reconciliation failures
-- repeated CLUBKONNECT/provider failures
+- repeated VTPASS/provider failures
 - database connection failures (/api/ready returns 503, connection pool errors)
 - AI provider (`OpenRouter`) failures and `AI_DAILY_COST_CEILING` breaches
 - auth rate-limit spikes (lockouts)

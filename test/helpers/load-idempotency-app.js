@@ -39,11 +39,11 @@ process.env.PAYSTACK_WEBHOOK_SECRET = 'test-webhook-secret';
 process.env.PAYSTACK_SECRET_KEY = 'test-secret-key';
 process.env.DATABASE_URL = DATABASE_URL;
 
-// ── Mock provider (never dials Clubkonnect) ─────────────────────────────────
+// ── Mock provider (never dials VTPass) ──────────────────────────────────
 const providerState = {
   calls: 0,
   outcome: 'success', // 'success' | 'pending' | 'failed'
-  queryOutcome: 'pending', // what queryClubkonnectOrder reports during reconciliation
+  queryOutcome: 'pending', // what queryVtpassOrder reports during reconciliation
   queryCalls: 0,
   async reset() {
     providerState.calls = 0;
@@ -59,29 +59,34 @@ const mockProvider = {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : null;
   },
-  CK_PENDING_CODES: new Set([100, 199, 299]),
-  normalizeClubkonnectResponse: (raw) => ({ ...raw }),
-  queryClubkonnectOrder: async () => {
+  VTPASS_SUCCESS_CODES: new Set(['000']),
+  normalizeVtpassResponse: (raw) => ({ ...raw, status: raw.response_description || raw.response, remark: raw.response_description }),
+  queryVtpassOrder: async () => {
     providerState.queryCalls += 1;
     const outcome = providerState.queryOutcome;
     if (outcome === 'success') {
-      return { outcome: 'success', statusCode: 200, status: 'ORDER_COMPLETED', remark: 'Confirmed', description: 'Delivered', orderId: 'QUERY-ORDER', raw: {} };
+      return { outcome: 'success', statusCode: '000', status: 'ORDER_COMPLETED', remark: 'Confirmed', description: 'Delivered', orderId: 'QUERY-ORDER', raw: { response: 'success', response_description: 'Transaction completed' } };
     }
     if (outcome === 'failed') {
-      return { outcome: 'failed', statusCode: 400, status: 'ORDER_ERROR', remark: 'Declined', description: 'Provider declined', orderId: 'QUERY-ORDER', raw: {} };
+      return { outcome: 'failed', statusCode: '400', status: 'ORDER_ERROR', remark: 'Declined', description: 'Provider declined', orderId: 'QUERY-ORDER', raw: { response: 'failed', response_description: 'Transaction failed' } };
     }
-    return { outcome: 'pending', statusCode: 199, status: 'ORDER_RECEIVED', remark: 'On hold', description: 'Pending', orderId: 'QUERY-ORDER', raw: {} };
+    return { outcome: 'pending', statusCode: '199', status: 'ORDER_RECEIVED', remark: 'On hold', description: 'Pending', orderId: 'QUERY-ORDER', raw: { response: 'pending', response_description: 'Transaction processing' } };
   },
-  async processClubkonnectPurchase({ requestId, userId, serviceType, amount, description }) {
+  async processVtpassPurchase({ requestId, userId, serviceType, amount, description }) {
     const db = require(path.join(ROOT, 'database.js'));
     providerState.calls += 1;
     await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
 
-    const orderId = `PRV-${providerState.calls}`;
+    const orderId = `VTP-${providerState.calls}`;
     if (providerState.outcome === 'success') {
       await db.recordVtuProviderResponse(requestId, {
-        orderId, statusCode: 200, status: 'ORDER_COMPLETED',
-        remark: 'Success', description: 'Delivered', raw: { token: 'ELEC-TOKEN-001' },
+        orderId, statusCode: '000', status: 'ORDER_COMPLETED',
+        remark: 'Success', description: 'Delivered', raw: { 
+          requestId: `VTP-${Date.now()}`,
+          response: 'success',
+          response_code: '000',
+          response_description: 'Transaction completed'
+        },
       });
       try {
         const result = await db.completeVtuOrder(requestId);
@@ -93,15 +98,23 @@ const mockProvider = {
     }
     if (providerState.outcome === 'failed') {
       await db.recordVtuProviderResponse(requestId, {
-        orderId, statusCode: 400, status: 'ORDER_ERROR',
-        remark: 'Declined', description: 'Provider declined', raw: {},
+        orderId, statusCode: '400', status: 'ORDER_ERROR',
+        remark: 'Declined', description: 'Provider declined', 
+        raw: { 
+          response: 'failed',
+          response_description: 'Transaction failed'
+        },
       });
       await db.markVtuOrderFailed(requestId);
       return { outcome: 'failed', message: 'Provider declined', requestId, orderId, provider: { raw: {} } };
     }
     await db.recordVtuProviderResponse(requestId, {
-      orderId, statusCode: 199, status: 'ORDER_RECEIVED',
-      remark: 'On hold', description: 'Pending', raw: {},
+      orderId, statusCode: '199', status: 'ORDER_RECEIVED',
+      remark: 'On hold', description: 'Pending', 
+      raw: { 
+        response: 'pending',
+        response_description: 'Transaction processing'
+      },
     });
     await db.markVtuOrderPending(requestId);
     return {
@@ -117,7 +130,7 @@ function installMock(relPath, exports) {
   require.cache[abs] = { id: abs, filename: abs, loaded: true, exports };
 }
 
-installMock('services/clubkonnect.js', mockProvider);
+installMock('services/vtpass.js', mockProvider);
 installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},

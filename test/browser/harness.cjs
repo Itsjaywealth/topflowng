@@ -56,13 +56,13 @@ function installMock(relPath, exports) {
   require.cache[abs] = { id: abs, filename: abs, loaded: true, exports };
 }
 
-installMock('services/clubkonnect.js', {
+installMock('services/vtpass.js', {
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; },
-  CK_PENDING_CODES: new Set([100, 199, 299]),
-  normalizeClubkonnectResponse: (raw) => ({ ...raw }),
-  queryClubkonnectOrder: async () => ({ outcome: 'pending' }),
-  processClubkonnectPurchase: async () => ({ outcome: 'pending', message: 'Held', requestId: 'x', orderId: 'PRV-1', provider: { raw: {} } }),
+  VTPASS_SUCCESS_CODES: new Set(['000']),
+  normalizeVtpassResponse: (raw) => ({ ...raw }),
+  queryVtpassOrder: async () => ({ outcome: 'pending' }),
+  processVtpassPurchase: async () => ({ outcome: 'pending', message: 'Held', requestId: 'x', orderId: 'VTP-1', provider: { raw: {} } }),
 });
 
 installMock('services/email.js', {

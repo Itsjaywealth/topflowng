@@ -1,12 +1,12 @@
 /**
  * TopFlowNG — Production Backend
  *
- * Stack: Express · PostgreSQL · JWT · Paystack · Clubkonnect VTU
+ * Stack: Express · PostgreSQL · JWT · Paystack · VTPass VTU
  * Security: Helmet · express-rate-limit · CORS · Sentry
  *
  * Configuration is centralised in config.js; structured logging in
  * lib/logger.js; VTU/provider logic lives in routes/vtu.js and
- * services/clubkonnect.js.
+ * services/vtpass.js.
  */
 
 'use strict';
@@ -38,7 +38,7 @@ const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
-const { queryClubkonnectOrder, processClubkonnectPurchase } = require('./services/clubkonnect');
+const { queryVtpassOrder, processVtpassPurchase } = require('./services/vtpass');
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
@@ -572,7 +572,7 @@ app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
       const lastReconciled = order.last_reconciled_at
         ? new Date(order.last_reconciled_at).getTime()
         : 0;
-      const cooldownMs = config.clubkonnect.reconcilePollCooldownMs;
+      const cooldownMs = config.vtpass.reconcilePollCooldownMs;
       if (Date.now() - lastReconciled >= cooldownMs) {
         try {
           await reconcileVtuOrder(requestId);
@@ -612,38 +612,43 @@ app.use('/api/vtu', purchaseLimiter, vtuRouter);
 // ── AI Assistant (mounted /api/ai/*) — read-only, advisory ─────────────────
 app.use('/api/ai', aiRouter);
 
-// ── Clubkonnect VTU Reconciliation ──────────────────────────────────────────
-// Uses the provider's documented Query API and never trusts a browser claim or
-// a stale initial response. Shared by the admin endpoint and the background
-// sweeper so both apply identical, exactly-once settlement semantics.
+// ── VTPass VTU Reconciliation ───────────────────────────────────────────────
+// VTPass identifies a transaction solely by the request_id we sent, so every
+// captured pending order is queryable via /requery — no provider-side order id
+// is needed. Uses the provider's documented requery and never trusts a browser
+// claim or a stale initial response. Shared by the admin endpoint and the
+// background sweeper so both apply identical, exactly-once settlement
+// semantics. Unknown request_ids (e.g. legacy Clubkonnect-era rows) come back
+// as 015 INVALID REQUEST ID, which normalises to 'failed' — a clean, honest
+// terminal state for orders the current provider never actually accepted.
 async function reconcileVtuOrder(requestId) {
   const order = await db.getVtuOrderByRequestId(requestId);
   if (!order) return { error: 'VTU order not found' };
   if (order.status !== 'pending') {
     return { outcome: order.status, order, message: 'This order is already in a terminal state.' };
   }
-  if (!order.provider_order_id) {
+  if (!order.request_id) {
     return {
       outcome: 'unqueryable',
       order,
-      message: 'This pending order has no provider order ID and cannot be queried automatically.',
+      message: 'This pending order has no request reference and cannot be queried.',
     };
   }
 
   await db.recordReconciliationAttempt(requestId);
-  const provider = await queryClubkonnectOrder(order.provider_order_id);
+  const provider = await queryVtpassOrder(order.request_id);
   await db.recordVtuProviderResponse(requestId, provider);
 
   let balance = null;
   if (provider.outcome === 'success') {
     const settled = await db.completeVtuOrder(requestId, { allowPending: true });
     balance = settled.balance;
-    logger.info('Clubkonnect pending order settled', { requestId, orderId: order.provider_order_id });
+    logger.info('VTPass pending order settled', { requestId });
   } else if (provider.outcome === 'failed') {
     await db.markVtuOrderFailed(requestId, { allowPending: true });
-    logger.warn('Clubkonnect pending order failed on reconciliation', { requestId, orderId: order.provider_order_id });
+    logger.warn('VTPass pending order failed on reconciliation', { requestId });
   } else {
-    logger.info('Clubkonnect pending order remains pending', { requestId, orderId: order.provider_order_id });
+    logger.info('VTPass pending order remains pending', { requestId });
   }
 
   const updated = await db.getVtuOrderByRequestId(requestId);
@@ -652,10 +657,10 @@ async function reconcileVtuOrder(requestId) {
     order: updated,
     balance,
     message: provider.outcome === 'pending'
-      ? 'Clubkonnect still reports this order as pending. No wallet debit was made.'
+      ? 'VTPass still reports this order as pending. No wallet debit was made.'
       : provider.outcome === 'success'
-        ? 'Clubkonnect confirmed delivery and the wallet was debited once.'
-        : 'Clubkonnect confirmed failure. No wallet debit was made.',
+        ? 'VTPass confirmed delivery and the wallet was debited once.'
+        : 'VTPass confirmed failure. No wallet debit was made.',
   };
 }
 
@@ -670,7 +675,7 @@ app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (r
     }
     res.json(result);
   } catch (err) {
-    logger.error(`Clubkonnect reconciliation error for ${requestId}`, { message: err.message });
+    logger.error(`VTPass reconciliation error for ${requestId}`, { message: err.message });
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 502, 'Unable to reconcile this provider order right now.');
   }
@@ -1051,10 +1056,10 @@ app.use((err, req, res, _next) => {
 function schedulePendingOrderSweep() {
   if (typeof db.expireStaleVtuOrders !== 'function') return null;
   if (typeof db.getReconcilablePendingOrders !== 'function') return null;
-  const expiryMinutes = config.clubkonnect.pendingOrderExpiryMinutes;
-  const intervalMs = config.clubkonnect.sweepIntervalMs;
-  const backoffMinutes = config.clubkonnect.reconcileBackoffMinutes;
-  const maxAttempts = config.clubkonnect.reconcileMaxAttempts;
+  const expiryMinutes = config.vtpass.pendingOrderExpiryMinutes;
+  const intervalMs = config.vtpass.sweepIntervalMs;
+  const backoffMinutes = config.vtpass.reconcileBackoffMinutes;
+  const maxAttempts = config.vtpass.reconcileMaxAttempts;
   let timer = null;
 
   async function processDueAutoRecharges() {
@@ -1119,32 +1124,27 @@ function schedulePendingOrderSweep() {
     return d;
   }
 
-  const NETWORK_MAP = { MTN: '01', GLO: '02', '9MOBILE': '03', ETISALAT: '03', AIRTEL: '04' };
+  // Scheduled purchases ship as VTPass products via the shared provider client
+  // and VTPass-format request ids (YYYYMMDDHHII + suffix), so the sweeper and
+  // the interactive routes use the same idempotency + reconciliation paths.
+  const { buildRequestId, productFor } = require('./services/vtpass');
 
-  function buildScheduledPurchaseParams(row) {
-    const requestId = `SCHED-${row.service_type.toUpperCase()}-${row.id}-${Date.now()}`;
-    const common = { UserID: config.clubkonnect.userId, APIKey: config.clubkonnect.apiKey, RequestID: requestId, CallBackURL: '' };
-    switch (row.service_type) {
-      case 'airtime': {
-        const ck = NETWORK_MAP[String(row.network || '').toUpperCase()];
-        if (!ck) throw new Error(`Unsupported network: ${row.network}`);
-        return { endpoint: config.clubkonnect.airtimeUrl, params: { ...common, MobileNetwork: ck, MobileNumber: row.phone, Amount: Number(row.amount) } };
-      }
-      case 'data': {
-        const ck = NETWORK_MAP[String(row.network || '').toUpperCase()];
-        if (!ck) throw new Error(`Unsupported network: ${row.network}`);
+  function buildScheduledPurchaseProduct(row) {
+    const requestId = buildRequestId();
+    const serviceType = row.service_type;
+    switch (serviceType) {
+      case 'airtime':
+        return { requestId, product: productFor('airtime', { network: row.network, phone: row.phone, amount: Number(row.amount) }) };
+      case 'data':
         if (!row.plan_code) throw new Error('Data plan code missing');
-        return { endpoint: config.clubkonnect.dataUrl, params: { ...common, MobileNetwork: ck, DataPlan: row.plan_code, MobileNumber: row.phone, Amount: Number(row.amount) } };
-      }
-      case 'cable': {
+        return { requestId, product: productFor('data', { network: row.network, planCode: row.plan_code, phone: row.phone }) };
+      case 'cable':
         if (!row.plan_code) throw new Error('Cable package code missing');
-        return { endpoint: config.clubkonnect.cableUrl, params: { ...common, CableTV: String(row.network || '').toUpperCase(), Package: row.plan_code, SmartCardNo: row.identifier, Amount: Number(row.amount) } };
-      }
-      case 'electricity': {
-        return { endpoint: config.clubkonnect.electricityUrl, params: { ...common, ElectricCompany: String(row.network || '').toUpperCase(), MeterType: 'PREPAID', MeterNumber: row.identifier, Amount: Number(row.amount) } };
-      }
+        return { requestId, product: productFor('cable', { provider: String(row.network || ''), planCode: row.plan_code, smartCardNumber: row.identifier, phone: '' }) };
+      case 'electricity':
+        return { requestId, product: productFor('electricity', { disco: String(row.network || ''), meterType: 'prepaid', meterNumber: row.identifier, amount: Number(row.amount), phone: '' }) };
       default:
-        throw new Error(`Unsupported service type: ${row.service_type}`);
+        throw new Error(`Unsupported service type: ${serviceType}`);
     }
   }
 
@@ -1158,27 +1158,27 @@ function schedulePendingOrderSweep() {
             continue;
           }
           logger.info('Processing scheduled purchase', { id: row.id, serviceType: row.service_type });
-          const { endpoint, params } = buildScheduledPurchaseParams({ ...row, plan_code: row.plan_code });
-          const result = await processClubkonnectPurchase({
-            userId: row.user_id, requestId: params.RequestID, serviceType: row.service_type,
-            amount: Number(row.amount), description: `${row.service_type} — ${row.phone || row.identifier}`, endpoint, params,
+          const { requestId, product } = buildScheduledPurchaseProduct(row);
+          const result = await processVtpassPurchase({
+            userId: row.user_id, requestId, serviceType: row.service_type,
+            amount: Number(row.amount), description: `${row.service_type} — ${row.phone || row.identifier}`, product,
           });
 
           const nextRun = row.frequency === 'once' ? null : computeNextRun(row.frequency, new Date());
           if (result.outcome === 'success') {
             sendPurchaseEmail(row.email, row.full_name, {
               service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
-              amount: Number(row.amount), reference: params.RequestID, newBalance: result.balance,
+              amount: Number(row.amount), reference: requestId, newBalance: result.balance,
             });
           } else if (result.outcome === 'pending') {
             sendOrderStatusEmail(row.email, row.full_name, {
               service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
-              amount: Number(row.amount), requestId: params.RequestID, status: 'pending',
+              amount: Number(row.amount), requestId, status: 'pending',
             });
           } else {
             sendOrderStatusEmail(row.email, row.full_name, {
               service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
-              amount: Number(row.amount), requestId: params.RequestID, status: 'failed',
+              amount: Number(row.amount), requestId, status: 'failed',
             });
           }
 
@@ -1189,7 +1189,7 @@ function schedulePendingOrderSweep() {
           } else {
             await db.disableScheduledPurchase(row.id);
           }
-          logger.info('Scheduled purchase executed', { id: row.id, outcome: result.outcome, requestId: params.RequestID });
+          logger.info('Scheduled purchase executed', { id: row.id, outcome: result.outcome, requestId });
         } catch (err) {
           logger.error('Scheduled purchase failed', { id: row.id, message: err.message });
         }

@@ -117,7 +117,7 @@ test('startup: production fails fast when a required secret is missing', async (
       JWT_SECRET: 'x'.repeat(64),
       APP_URL: 'https://topflowng.test',
       PAYSTACK_SECRET_KEY: 'sk_live_zzz',
-      // DATABASE_URL and CLUBKONNECT_* deliberately omitted
+      // DATABASE_URL and VTPASS_* deliberately omitted
     },
     ['-e', 'require("./config");'],
   );
@@ -125,7 +125,7 @@ test('startup: production fails fast when a required secret is missing', async (
   assert.ok(
     /Missing required environment variable/i.test(res.err) &&
       /DATABASE_URL/.test(res.err) &&
-      /CLUBKONNECT_API_KEY/.test(res.err),
+      /VTPASS_API_KEY/.test(res.err),
     'expected the missing variable names in the error',
   );
   // The values of the secrets must never appear in the error.
@@ -147,8 +147,9 @@ test('graceful shutdown: SIGTERM closes server + DB pool and exits 0', async () 
     APP_URL: 'https://topflowng.test',
     PAYSTACK_SECRET_KEY: 'sk_test_zzz',
     PAYSTACK_WEBHOOK_SECRET: 'whsec_zzz',
-    CLUBKONNECT_USER_ID: '08000000000',
-    CLUBKONNECT_API_KEY: 'ck_key',
+    VTPASS_API_KEY: 'vtpass_key',
+    VTPASS_SECRET_KEY: 'vtpass_secret',
+    VTPASS_PUBLIC_KEY: 'vtpass_public',
     SENTRY_DSN: '',
     OPENROUTER_API_KEY: 'sk-or-v1-offline',
     OPENROUTER_BASE_URL: 'http://127.0.0.1:1',

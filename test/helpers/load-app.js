@@ -205,17 +205,17 @@ installMock('services/email.js', {
   __sentEmails: sentEmails,
 });
 
-// ── Mock provider client (never dials Clubkonnect) ──────────────────────────
-installMock('services/clubkonnect.js', {
+// ── Mock provider client (never dials VTPass) ──────────────────────────
+installMock('services/vtpass.js', {
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (value) => {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : null;
   },
-  CK_PENDING_CODES: ['01', '99'],
-  normalizeClubkonnectResponse: (raw) => ({ ...raw }),
-  queryClubkonnectOrder: async () => ({ outcome: 'pending' }),
-  processClubkonnectPurchase: async () => ({ outcome: 'pending' }),
+  VTPASS_SUCCESS_CODES: new Set(['000']),
+  normalizeVtpassResponse: (raw) => ({ ...raw, status: raw.code, remark: raw.response_description }),
+  queryVtpassOrder: async () => ({ outcome: 'pending' }),
+  processVtpassPurchase: async () => ({ outcome: 'pending' }),
 });
 
 // ── Boot the real app ────────────────────────────────────────────────────────

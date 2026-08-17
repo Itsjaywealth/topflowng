@@ -107,19 +107,21 @@ const config = {
       .filter(Boolean),
   },
 
-  clubkonnect: {
-    userId: str(process.env.CLUBKONNECT_USER_ID, null),
-    apiKey: str(process.env.CLUBKONNECT_API_KEY, null),
-    baseUrl: str(process.env.CLUBKONNECT_BASE_URL, 'https://www.clubkonnect.com'),
-    queryUrl: str(process.env.CLUBKONNECT_QUERY_URL, 'https://www.nellobytesystems.com/APIQuery.asp'),
-    airtimeUrl: str(process.env.CLUBKONNECT_AIRTIME_URL, 'https://www.nellobytesystems.com/APIAirtimeV1.asp'),
-    dataUrl: str(process.env.CLUBKONNECT_DATA_URL, 'https://www.nellobytesystems.com/APIDataBundleV1.asp'),
-    cableUrl: str(process.env.CLUBKONNECT_CABLE_URL, 'https://www.nellobytesystems.com/APICableTVV1.asp'),
-    electricityUrl: str(process.env.CLUBKONNECT_ELECTRICITY_URL, 'https://www.nellobytesystems.com/APIElectricityV1.asp'),
-    examUrl: str(process.env.CLUBKONNECT_EXAM_URL, 'https://www.nellobytesystems.com/APIExamPins.asp'),
-    rechargeUrl: str(process.env.CLUBKONNECT_RECHARGE_URL, 'https://www.nellobytesystems.com/APIRechargeCard.asp'),
-    timeoutMs: num(process.env.CLUBKONNECT_TIMEOUT_MS, 30_000),
+  // VTPass VTU provider (replaces the legacy Clubkonnect/Nellobyte API, which
+  // was unreachable: every endpoint returned MISSING_PHONE_NUMBER).
+  //   POST /api/pay      — purchase  (headers: api-key + secret-key)
+  //   POST /api/requery  — status    (headers: api-key + secret-key)
+  //   GET  /api/service-variations — plan catalog (headers: api-key + public-key)
+  vtpass: {
+    apiKey: str(process.env.VTPASS_API_KEY, null),
+    secretKey: str(process.env.VTPASS_SECRET_KEY, null),
+    publicKey: str(process.env.VTPASS_PUBLIC_KEY, null),
+    baseUrl: str(process.env.VTPASS_BASE_URL, 'https://vtpass.com/api'),
+    timeoutMs: num(process.env.VTPASS_TIMEOUT_MS, 30_000),
     maxPurchaseAmount: num(process.env.MAX_PURCHASE_AMOUNT, 1_000_000),
+    // Optional JSON blob overriding the built-in product→service/variation map
+    // without a code change. Shape: {"MTN1GB":{"serviceID":"mtn-data","variation":"mtn-sme-1gb"}}
+    productMapJson: str(process.env.VTPASS_PRODUCT_MAP, null),
     pendingOrderExpiryMinutes: num(process.env.PENDING_ORDER_EXPIRY_MINUTES, 6),
     sweepIntervalMs: num(process.env.PENDING_ORDER_SWEEP_INTERVAL_MS, 30_000),
     reconcileBackoffMinutes: num(process.env.PENDING_ORDER_RECONCILE_BACKOFF_MINUTES, 2),
@@ -134,22 +136,23 @@ const config = {
 // logged or echoed — only the variable NAMES are reported. Development/test
 // keep their safe fallbacks so local work and automated checks still boot.
 //
-// DECISION: Paystack (wallet top-up) and Clubkonnect (VTU) are MANDATORY for
-// every production deployment — they are the platform's only money-moving
-// integration and there is no supported payments/VTU-disabled mode. They stay
-// in the hard-required set, so a deployment that omits them refuses to boot
-// rather than silently running with broken payments. There is deliberately no
-// opt-out flag: an intentionally-paused payments deployment is expressed by not
-// routing traffic to this service, never by booting it without the keys.
-// Authenticity (not just presence) is verified by the providers at first live
-// call; boot-time validation only guarantees a value was provided.
+// DECISION: Paystack (wallet top-up) and VTPass (VTU) are MANDATORY for every
+// production deployment — they are the platform's only money-moving integration
+// and there is no supported payments/VTU-disabled mode. They stay in the
+// hard-required set, so a deployment that omits them refuses to boot rather
+// than silently running with broken payments. There is deliberately no opt-out
+// flag: an intentionally-paused payments deployment is expressed by not routing
+// traffic to this service, never by booting it without the keys. Authenticity
+// (not just presence) is verified by the providers at first live call;
+// boot-time validation only guarantees a value was provided.
 const REQUIRED_PRODUCTION = [
   'DATABASE_URL',        // Postgres connection
   'JWT_SECRET',          // token signing
   'APP_URL',             // canonical origin (CORS, callbacks, reset links)
   'PAYSTACK_SECRET_KEY', // payments — mandatory (see decision note)
-  'CLUBKONNECT_USER_ID', // VTU provider — mandatory (see decision note)
-  'CLUBKONNECT_API_KEY', // VTU provider — mandatory (see decision note)
+  'VTPASS_API_KEY',      // VTU provider — mandatory (see decision note)
+  'VTPASS_SECRET_KEY',   // VTU provider — mandatory (see decision note)
+  'VTPASS_PUBLIC_KEY',   // VTU provider — required for GET (variations) endpoints
 ];
 
 const OPTIONAL_PRODUCTION = [

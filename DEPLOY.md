@@ -73,9 +73,9 @@ PORT                    = 3000
 NODE_ENV                = production
 APP_URL                 = https://topflowng.com
 
-CLUBKONNECT_USER_ID     = (your Clubkonnect phone number)
-CLUBKONNECT_API_KEY     = (your Clubkonnect API key)
-CLUBKONNECT_BASE_URL    = https://www.clubkonnect.com
+VTPASS_API_KEY       = (your VTPass API key)
+VTPASS_SECRET_KEY    = (your VTPass secret key)
+VTPASS_PUBLIC_KEY    = (your VTPass public key)
 
 PAYSTACK_SECRET_KEY     = sk_live_xxxxxxxxxxxxxxxxxxxxxx
 PAYSTACK_PUBLIC_KEY     = pk_live_xxxxxxxxxxxxxxxxxxxxxx
@@ -149,10 +149,10 @@ In **Hostinger** control panel:
    ```bash
    curl https://ifconfig.me
    ```
-3. Paste that IP into Clubkonnect's whitelist
-4. Register at Clubkonnect: **https://www.clubkonnect.com/Register.asp**
-5. Fund your Clubkonnect reseller wallet (minimum ₦1,000 to start testing)
-6. Get your API key: Dashboard → Developer's API → your UserID + APIKey
+3. (No VTU IP whitelist required for VTPass — API keys authenticate)
+4. Register at VTPass: **https://vtpass.com**
+5. Fund your VTPass reseller wallet (minimum ₦1,000 to start testing)
+6. Get your API keys: Dashboard → Settings → API Keys
 
 ---
 
@@ -161,8 +161,7 @@ In **Hostinger** control panel:
 - [ ] `NODE_ENV=production` is set in Railway
 - [ ] `APP_URL=https://topflowng.com` is set (Paystack callback needs this)
 - [ ] Paystack webhook URL is set to `https://topflowng.com/api/paystack/webhook`
-- [ ] Clubkonnect IP is whitelisted
-- [ ] Clubkonnect wallet is funded
+- [ ] VTPass wallet is funded
 - [ ] Test one airtime purchase end-to-end
 - [ ] Test Paystack card payment (use Paystack test card: 4084 0840 8408 4081, CVV 408, exp 0822)
 - [ ] Volume mounted so DB persists across restarts
@@ -176,7 +175,7 @@ In **Hostinger** control panel:
 |---------|------|
 | Railway Hobby plan | $5/month (needed for volumes + persistent DB) |
 | topflowng.com domain | Already paid (Hostinger) |
-| Clubkonnect | Free to register; pay per transaction (reseller margin) |
+| Clubkonnect removed | VTPass — pay per transaction (reseller margin) |
 | Paystack | 1.5% + ₦100 per card transaction; free for bank transfer |
 
 Railway free tier works for initial testing but has sleep delays. Upgrade to Hobby ($5/mo) for always-on.
@@ -187,5 +186,4 @@ Railway free tier works for initial testing but has sleep delays. Upgrade to Hob
 
 - Railway docs: https://docs.railway.app
 - Paystack docs: https://paystack.com/docs
-- Clubkonnect: https://www.clubkonnect.com/APIDocs.asp (log in first)
-- Clubkonnect register: https://www.clubkonnect.com/Register.asp
+- VTPass: https://vtpass.com/developers
