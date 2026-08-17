@@ -6,6 +6,7 @@
  * safe defaults so the app can still boot for local work and automated checks.
  * Secrets are never logged or exposed to the frontend.
  */
+
 'use strict';
 
 require('dotenv').config();
@@ -115,10 +116,6 @@ const config = {
     apiKey: str(process.env.VTPASS_API_KEY, null),
     secretKey: str(process.env.VTPASS_SECRET_KEY, null),
     publicKey: str(process.env.VTPASS_PUBLIC_KEY, null),
-    // Basic auth credentials (used when VTPASS_AUTH_TYPE=basic)
-    username: str(process.env.VTPASS_USERNAME, null),
-    password: str(process.env.VTPASS_PASSWORD, null),
-    authType: str(process.env.VTPASS_AUTH_TYPE, 'apikey'), // 'apikey' | 'basic'
     baseUrl: str(process.env.VTPASS_BASE_URL, 'https://vtpass.com/api'),
     timeoutMs: num(process.env.VTPASS_TIMEOUT_MS, 30_000),
     maxPurchaseAmount: num(process.env.MAX_PURCHASE_AMOUNT, 1_000_000),
@@ -153,7 +150,9 @@ const REQUIRED_PRODUCTION = [
   'JWT_SECRET',          // token signing
   'APP_URL',             // canonical origin (CORS, callbacks, reset links)
   'PAYSTACK_SECRET_KEY', // payments — mandatory (see decision note)
-  // VTPass keys are validated below based on VTPASS_AUTH_TYPE
+  'VTPASS_API_KEY',      // VTU provider — mandatory (see decision note)
+  'VTPASS_SECRET_KEY',   // VTU provider — mandatory (see decision note)
+  'VTPASS_PUBLIC_KEY',   // VTU provider — required for GET (variations) endpoints
 ];
 
 const OPTIONAL_PRODUCTION = [
@@ -169,25 +168,6 @@ function validateProductionConfig() {
   if (missing.length > 0) {
     throw new Error(`[config] Missing required environment variable(s): ${missing.join(', ')}`);
   }
-
-  // VTPass auth validation: require credentials matching the configured auth type
-  const vtpassAuthType = str(process.env.VTPASS_AUTH_TYPE, 'apikey');
-  if (vtpassAuthType === 'basic') {
-    const missingBasic = ['VTPASS_USERNAME', 'VTPASS_PASSWORD'].filter(
-      (name) => !process.env[name] || !process.env[name].trim()
-    );
-    if (missingBasic.length > 0) {
-      throw new Error(`[config] VTPass Basic auth requires: ${missingBasic.join(', ')}`);
-    }
-  } else {
-    const missingApiKey = ['VTPASS_API_KEY', 'VTPASS_SECRET_KEY', 'VTPASS_PUBLIC_KEY'].filter(
-      (name) => !process.env[name] || !process.env[name].trim()
-    );
-    if (missingApiKey.length > 0) {
-      throw new Error(`[config] VTPass API key auth requires: ${missingApiKey.join(', ')}`);
-    }
-  }
-
   const optionalMissing = OPTIONAL_PRODUCTION.filter((name) => !process.env[name]);
   if (optionalMissing.length > 0) {
     console.warn(`[config] Optional env var(s) not set (feature degraded): ${optionalMissing.join(', ')}`);

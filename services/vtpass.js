@@ -328,41 +328,15 @@ function normalizeVtpassResponse(raw) {
   return { outcome: 'pending', ...base };
 }
 
-/**
- * Returns { headers, auth? } to spread into axios request config.
- * When VTPASS_AUTH_TYPE=basic, uses HTTP Basic auth (email + password).
- * Falls back to API-key headers otherwise.
- */
-function authConfig(kind) {
-  if (config.vtpass.authType === 'basic') {
-    return {
-      headers: {},
-      auth: {
-        username: config.vtpass.username,
-        password: config.vtpass.password,
-      },
-    };
-  }
+function authHeaders(kind) {
   const headers = { 'api-key': config.vtpass.apiKey };
   if (kind === 'get') headers['public-key'] = config.vtpass.publicKey;
   else headers['secret-key'] = config.vtpass.secretKey;
-  return { headers };
-}
-
-// Keep backward-compatible alias used in tests / external callers
-function authHeaders(kind) {
-  return authConfig(kind).headers;
+  return headers;
 }
 
 function assertConfigured() {
-  const isBasic = config.vtpass.authType === 'basic';
-  if (isBasic) {
-    if (!config.vtpass.username || !config.vtpass.password) {
-      const error = new ApiError(503, 'VTPass Basic auth is not configured (VTPASS_USERNAME / VTPASS_PASSWORD missing)');
-      error.code = 'VTPASS_NOT_CONFIGURED';
-      throw error;
-    }
-  } else if (!config.vtpass.apiKey || !config.vtpass.secretKey) {
+  if (!config.vtpass.apiKey || !config.vtpass.secretKey) {
     const error = new ApiError(503, 'VTPass purchase API is not configured');
     error.code = 'VTPASS_NOT_CONFIGURED';
     throw error;
@@ -384,7 +358,7 @@ async function fetchVariations(serviceID) {
   }
   const response = await axios.get(`${config.vtpass.baseUrl}/service-variations`, {
     params: { serviceID },
-    ...authConfig('get'),
+    headers: authHeaders('get'),
     timeout: config.vtpass.timeoutMs,
   });
   const content = response.data && response.data.content;
@@ -409,7 +383,7 @@ async function queryVtpassOrder(requestId) {
   assertConfigured();
   try {
     const response = await axios.post(`${config.vtpass.baseUrl}/requery`, { request_id: requestId }, {
-      ...authConfig('post'),
+      headers: authHeaders('post'),
       timeout: config.vtpass.timeoutMs,
     });
     return normalizeVtpassResponse(response.data);
@@ -438,7 +412,7 @@ async function processVtpassPurchase({ userId, requestId, serviceType, amount, d
     if (product.quantity !== undefined) body.quantity = product.quantity;
 
     const response = await axios.post(`${config.vtpass.baseUrl}/pay`, body, {
-      ...authConfig('post'),
+      headers: authHeaders('post'),
       timeout: config.vtpass.timeoutMs,
     });
     providerRaw = response.data;

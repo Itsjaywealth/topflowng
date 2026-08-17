@@ -117,20 +117,58 @@ test('startup: production fails fast when a required secret is missing', async (
       JWT_SECRET: 'x'.repeat(64),
       APP_URL: 'https://topflowng.test',
       PAYSTACK_SECRET_KEY: 'sk_live_zzz',
-      // DATABASE_URL and VTPASS_* deliberately omitted
+      // DATABASE_URL deliberately omitted
     },
     ['-e', 'require("./config");'],
   );
   assert.notStrictEqual(res.code, 0, 'expected non-zero exit');
   assert.ok(
     /Missing required environment variable/i.test(res.err) &&
-      /DATABASE_URL/.test(res.err) &&
-      /VTPASS_API_KEY/.test(res.err),
-    'expected the missing variable names in the error',
+      /DATABASE_URL/.test(res.err),
+    'expected DATABASE_URL in the error',
   );
   // The values of the secrets must never appear in the error.
   assert.ok(!res.err.includes('sk_live_zzz'));
   assert.ok(!res.err.includes('x'.repeat(64)));
+});
+
+test('startup: production fails fast when VTPass API key credentials are missing', async () => {
+  const res = await run(
+    {
+      NODE_ENV: 'production',
+      JWT_SECRET: 'x'.repeat(64),
+      APP_URL: 'https://topflowng.test',
+      PAYSTACK_SECRET_KEY: 'sk_live_zzz',
+      DATABASE_URL: 'postgres://localhost/fake',
+      // VTPASS_* deliberately omitted; VTPASS_AUTH_TYPE defaults to 'apikey'
+    },
+    ['-e', 'require("./config");'],
+  );
+  assert.notStrictEqual(res.code, 0, 'expected non-zero exit');
+  assert.ok(
+    /VTPASS_API_KEY/.test(res.err),
+    'expected VTPASS_API_KEY in the error',
+  );
+});
+
+test('startup: production fails fast when VTPass Basic auth credentials are missing', async () => {
+  const res = await run(
+    {
+      NODE_ENV: 'production',
+      JWT_SECRET: 'x'.repeat(64),
+      APP_URL: 'https://topflowng.test',
+      PAYSTACK_SECRET_KEY: 'sk_live_zzz',
+      DATABASE_URL: 'postgres://localhost/fake',
+      VTPASS_AUTH_TYPE: 'basic',
+      // VTPASS_USERNAME / VTPASS_PASSWORD deliberately omitted
+    },
+    ['-e', 'require("./config");'],
+  );
+  assert.notStrictEqual(res.code, 0, 'expected non-zero exit');
+  assert.ok(
+    /VTPASS_USERNAME/.test(res.err),
+    'expected VTPASS_USERNAME in the error',
+  );
 });
 
 // ── Graceful shutdown (real Postgres, prod-like config) ─────────────────────
