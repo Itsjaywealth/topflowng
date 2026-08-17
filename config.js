@@ -116,6 +116,10 @@ const config = {
     apiKey: str(process.env.VTPASS_API_KEY, null),
     secretKey: str(process.env.VTPASS_SECRET_KEY, null),
     publicKey: str(process.env.VTPASS_PUBLIC_KEY, null),
+    // Basic auth credentials (used when VTPASS_AUTH_TYPE=basic)
+    username: str(process.env.VTPASS_USERNAME, null),
+    password: str(process.env.VTPASS_PASSWORD, null),
+    authType: str(process.env.VTPASS_AUTH_TYPE, 'apikey'), // 'apikey' | 'basic'
     baseUrl: str(process.env.VTPASS_BASE_URL, 'https://vtpass.com/api'),
     timeoutMs: num(process.env.VTPASS_TIMEOUT_MS, 30_000),
     maxPurchaseAmount: num(process.env.MAX_PURCHASE_AMOUNT, 1_000_000),
