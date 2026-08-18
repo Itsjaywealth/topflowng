@@ -240,6 +240,11 @@ async function cleanup() {
     const db = require(path.join(ROOT, 'database.js'));
     if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
   } catch { /* best effort */ }
+  // Give the pg pool's per-connection teardown callbacks (error events fired by the
+  // five failed concurrent debits) time to drain before DROP DATABASE sends
+  // pg_terminate_backend. Without this pause those callbacks fire as uncaughtExceptions
+  // attributed to the last test on Node 18/20.
+  await new Promise((r) => setTimeout(r, 250));
   await pgHelper.dropDatabase(DB_PREFIX);
 }
 

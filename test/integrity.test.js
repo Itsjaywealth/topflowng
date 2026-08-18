@@ -82,10 +82,6 @@ test('wallet: concurrent debits never drive the balance below zero', async () =>
   const balance = await db.getWalletBalance(userId);
   assert.strictEqual(balance, 0);
   assert.ok(balance >= 0, 'wallet must never be negative');
-
-  // Drain the pg connection pool's next-tick release callbacks so that the Node 18
-  // test runner does not detect them as "async activity after the test ended."
-  await new Promise((r) => setImmediate(r));
 });
 
 test('wallet: purchase is refused when the balance is short, with no debit', async () => {
