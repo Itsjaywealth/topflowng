@@ -4,12 +4,33 @@
 // cached app shell can never hide a deployment.
 // Cache-first for immutable static assets only. skipWaiting + clients.claim
 // mean a new version takes over on the next load — no stale-asset trap.
-const CACHE = 'topflowng-v6';
+const CACHE = 'topflowng-v7';
 const STATIC = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/assets/brand/topflowng-mark.svg',
   '/assets/provider-logos.js',
+  '/assets/providers/mtn.svg',
+  '/assets/providers/glo.png',
+  '/assets/providers/airtel.png',
+  '/assets/providers/t2.png',
+  '/assets/providers/9mobile.webp',
+  '/assets/providers/ikedc.png',
+  '/assets/providers/ekedc.png',
+  '/assets/providers/aedc.png',
+  '/assets/providers/phedc.jpg',
+  '/assets/providers/kedc.png',
+  '/assets/providers/ibedc.png',
+  '/assets/providers/jed.png',
+  '/assets/providers/kaedco.png',
+  '/assets/providers/eedc.png',
+  '/assets/providers/bedc.png',
+  '/assets/providers/aple.png',
+  '/assets/providers/yedc.png',
+  '/assets/providers/dstv.png',
+  '/assets/providers/gotv.png',
+  '/assets/providers/startimes.png',
+  '/assets/providers/waec.png',
 ];
 
 self.addEventListener('install', e => {
