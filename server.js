@@ -807,6 +807,22 @@ app.get('/api/admin/reconciliation', adminMiddleware, async (req, res) => {
   }
 });
 
+// ── Admin: VTPass provider balance (read-only, never exposes the raw credential) ──
+app.get('/api/admin/vtpass-balance', adminMiddleware, async (_req, res) => {
+  try {
+    const { getBalance } = require('./providers/vtpass');
+    const balance = await getBalance();
+    if (balance === null) {
+      return res.json({ status: 'UNVERIFIED', reason: 'balance endpoint did not return a numeric value' });
+    }
+    const sufficient = balance > 0;
+    return res.json({ status: sufficient ? 'SUFFICIENT' : 'INSUFFICIENT', sufficient });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    return res.json({ status: 'UNVERIFIED', reason: 'error calling provider balance endpoint' });
+  }
+});
+
 // CSP violation reporting endpoint (receives report-only violations for monitoring)
 app.post('/api/admin/csp-report', apiLimiter, express.json({ type: 'application/reports+json' }), (req, res) => {
   const body = req.body;
