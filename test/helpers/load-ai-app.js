@@ -186,6 +186,7 @@ async function cleanup() {
     const db = require(path.join(ROOT, 'database.js'));
     if (typeof db.closePool === 'function') await db.closePool().catch(() => {});
   } catch { /* best effort */ }
+  await new Promise((r) => setTimeout(r, 250));
   await pgHelper.dropDatabase(DB_PREFIX);
 }
 

@@ -117,6 +117,15 @@ button{font-family:var(--font)}
 }
 .field input::placeholder{color:var(--mid);font-weight:500}
 .field input:focus{border-color:var(--blue-2);box-shadow:var(--ring)}
+.pw-field{position:relative}
+.pw-field input{padding-right:46px}
+.pw-toggle{position:absolute;top:50%;right:6px;transform:translateY(-50%);
+  width:34px;height:34px;border:none;background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:var(--mid);
+  border-radius:8px;transition:color .12s ease,background .12s ease}
+.pw-toggle:hover{color:var(--blue-2);background:var(--blue-soft)}
+.pw-toggle:focus-visible{outline:2px solid var(--blue-2);outline-offset:1px}
+.pw-toggle svg{width:19px;height:19px;stroke-width:2;fill:none;stroke:currentColor}
 .btn{
   width:100%;min-height:50px;margin-top:6px;
   background:var(--grad);color:var(--white);
@@ -340,7 +349,13 @@ tbody tr:hover td{background:var(--mist)}
     </div>
     <div class="field">
       <label for="admin-password">Password</label>
-      <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password">
+      <div class="pw-field">
+        <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePasswordVisibility('admin-password', this)">
+          <svg class="pw-eye-open" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="pw-eye-closed" style="display:none" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path d="m4 4 16 16"/></svg>
+        </button>
+      </div>
     </div>
     <button type="button" class="btn" id="login-btn" onclick="adminLogin()">Sign in</button>
     <p class="error-msg" id="login-error" role="alert"></p>
@@ -703,6 +718,17 @@ const PAGE = 50;
 let txnTabFilter = 'all';
 
 // ── AUTH ───────────────────────────────────────────────────────────────────
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  btn.setAttribute('aria-pressed', String(show));
+  btn.querySelector('.pw-eye-open').style.display = show ? 'none' : '';
+  btn.querySelector('.pw-eye-closed').style.display = show ? '' : 'none';
+}
+
 async function adminLogin() {
   const email = document.getElementById('admin-email').value.trim();
   const pass = document.getElementById('admin-password').value;

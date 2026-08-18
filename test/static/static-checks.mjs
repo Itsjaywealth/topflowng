@@ -189,6 +189,15 @@ await checkInlineSyntax('bizflow.html');
   check('active provider tiles contain no emoji', providerTiles.every((tile) => !/\p{Extended_Pictographic}/u.test(tile)));
   check('EEDC is not an active customer provider', !/provider-choice[^>]*>[\s\S]{0,500}?EEDC/.test(app));
   check('recharge-card service tile is disabled', /service-tile" disabled[^>]*>[\s\S]{0,500}?Recharge Cards/.test(app));
+  for (const [shell, file] of [['topflowng.html', app], ['admin.html', read('admin.html')]]) {
+    const pwFields = [...file.matchAll(/<input type="password"[^>]*id="([^"]+)"/g)].map((m) => m[1]).filter((id) => !/pin/i.test(id));
+    const wrapped = pwFields.every((id) => new RegExp(`class="pw-field"[\\s\\S]{0,220}?id="${id}"`).test(file));
+    check(`${shell} password inputs have show/hide toggles`, wrapped);
+    const pinFields = [...file.matchAll(/<input type="password"[^>]*id="([^"]+)"/g)].map((m) => m[1]).filter((id) => /pin/i.test(id));
+    check(`${shell} transaction PIN inputs stay masked`, pinFields.every((id) => !new RegExp(`class="pw-field"[\\s\\S]{0,220}?id="${id}"`).test(file)));
+  }
+  check('password toggle helper defined in both shells',
+    /function togglePasswordVisibility\(/.test(app) && /function togglePasswordVisibility\(/.test(read('admin.html')));
 }
 
 // ── Summary ────────────────────────────────────────────────────────────────
