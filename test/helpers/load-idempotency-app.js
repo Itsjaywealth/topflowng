@@ -90,11 +90,13 @@ const mockProvider = {
     if (providerState.outcome === 'success') {
       await db.recordVtuProviderResponse(requestId, {
         orderId, statusCode: '000', status: 'ORDER_COMPLETED',
-        remark: 'Success', description: 'Delivered', raw: { 
+        remark: 'Success', description: 'Delivered', token: 'ELEC-TOKEN-001',
+        raw: { 
           requestId: `VTP-${Date.now()}`,
           response: 'success',
           response_code: '000',
-          response_description: 'Transaction completed'
+          response_description: 'Transaction completed',
+          token: 'ELEC-TOKEN-001',
         },
       });
       try {

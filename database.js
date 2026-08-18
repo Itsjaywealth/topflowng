@@ -311,14 +311,47 @@ async function debitWallet(userId, amount, description, reference = null) {
   }
 }
 
-async function getTransactions(userId, limit = 20) {
-  const { rows } = await pool.query(
-    `SELECT id, type, amount, description, reference, status, provider_order_id, created_at
-     FROM transactions WHERE user_id = $1
-     ORDER BY created_at DESC LIMIT $2`,
-    [userId, limit]
+async function getTransactions(userId, { limit = 20, offset = 0, q = null, category = null, status = null, from = null, to = null } = {}) {
+  const params = [userId];
+  let sql = `SELECT id, type, amount, description, reference, status, provider_order_id, created_at
+             FROM transactions WHERE user_id = $1`;
+  if (category && category !== 'all' && category !== 'credit') {
+    params.push(category);
+    sql += ` AND ${categoryFilterClause(category, '$' + params.length)}`;
+  } else if (category === 'credit') {
+    sql += ` AND type = 'credit'`;
+  }
+  if (status && status !== 'all') {
+    params.push(status);
+    sql += ` AND status = $${params.length}`;
+  }
+  if (from) { params.push(from); sql += ` AND created_at >= $${params.length}`; }
+  if (to) { params.push(to); sql += ` AND created_at < $${params.length}`; }
+  if (q) {
+    params.push(`%${q}%`);
+    sql += ` AND (description ILIKE $${params.length} OR reference ILIKE $${params.length} OR provider_order_id ILIKE $${params.length})`;
+  }
+  const countRes = await pool.query(
+    `SELECT COUNT(*) AS total FROM (${sql}) t`, params
   );
-  return rows;
+  const base = params.length + 1;
+  params.push(limit, offset);
+  sql += ' ORDER BY created_at DESC LIMIT $' + base + ' OFFSET $' + (base + 1);
+  const { rows } = await pool.query(sql, params);
+  return { transactions: rows, total: parseInt(countRes.rows[0].total, 10) };
+}
+
+function categoryFilterClause(category, placeholder) {
+  switch (category) {
+    case 'airtime': return `(description ILIKE 'Airtime%' OR description ILIKE '% airtime %')`;
+    case 'data': return `(description ILIKE 'Data%' OR description ILIKE '% data %' OR description ILIKE '%Bundle%')`;
+    case 'electricity': return `(description ILIKE 'Electricity%' OR description ILIKE '%Electricity%' OR description ILIKE '% prepaid %' OR description ILIKE '% postpaid %')`;
+    case 'cable': return `(description ILIKE '%DStv%' OR description ILIKE '%GOtv%' OR description ILIKE '%StarTimes%' OR description ILIKE '% cable %' OR description ILIKE 'Cable%')`;
+    case 'exam-pin': return `(description ILIKE 'Exam%' OR description ILIKE '%WAEC%' OR description ILIKE '%NECO%' OR description ILIKE '%NABTEB%' OR description ILIKE '%JAMB%')`;
+    case 'recharge-pin': return `(description ILIKE '%Recharge%' OR description ILIKE '% card pin %')`;
+    case 'wallet': return `(type = 'credit' OR type = 'debit')`;
+    default: return 'TRUE';
+  }
 }
 
 async function logFailedTransaction(userId, description, amount) {
@@ -402,6 +435,11 @@ async function recordVtuIdempotencyResult(requestId, response) {
 }
 
 async function recordVtuProviderResponse(requestId, provider) {
+  const raw = (provider.raw && typeof provider.raw === 'object') ? { ...provider.raw } : {};
+  // Durably persist any vended token / PIN so it survives the success modal and
+  // can be recovered from transaction detail, the receipt, or admin tools.
+  if (provider.token) raw.token = provider.token;
+  if (provider.purchasedCode) raw.purchasedCode = provider.purchasedCode;
   const { rows } = await pool.query(
     `UPDATE vtu_orders
      SET provider_order_id = COALESCE($2, provider_order_id),
@@ -420,7 +458,7 @@ async function recordVtuProviderResponse(requestId, provider) {
       provider.status || null,
       provider.remark || null,
       provider.description || null,
-      JSON.stringify(provider.raw || {}),
+      JSON.stringify(raw),
     ]
   );
   return rows[0] || null;
@@ -592,7 +630,7 @@ async function getVtuOrderByRequestId(requestId) {
     `SELECT request_id, user_id, service_type, amount, description, provider_order_id,
             provider_status_code, provider_status, provider_remark, provider_description,
             status, transaction_id, created_at, updated_at,
-            idempotency_key, request_fingerprint, response_snapshot,
+            idempotency_key, request_fingerprint, response_snapshot, provider_response,
             idempotency_key_created_at, idempotency_key_last_used_at,
             reconcile_attempts, last_reconciled_at
      FROM vtu_orders WHERE request_id = $1`,
@@ -758,6 +796,18 @@ async function getAdminStats() {
      WHERE created_at >= CURRENT_DATE AND status = 'completed' AND type = 'debit'`
   );
   s.avg_transaction_amount_today = avg.rows[0]?.avg_amount != null ? parseFloat(avg.rows[0].avg_amount) : null;
+  // Ops signal: pending orders that have been stuck long enough to warrant a
+  // human look (older than the sweep cadence, i.e. not just being processed).
+  const stale = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM vtu_orders
+     WHERE status IN ('pending','submitted')
+       AND created_at < NOW() - INTERVAL '30 minutes'`
+  );
+  s.stale_pending = stale.rows[0].n;
+  const bg = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM scheduled_execution_claims WHERE expires_at < NOW()`
+  );
+  s.expired_claims = bg.rows[0].n;
   return s;
 }
 
@@ -968,6 +1018,65 @@ async function getAnalyticsSummary(userId) {
     [userId]
   );
   return rows[0];
+}
+
+// ── In-app notifications ─────────────────────────────────────────────────────
+async function createNotification({ userId, category = 'transaction', title, message, link = null }) {
+  const { rows } = await pool.query(
+    `INSERT INTO notifications (user_id, category, title, message, link)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, user_id, category, title, message, link, read_at, created_at`,
+    [userId, category, title, message, link]
+  );
+  return rows[0];
+}
+
+async function getNotifications(userId, { limit = 30, offset = 0, category = null, unreadOnly = false } = {}) {
+  const params = [userId, limit, offset];
+  let sql = `SELECT id, category, title, message, link, read_at, created_at
+             FROM notifications WHERE user_id = $1`;
+  if (category && category !== 'all') { params.push(category); sql += ` AND category = $${params.length}`; }
+  if (unreadOnly) { sql += ' AND read_at IS NULL'; }
+  sql += ' ORDER BY created_at DESC LIMIT $2 OFFSET $3';
+  const { rows } = await pool.query(sql, params);
+  const countRes = await pool.query('SELECT COUNT(*) AS total FROM notifications WHERE user_id = $1', [userId]);
+  return { notifications: rows, total: parseInt(countRes.rows[0].total, 10) };
+}
+
+async function getUnreadNotificationCount(userId) {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*) AS unread FROM notifications WHERE user_id = $1 AND read_at IS NULL',
+    [userId]
+  );
+  return parseInt(rows[0].unread, 10);
+}
+
+async function markNotificationRead(userId, notificationId) {
+  const { rows } = await pool.query(
+    `UPDATE notifications SET read_at = COALESCE(read_at, NOW())
+     WHERE id = $1 AND user_id = $2
+     RETURNING id, read_at`,
+    [notificationId, userId]
+  );
+  return rows[0] || null;
+}
+
+async function markAllNotificationsRead(userId) {
+  const { rows } = await pool.query(
+    `UPDATE notifications SET read_at = COALESCE(read_at, NOW())
+     WHERE user_id = $1 AND read_at IS NULL
+     RETURNING id`,
+    [userId]
+  );
+  return rows.length;
+}
+
+async function deleteNotification(userId, notificationId) {
+  const { rows } = await pool.query(
+    'DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING id',
+    [notificationId, userId]
+  );
+  return rows[0] || null;
 }
 
 // ── BizFlow user data (per-user JSONB document) ─────────────────────────────
@@ -1446,4 +1555,10 @@ module.exports = {
   setScheduledPurchaseActive,
   getScheduledPurchaseById,
   getVtuOrdersByUser,
+  createNotification,
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
 };

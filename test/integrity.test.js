@@ -178,6 +178,35 @@ test('IDOR: a non-admin cannot reach admin endpoints', async () => {
   }
 });
 
+// ── Operations center ─────────────────────────────────────────────────────────
+
+test('ops: a non-admin cannot reach the operations summary', async () => {
+  const res = await h.api('GET', '/api/admin/ops', { token: tokenB });
+  assert.strictEqual(res.status, 403);
+});
+
+// ── Electricity token durability ─────────────────────────────────────────────
+
+test('electricity token is retrievable from the order after purchase', async () => {
+  await db.creditWallet(userIdA, 100000, 'seed', 'seed-IT-A');
+  const res = await h.api('POST', '/api/vtu/electricity', {
+    token: tokenA,
+    body: {
+      disco: 'IKEDC', meterNumber: '45067460456', meterType: 'prepaid',
+      amount: 1000, phone: '08031234567', pin: '1111',
+    },
+  });
+  assert.strictEqual(res.status, 200, `electricity purchase should succeed: ${JSON.stringify(res.data)}`);
+  assert.ok(res.data.reference, 'purchase returns a reference');
+  const ref = res.data.reference;
+
+  const order = await h.api('GET', `/api/vtu/orders/${ref}`, { token: tokenA });
+  assert.strictEqual(order.status, 200);
+  assert.strictEqual(order.data.status, 'completed');
+  assert.ok(order.data.electricityToken, 'order exposes the persisted electricity token');
+  assert.match(order.data.electricityToken, /ELEC-TOKEN-001/);
+});
+
 // ── Amount tampering ─────────────────────────────────────────────────────────
 
 test('pricing: a data plan cannot be bought below its catalog price', async () => {

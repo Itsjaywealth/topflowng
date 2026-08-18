@@ -499,6 +499,36 @@ async function queryVtpassOrder(requestId) {
   }
 }
 
+function serviceLabel(serviceType) {
+  const labels = { airtime: 'Airtime', data: 'Data', electricity: 'Electricity', cable: 'Cable TV', 'exam-pin': 'Exam PIN', 'recharge-pin': 'Recharge PIN' };
+  return labels[serviceType] || 'Purchase';
+}
+
+async function notifyPurchase({ userId, requestId, serviceType, amount, description, outcome }) {
+  const service = serviceLabel(serviceType);
+  const amountText = `₦${Number(amount).toLocaleString()}`;
+  let title, message, category, link;
+  if (outcome === 'success') {
+    title = `${service} purchase successful`;
+    message = `Your ${amountText} ${service.toLowerCase()} purchase was successful.`;
+    category = 'transaction';
+    link = `/api/wallet/transactions?q=${encodeURIComponent(requestId)}`;
+  } else if (outcome === 'pending') {
+    title = `${service} purchase pending`;
+    message = `Your ${amountText} ${service.toLowerCase()} purchase is awaiting provider confirmation. Your wallet has not been debited.`;
+    category = 'transaction';
+    link = `/api/wallet/transactions?q=${encodeURIComponent(requestId)}`;
+  } else if (outcome === 'failed') {
+    title = `${service} purchase failed`;
+    message = `Your ${amountText} ${service.toLowerCase()} purchase could not be completed. You have not been charged.`;
+    category = 'transaction';
+    link = `/api/wallet/transactions?q=${encodeURIComponent(requestId)}`;
+  } else {
+    return;
+  }
+  await db.createNotification({ userId, category, title, message, link }).catch(() => {});
+}
+
 async function processVtpassPurchase({ userId, requestId, serviceType, amount, description, product }) {
   await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
 
@@ -548,6 +578,7 @@ async function processVtpassPurchase({ userId, requestId, serviceType, amount, d
     try {
       const result = await db.completeVtuOrder(requestId);
       logger.info('VTPass purchase completed', { requestId, orderId: provider.orderId || 'no provider order id' });
+      await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'success' });
       return { outcome: 'success', balance: result.balance, requestId, orderId: provider.orderId, provider };
     } catch (err) {
       // Provider confirmed delivery, but the local settlement could not be
@@ -559,6 +590,7 @@ async function processVtpassPurchase({ userId, requestId, serviceType, amount, d
         message: err.message,
       });
       await db.markVtuOrderPending(requestId).catch(() => {});
+      await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'pending' });
       return {
         outcome: 'pending',
         message: 'Delivery was confirmed but the wallet debit could not be recorded. The order is held for reconciliation; your wallet has not been debited.',
@@ -572,11 +604,13 @@ async function processVtpassPurchase({ userId, requestId, serviceType, amount, d
   if (provider.outcome === 'failed') {
     await db.markVtuOrderFailed(requestId);
     logger.warn('VTPass purchase failed without wallet debit', { requestId, statusCode: provider.statusCode || 'unknown', code: provider.status });
+    await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'failed' });
     return { outcome: 'failed', message: provider.description || provider.remark || 'The provider declined this purchase.', requestId, orderId: provider.orderId, provider };
   }
 
   await db.markVtuOrderPending(requestId);
   logger.warn('VTPass purchase pending reconciliation', { requestId, statusCode: provider.statusCode || 'unknown', remark: provider.remark || '' });
+  await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'pending' });
   return {
     outcome: 'pending',
     message: 'Your request is pending provider confirmation. Your wallet has not been debited.',

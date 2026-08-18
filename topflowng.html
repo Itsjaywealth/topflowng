@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Theme init — runs synchronously before any CSS renders to prevent flash -->
+<!-- Theme + palette init — runs synchronously before any CSS renders to prevent flash -->
 <script src="/assets/provider-logos.js"></script>
 <script>
 (function(){
-  var t = localStorage.getItem('topflowng-theme');
-  if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    document.documentElement.classList.add('dark');
-  }
+  try {
+    var theme = localStorage.getItem('topflowng-theme') || 'system';
+    var palette = localStorage.getItem('topflowng-palette') || 'teal';
+    var dark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.classList.add('dark');
+    document.documentElement.setAttribute('data-palette', palette === 'emerald' ? 'emerald' : 'teal');
+  } catch (e) {}
 })();
 </script>
 <meta charset="UTF-8">
@@ -200,6 +203,56 @@ html.dark {
   --danger:         #EF6A6A;
   --info:           #63B3ED;
   --focus-ring:     0 0 0 3px rgba(28,191,206,.35);
+}
+
+/* ── Palette B — TopFlow Emerald (premium green) ────────────────
+   Second selectable TopFlowNG brand personality. Independent of the
+   light/dark appearance layer; applies in both. */
+html[data-palette="emerald"] {
+  --teal:        #087F5B;
+  --teal-hi:     #20B486;
+  --teal-soft:   #E7F8F1;
+  --teal-mid:    #B9E8D6;
+  --teal-dark:   #065F46;
+  --grad:        linear-gradient(135deg,#087F5B 0%,#20B486 100%);
+
+  --green:       #087F5B;
+  --green-soft:  #E7F8F1;
+  --green-mid:   #B9E8D6;
+  --green-dark:  #065F46;
+  --green-hi:    #20B486;
+
+  --shadow:      0 4px 16px rgba(8,127,91,.12);
+  --shadow-lg:   0 8px 32px rgba(8,127,91,.16);
+
+  --brand:          #087F5B;
+  --brand-hover:    #065F46;
+  --brand-soft:     #E7F8F1;
+  --brand-ink:      #065F46;
+  --focus-ring:     0 0 0 3px rgba(8,127,91,.28);
+}
+html.dark[data-palette="emerald"] {
+  --teal:        #20B486;
+  --teal-hi:     #2FD9A8;
+  --teal-soft:   #0C2A20;
+  --teal-mid:    #144032;
+  --teal-dark:   #16A97B;
+  --grad:        linear-gradient(135deg,#20B486 0%,#2FD9A8 100%);
+
+  --green:       #20B486;
+  --green-soft:  #0C2A20;
+  --green-mid:   #144032;
+  --green-dark:  #16A97B;
+  --green-hi:    #2FD9A8;
+
+  --shadow:      0 4px 20px rgba(0,0,0,.35);
+  --shadow-lg:   0 8px 36px rgba(0,0,0,.4);
+
+  --brand:          #20B486;
+  --brand-hover:    #2FD9A8;
+  --brand-soft:     #0C2A20;
+  --brand-ink:      #7FD8BC;
+  --focus-ring:     0 0 0 3px rgba(32,180,134,.35);
 }
 
 /* ── Reset ────────────────────────────────────────────────────── */
@@ -537,7 +590,7 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
   font:800 18px/1 var(--display);color:var(--text-primary);letter-spacing:-.2px}
 .wordmark .logo-mark{width:30px;height:30px;border-radius:9px}
 .wordmark span{color:var(--brand)}
-.workspace-profile{display:flex;align-items:center;gap:10px;margin-left:auto}
+.workspace-profile{display:flex;align-items:center;gap:8px;margin-left:auto}
 .header-greeting{font:500 13px/1 var(--font);color:var(--text-secondary)}
 .header-name{font-weight:700;color:var(--text-primary)}
 
@@ -547,6 +600,89 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
   transition:border-color var(--transition),color var(--transition),background var(--transition)}
 .theme-toggle:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
 .theme-toggle svg{width:16px;height:16px}
+
+/* Notification bell + badge */
+.notif-bell{position:relative;display:flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:12px;border:1px solid var(--border-subtle);
+  background:var(--surface);color:var(--text-secondary);cursor:pointer;
+  transition:border-color var(--transition),color var(--transition),background var(--transition)}
+.notif-bell:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.notif-bell svg{width:17px;height:17px}
+.notif-badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 4px;
+  border-radius:9px;background:var(--danger);color:#fff;font:800 10px/18px var(--font);
+  text-align:center;box-shadow:0 0 0 2px var(--surface)}
+
+/* Notification centre */
+.notif-list{display:flex;flex-direction:column;gap:8px}
+.notif-toolbar{display:flex;justify-content:flex-end;margin:4px 0 12px}
+.notif-item{display:flex;align-items:flex-start;gap:13px;padding:14px;
+  background:var(--surface);border:1px solid var(--border-subtle);border-radius:14px;
+  cursor:pointer;transition:background var(--transition),border-color var(--transition)}
+.notif-item:hover{background:var(--surface-muted);border-color:var(--border-strong)}
+.notif-item.unread{background:color-mix(in srgb,var(--brand) 5%,var(--surface));
+  border-color:color-mix(in srgb,var(--brand) 35%,var(--border-subtle))}
+.notif-icon{width:40px;height:40px;flex-shrink:0;border-radius:12px;
+  background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center}
+.notif-icon.has-provider{background:#fff;padding:5px}
+.notif-icon.has-provider img{max-width:100%;max-height:100%;object-fit:contain}
+.notif-icon svg{width:18px;height:18px}
+.notif-body{flex:1;min-width:0}
+.notif-title{font:700 14px/1.35 var(--display);color:var(--text-primary)}
+.notif-item.unread .notif-title{color:var(--brand)}
+.notif-msg{font:500 13px/1.5 var(--font);color:var(--text-secondary);margin-top:2px}
+.notif-time{font:500 11.5px/1.4 var(--font);color:var(--text-muted);margin-top:5px}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:6px;flex-shrink:0}
+.notif-item:not(.unread) .notif-dot{opacity:0}
+
+/* Transaction detail + history polish */
+.txn-detail-card{max-width:420px;width:100%}
+.txn-detail-status{display:inline-flex;align-items:center;gap:8px;margin:6px auto 12px;
+  padding:7px 14px;border-radius:99px;font:700 13px/1 var(--display)}
+.txn-detail-status.success{background:var(--success-soft);color:var(--success)}
+.txn-detail-status.pending{background:var(--warn-soft);color:var(--warn)}
+.txn-detail-status.failed{background:var(--danger-soft);color:var(--danger)}
+.txn-detail-status svg{width:15px;height:15px}
+.txn-detail-amount{font:800 34px/1 var(--display);letter-spacing:-.5px;margin:6px 0 4px;
+  color:var(--text-primary)}
+.txn-detail-amount.credit{color:var(--success)}
+.txn-detail-amount.failed{color:var(--text-muted)}
+.txn-detail-service{font:600 14px/1.4 var(--font);color:var(--text-secondary);margin-bottom:8px}
+.txn-detail-provider{display:flex;justify-content:center;margin-bottom:6px}
+.provider-logo-frame.detail{width:44px;height:44px;padding:6px;border-radius:12px}
+#txn-detail-provider{display:flex;justify-content:center;margin:8px 0 4px}
+#txn-detail-token{margin-top:12px}
+.receipt-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.receipt-actions .btn-copy-ref{width:100%}
+.txn-group-label{font:700 12px/1 var(--display);text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text-muted);margin:18px 4px 8px}
+.txn-item{display:flex;align-items:center;gap:12px;padding:13px 6px;
+  border-radius:12px;transition:background var(--transition);cursor:pointer}
+.txn-item:hover{background:var(--surface-muted)}
+.txn-title{font:600 14px/1.3 var(--font);color:var(--text-primary)}
+.txn-recipient{font:500 12.5px/1.4 var(--font);color:var(--text-muted);margin-top:2px}
+.txn-amount{font:800 14.5px/1 var(--display);text-align:right;white-space:nowrap}
+.txn-amount.credit{color:var(--success)}
+.txn-amount.failed{color:var(--text-muted);text-decoration:line-through}
+.txn-amount.debit{color:var(--text-primary)}
+.filter-chip--status.active{color:var(--brand)}
+.filter-chip--date.active{color:var(--brand)}
+
+/* Support overlay */
+.support-card{max-width:440px;width:100%}
+.support-title{font:800 22px/1.2 var(--display);text-align:center;letter-spacing:-.3px;margin-top:6px}
+.support-sub{font:500 13.5px/1.4 var(--font);color:var(--text-muted);text-align:center;margin:4px 0 16px}
+.support-faq{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:46vh;overflow-y:auto}
+.faq-item{background:var(--surface);border:1px solid var(--border-subtle);border-radius:12px;padding:0 14px}
+.faq-item summary{cursor:pointer;padding:13px 0;font:600 13.5px/1.4 var(--font);color:var(--text-primary);
+  list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:"+";font:800 16px/1 var(--display);color:var(--brand);transition:transform .18s}
+.faq-item[open] summary::after{transform:rotate(45deg)}
+.faq-item p{font:500 13px/1.5 var(--font);color:var(--text-secondary);padding:0 0 13px}
+.support-help-block{border:1px solid var(--border-strong);border-radius:14px;padding:16px;margin-bottom:8px;
+  background:var(--surface)}
+.support-help-title{font:700 14px/1.4 var(--display);color:var(--text-primary);margin-bottom:10px}
+.support-note{font:500 12.5px/1.5 var(--font);color:var(--text-secondary);margin-top:6px}
 html.dark .icon-sun{display:block}
 html.dark .icon-moon{display:none}
 .icon-sun{display:none}
@@ -840,6 +976,46 @@ html.dark .icon-moon{display:none}
   margin-top:4px;transition:background .18s,color .18s}
 .btn-logout:hover{background:var(--danger);color:#fff}
 
+/* ── Appearance (palette + theme picker) ──────────────────────── */
+.appearance-block{margin-bottom:14px}
+.appearance-label{font:600 12px/1.4 var(--font);color:var(--text-secondary);
+  margin-bottom:8px;letter-spacing:.02em}
+.palette-options{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:560px){.palette-options{grid-template-columns:1fr 1fr}}
+.palette-option{display:flex;align-items:center;gap:12px;padding:12px 14px;
+  border:1.5px solid var(--border-subtle);border-radius:14px;background:var(--surface);
+  cursor:pointer;transition:border-color var(--transition),background var(--transition),box-shadow var(--transition);
+  text-align:left;width:100%;color:inherit}
+.palette-option:hover{border-color:var(--border-strong);background:var(--surface-muted)}
+.palette-option[aria-checked="true"]{border-color:var(--brand);
+  box-shadow:var(--focus-ring);background:color-mix(in srgb,var(--brand) 6%,var(--surface))}
+.palette-option-copy{flex:1;min-width:0}
+.palette-option-copy strong{display:block;font:700 14px/1.3 var(--display);color:var(--text-primary)}
+.palette-option-copy small{display:block;font:500 12px/1.4 var(--font);color:var(--text-muted);margin-top:2px}
+.palette-check{width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;
+  display:flex;align-items:center;justify-content:center;font:800 12px/1 var(--display);
+  opacity:0;transform:scale(.5);transition:opacity var(--transition),transform var(--transition)}
+.palette-option[aria-checked="true"] .palette-check{opacity:1;transform:scale(1)}
+.palette-swatch{width:40px;height:40px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;gap:4px;padding:8px}
+.palette-swatch--teal{background:linear-gradient(135deg,#0B7E8E,#1CBFCE)}
+.palette-swatch--emerald{background:linear-gradient(135deg,#087F5B,#20B486)}
+.palette-swatch i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.palette-swatch i:last-child{opacity:.5}
+.palette-swatch i:last-child{opacity:.55}
+.theme-swatch{width:40px;height:40px;border-radius:12px;flex-shrink:0;position:relative;overflow:hidden;
+  border:1px solid var(--border-subtle)}
+.theme-swatch--light{background:#F4F6F9}
+.theme-swatch--dark{background:#0C1828}
+.theme-swatch--system{background:linear-gradient(135deg,#F4F6F9 50%,#0C1828 50%)}
+.theme-swatch i{position:absolute;left:50%;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);background:var(--brand)}
+
+/* ── Notification preferences ─────────────────────────────────── */
+.pref-row{display:flex;align-items:center;gap:12px;padding:12px 2px;
+  font:600 14px/1.3 var(--font);color:var(--text-primary);cursor:pointer}
+.pref-row input{width:18px;height:18px;accent-color:var(--brand);flex-shrink:0}
+.pref-row input:disabled{opacity:.55;cursor:not-allowed}
+
 /* Bottom nav */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;
   display:none;background:color-mix(in srgb,var(--surface) 92%,transparent);
@@ -849,7 +1025,7 @@ html.dark .icon-moon{display:none}
 #main-app.active-screen ~ .bottom-nav,
 #main-app.active-screen + .bottom-nav,
 .bottom-nav.visible{display:grid}
-.bottom-nav{grid-template-columns:repeat(5,1fr)}
+.bottom-nav{grid-template-columns:repeat(6,1fr)}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:8px 4px;font:600 10px/1 var(--font);color:var(--text-muted);
   transition:color var(--transition);cursor:pointer;border:none;background:none}
@@ -1361,6 +1537,10 @@ html.dark .icon-moon{display:none}
         </div>
         <div class="workspace-profile">
           <div class="header-greeting">Good day, <span class="header-name" id="header-name">—</span></div>
+          <button type="button" class="notif-bell" id="notif-bell" onclick="openNotifications()" aria-label="Notifications" title="Notifications">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="notif-badge" id="notif-badge" hidden>0</span>
+          </button>
           <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark / light mode">
             <svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
             <svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -1399,6 +1579,7 @@ html.dark .icon-moon{display:none}
     <nav class="sidebar-nav" aria-label="Primary">
       <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg>Home</button>
       <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg>Wallet</button>
+      <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Updates</button>
       <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Services</button>
       <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>History</button>
       <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>Account</button>
@@ -1523,6 +1704,29 @@ html.dark .icon-moon{display:none}
       </section>
     </div>
 
+    <div class="screen" id="screen-notifications">
+      <div class="history-head">
+        <div>
+          <div class="eyebrow">Updates</div>
+          <h1>Notifications</h1>
+        </div>
+        <button class="history-refresh" type="button" onclick="loadNotifications(true)">Refresh</button>
+      </div>
+      <div class="filter-chips notif-filter-chips">
+        <div role="button" tabindex="0" class="filter-chip active" onclick="filterNotifications('all',this)">All</div>
+        <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('transaction',this)">Transactions</div>
+        <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('wallet',this)">Wallet</div>
+        <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('schedule',this)">Schedules</div>
+        <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('security',this)">Security</div>
+      </div>
+      <div class="notif-toolbar">
+        <button class="section-link" onclick="markAllNotificationsRead()">Mark all as read</button>
+      </div>
+      <div class="notif-list" id="notif-list" aria-live="polite">
+        <div class="txn-empty">Loading notifications…</div>
+      </div>
+    </div>
+
     <div class="screen" id="screen-history">
       <div class="history-head">
         <div>
@@ -1531,17 +1735,29 @@ html.dark .icon-moon{display:none}
         </div>
         <button class="history-refresh" type="button" onclick="loadAllTxns(true)">Refresh</button>
       </div>
-      <div class="filter-chips">
-        <div role="button" tabindex="0" class="filter-chip active" onclick="filterTxns('all',this)">All</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('airtime',this)">Airtime</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('data',this)">Data</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('electricity',this)">Electricity</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('cable',this)">Cable TV</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('exam-pin',this)">Exam PINs</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('recharge-pin',this)">Recharge Cards</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterTxns('credit',this)">Top-ups</div>
+      <div class="filter-chips" role="group" aria-label="Filter by category">
+        <div role="button" tabindex="0" class="filter-chip active" data-cat="all" onclick="filterTxns('all',this)">All</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="wallet" onclick="filterTxns('wallet',this)">Wallet</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="airtime" onclick="filterTxns('airtime',this)">Airtime</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="data" onclick="filterTxns('data',this)">Data</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="electricity" onclick="filterTxns('electricity',this)">Electricity</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="cable" onclick="filterTxns('cable',this)">Cable TV</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="exam-pin" onclick="filterTxns('exam-pin',this)">Education</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="credit" onclick="filterTxns('credit',this)">Top-ups</div>
       </div>
-      <input type="text" class="history-search" id="txn-search-input" placeholder="Search by reference, description, or user..." oninput="filterTxns(activeTxnFilter,activeTxnChip)">
+      <div class="filter-chips" role="group" aria-label="Filter by status">
+        <div role="button" tabindex="0" class="filter-chip filter-chip--status active" data-status="all" onclick="filterTxnsByStatus('all',this)">All</div>
+        <div role="button" tabindex="0" class="filter-chip filter-chip--status" data-status="completed" onclick="filterTxnsByStatus('completed',this)">Successful</div>
+        <div role="button" tabindex="0" class="filter-chip filter-chip--status" data-status="pending" onclick="filterTxnsByStatus('pending',this)">Pending</div>
+        <div role="button" tabindex="0" class="filter-chip filter-chip--status" data-status="failed" onclick="filterTxnsByStatus('failed',this)">Failed</div>
+      </div>
+      <div class="filter-chips" role="group" aria-label="Filter by date">
+        <div role="button" tabindex="0" class="filter-chip filter-chip--date active" data-range="all" onclick="filterTxnsByDate('all',this)">All dates</div>
+        <div role="button" tabindex="0" class="filter-chip filter-chip--date" data-range="today" onclick="filterTxnsByDate('today',this)">Today</div>
+        <div role="button" tabindex="0" class="filter-chip filter-chip--date" data-range="week" onclick="filterTxnsByDate('week',this)">This week</div>
+        <div role="button" tabindex="0" class="filter-chip filter-chip--date" data-range="month" onclick="filterTxnsByDate('month',this)">This month</div>
+      </div>
+      <input type="text" class="history-search" id="txn-search-input" placeholder="Search by reference, description, or provider..." oninput="filterTxns(activeTxnFilter,activeTxnChip)">
       <div class="txn-list" id="all-txns">
         <div class="txn-empty">Loading...</div>
       </div>
@@ -1638,12 +1854,68 @@ html.dark .icon-moon{display:none}
         <button class="btn-confirm" onclick="openScheduledModal()" style="flex:none;min-height:44px;padding:0 18px;font-size:13px;width:100%;margin-top:4px">Schedule a purchase</button>
       </div>
 
+      <!-- Appearance -->
+      <div class="pin-section" id="appearance-section">
+        <h4>Appearance</h4>
+        <p>Choose your preferred TopFlowNG colour personality and theme. These settings are saved on this device and applied instantly.</p>
+        <div class="appearance-block">
+          <div class="appearance-label">Colour palette</div>
+          <div class="palette-options" id="palette-options" role="radiogroup" aria-label="Colour palette">
+            <button type="button" role="radio" class="palette-option" id="palette-teal" aria-checked="true" onclick="selectPalette('teal')">
+              <span class="palette-swatch palette-swatch--teal" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="palette-option-copy"><strong>TopFlow Teal</strong><small>Fresh, modern, confident</small></span>
+              <span class="palette-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" role="radio" class="palette-option" id="palette-emerald" aria-checked="false" onclick="selectPalette('emerald')">
+              <span class="palette-swatch palette-swatch--emerald" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="palette-option-copy"><strong>TopFlow Emerald</strong><small>Premium, growth, wealth</small></span>
+              <span class="palette-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+        <div class="appearance-block">
+          <div class="appearance-label">Theme</div>
+          <div class="palette-options" id="theme-options" role="radiogroup" aria-label="Theme">
+            <button type="button" role="radio" class="palette-option" id="theme-light" aria-checked="false" onclick="selectTheme('light')">
+              <span class="theme-swatch theme-swatch--light" aria-hidden="true"><i></i></span>
+              <span class="palette-option-copy"><strong>Light</strong><small>Bright and airy</small></span>
+              <span class="palette-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" role="radio" class="palette-option" id="theme-dark" aria-checked="false" onclick="selectTheme('dark')">
+              <span class="theme-swatch theme-swatch--dark" aria-hidden="true"><i></i></span>
+              <span class="palette-option-copy"><strong>Dark</strong><small>Easy on the eyes</small></span>
+              <span class="palette-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" role="radio" class="palette-option" id="theme-system" aria-checked="false" onclick="selectTheme('system')">
+              <span class="theme-swatch theme-swatch--system" aria-hidden="true"><i></i></span>
+              <span class="palette-option-copy"><strong>System</strong><small>Follow this device</small></span>
+              <span class="palette-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification preferences -->
+      <div class="pin-section" id="notif-prefs-section">
+        <h4>Notifications</h4>
+        <p>Control which in-app notifications you receive.</p>
+        <label class="pref-row"><input type="checkbox" id="pref-transactions" checked onchange="saveNotifPrefs()"><span>Transaction updates</span></label>
+        <label class="pref-row"><input type="checkbox" id="pref-wallet" checked onchange="saveNotifPrefs()"><span>Wallet activity</span></label>
+        <label class="pref-row"><input type="checkbox" id="pref-schedule" checked onchange="saveNotifPrefs()"><span>Scheduled purchase alerts</span></label>
+        <label class="pref-row"><input type="checkbox" id="pref-security" checked disabled title="Security notices are always kept on for your protection"><span>Security notifications</span></label>
+        <div id="notif-prefs-msg" class="auth-error" style="margin-top:8px;display:none"></div>
+      </div>
 
       <!-- Account actions -->
       <div class="account-card">
         <div class="account-item" onclick="openFundModal()">
           <div class="acct-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></div>
           <div class="acct-label">Fund wallet</div>
+          <div class="acct-arrow">›</div>
+        </div>
+        <div class="account-item" onclick="openSupport()">
+          <div class="acct-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.8.3-1.4 1-1.4 1.9V14"/><path d="M12 17.5h.01"/></svg></div>
+          <div class="acct-label">Support &amp; FAQ</div>
           <div class="acct-arrow">›</div>
         </div>
         <div class="account-item" onclick="openChangePassword()">
@@ -1668,6 +1940,9 @@ html.dark .icon-moon{display:none}
     </button>
     <button class="nav-item" id="nav-services" onclick="openService('airtime')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span>Services
+    </button>
+    <button class="nav-item" id="nav-notifications" onclick="goTab('notifications')">
+      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>Updates
     </button>
     <button class="nav-item" id="nav-history" onclick="goTab('history')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>History
@@ -1910,6 +2185,93 @@ html.dark .icon-moon{display:none}
 
 
 
+<!-- ══════════════ TRANSACTION DETAIL OVERLAY ══════════════ -->
+<div class="receipt-overlay" id="txn-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="txn-detail-title">
+  <div class="receipt-card txn-detail-card">
+    <div class="receipt-brand"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"><span>TopFlowNG</span></div>
+    <div class="txn-detail-status" id="txn-detail-status"></div>
+    <div id="txn-detail-provider"></div>
+    <div class="txn-detail-amount" id="txn-detail-amount">—</div>
+    <div class="txn-detail-service" id="txn-detail-service">—</div>
+    <div class="receipt-lines" id="txn-detail-lines"></div>
+    <div id="txn-detail-token"></div>
+    <div class="receipt-actions" id="txn-detail-actions">
+      <button type="button" class="btn-copy-ref" id="btn-copy-detail-ref" onclick="copyDetailRef()">Copy reference</button>
+      <button type="button" class="btn-copy-ref" id="btn-share-receipt" onclick="shareTransactionReceipt()">Share receipt</button>
+      <button type="button" class="btn-copy-ref" id="btn-print-receipt" onclick="printTransactionReceipt()">Download / print</button>
+      <button type="button" class="btn-copy-ref" id="btn-get-help" onclick="openSupportFromTxn()">Get help</button>
+    </div>
+    <button class="btn-close-receipt" onclick="closeTxnDetail()">Close</button>
+  </div>
+</div>
+
+<!-- ══════════════ SUPPORT OVERLAY ══════════════ -->
+<div class="receipt-overlay" id="support-overlay" role="dialog" aria-modal="true" aria-labelledby="support-title">
+  <div class="receipt-card support-card">
+    <div class="receipt-brand"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"><span>TopFlowNG</span></div>
+    <div class="support-title" id="support-title">Support</div>
+    <div class="support-sub">How can we help?</div>
+
+    <div class="support-faq">
+      <details class="faq-item">
+        <summary>What is TopFlowNG?</summary>
+        <p>TopFlowNG is a Naira wallet for everyday payments — airtime, data, electricity and cable TV bills — with a receipt and history for everything.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do I fund my wallet?</summary>
+        <p>Tap "Fund wallet" on Home or Wallet, choose an amount, and pay securely with your card, bank transfer or USSD through Paystack.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How quickly are purchases delivered?</summary>
+        <p>Most airtime, data and bill payments are delivered within seconds. Some orders are held as "pending" while the provider confirms them — your wallet is only debited once the order is confirmed.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What happens when a transaction is pending?</summary>
+        <p>Pending transactions are being confirmed by the provider. Your wallet has not been debited. The order resolves automatically, and you can watch it in Transactions.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What happens if a purchase fails?</summary>
+        <p>If a purchase fails, you are never charged. Your wallet is only debited after the provider confirms the order. The failed order appears in your transaction history.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Where can I find an electricity token?</summary>
+        <p>Your electricity token is shown immediately after a successful purchase and can be recovered any time from the transaction detail or the receipt.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do I view old transactions?</summary>
+        <p>Open the Transactions tab from Home, Wallet or the bottom navigation. Use the filters and search to find any purchase or top-up.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Why do I need a transaction PIN?</summary>
+        <p>Your 4–6 digit PIN protects every purchase. It is set once from your Account page and never stored in plain text.</p>
+      </details>
+    </div>
+
+    <div class="support-help-block" id="support-help-block" hidden>
+      <div class="support-help-title">Report a problem with a transaction</div>
+      <div class="field"><label for="support-ref">Transaction reference</label>
+        <div class="pin-row" style="gap:8px">
+          <input type="text" id="support-ref" class="field-input" placeholder="e.g. TF-1700000000000-1" style="min-width:0">
+          <button class="btn-copy-ref" type="button" onclick="copySupportRef()" style="flex:none">Copy</button>
+        </div>
+      </div>
+      <div class="field"><label for="support-service">Service</label>
+        <input type="text" id="support-service" class="field-input" readonly style="min-width:0;background:var(--surface-muted)">
+      </div>
+      <div class="field"><label for="support-status">Status</label>
+        <input type="text" id="support-status" class="field-input" readonly style="min-width:0;background:var(--surface-muted)">
+      </div>
+      <p class="support-note">Email <strong>support@topflowng.com</strong> with the reference above and our team will investigate. Please never share your password or transaction PIN.</p>
+      <a class="btn-copy-ref" id="btn-support-email" style="display:block;text-align:center;margin-top:10px;text-decoration:none"
+         href="mailto:support@topflowng.com?subject=TopFlowNG%20transaction%20help">Email support</a>
+    </div>
+
+    <div class="receipt-actions">
+      <button type="button" class="btn-copy-ref" id="btn-support-done" onclick="closeSupport()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ RECEIPT OVERLAY ══════════════ -->
 <div class="receipt-overlay" id="receipt-overlay" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
   <div class="receipt-card">
@@ -2066,6 +2428,17 @@ function fmt(n) {
 
 function fmtDate(d) {
   return new Date(d).toLocaleString('en-NG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+function fmtTime(d) {
+  const date = new Date(d);
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  const time = date.toLocaleTimeString('en-NG', { hour: 'numeric', minute: '2-digit' });
+  if (sameDay) return `Today, ${time}`;
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ', ' + time;
 }
 
 function initials(name) {
@@ -2307,12 +2680,13 @@ function launchApp() {
   loadPinStatus();
   loadAllBeneficiaries();
   setupHeroSlider();
-  // Keep pending purchases resolving themselves live: refresh the glance widget
-  // (and statuses) every 15s so a confirmed/failed order shows up without a
-  // manual reload even when no receipt is open.
+  refreshNotifBadge();
   setInterval(() => {
     if (document.getElementById('main-app').classList.contains('active-screen')) checkPendingOrders();
   }, 15000);
+  setInterval(() => {
+    if (document.getElementById('main-app').classList.contains('active-screen')) refreshNotifBadge();
+  }, 60000);
 }
 
 function setupHeroSlider() {
@@ -2416,6 +2790,117 @@ async function loadWalletData() {
   }
 }
 
+// ── NOTIFICATIONS ────────────────────────────────────────────────────────
+let notifCategory = 'all';
+let notifOffset = 0;
+let notifTotal = 0;
+const NOTIF_LIMIT = 30;
+
+function notificationIcon(cat) {
+  const icons = {
+    wallet: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg>',
+    schedule: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+    security: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.5 3 8 7.5 9.5 4.5-1.5 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9.5 12 1.8 1.8 3.4-3.6"/></svg>',
+    system: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  };
+  return icons[cat] || '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
+}
+
+function notificationHTML(n) {
+  const unread = !n.read_at;
+  const providerKey = window.TopFlowLogos?.keyFor(n.title + ' ' + n.message);
+  const providerLogo = providerKey ? window.TopFlowLogos.image(providerKey) : '';
+  return `<div class="notif-item ${unread ? 'unread' : ''}" data-id="${n.id}" data-link="${escHtml(n.link || '')}" role="button" tabindex="0" aria-label="${escHtml(n.title)}${unread ? ' (unread)' : ''}" onclick="openNotification(${n.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openNotification(${n.id})}">
+    <div class="notif-icon${providerLogo ? ' has-provider' : ''}">${providerLogo || notificationIcon(n.category)}</div>
+    <div class="notif-body">
+      <div class="notif-title">${escHtml(n.title)}</div>
+      <div class="notif-msg">${escHtml(n.message)}</div>
+      <div class="notif-time">${fmtDate(n.created_at)}</div>
+    </div>
+    <span class="notif-dot" aria-hidden="true"></span>
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function refreshNotifBadge() {
+  try {
+    const data = await api('GET', '/api/notifications/unread-count');
+    const badge = document.getElementById('notif-badge');
+    const n = Number(data.unread) || 0;
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.hidden = n === 0;
+  } catch (e) {}
+}
+
+function openNotifications() {
+  goTab('notifications');
+}
+
+async function loadNotifications(reset) {
+  if (reset) { notifOffset = 0; document.getElementById('notif-list').innerHTML = '<div class="txn-empty">Loading notifications…</div>'; }
+  try {
+    const params = new URLSearchParams({ limit: NOTIF_LIMIT, offset: notifOffset });
+    if (notifCategory !== 'all') params.set('category', notifCategory);
+    const data = await api('GET', '/api/notifications?' + params);
+    const list = data.notifications || [];
+    notifTotal = data.total || 0;
+    const el = document.getElementById('notif-list');
+    if (reset) el.innerHTML = '';
+    if (!list.length && reset) {
+      el.innerHTML = '<div class="txn-empty">No notifications yet. We\'ll notify you here about wallet activity and purchases.</div>';
+    }
+    list.forEach(n => { el.insertAdjacentHTML('beforeend', notificationHTML(n)); });
+    if (notifOffset + NOTIF_LIMIT < notifTotal) {
+      const more = document.createElement('button');
+      more.className = 'load-more'; more.textContent = 'Load more…';
+      more.onclick = () => { notifOffset += NOTIF_LIMIT; loadNotifications(false); };
+      el.appendChild(more);
+    }
+    refreshNotifBadge();
+  } catch {
+    document.getElementById('notif-list').innerHTML = '<div class="txn-empty">Failed to load notifications.</div>';
+  }
+}
+
+function filterNotifications(cat, el) {
+  notifCategory = cat;
+  document.querySelectorAll('.notif-filter-chips .filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  loadNotifications(true);
+}
+
+async function openNotification(id) {
+  let link = null;
+  const item = document.querySelector(`.notif-item[data-id="${id}"]`);
+  if (item) link = item.getAttribute('data-link');
+  try {
+    await api('POST', '/api/notifications/read/' + id);
+    if (item) { item.classList.remove('unread'); item.querySelector('.notif-dot')?.remove(); }
+    refreshNotifBadge();
+  } catch (e) {}
+  // Deep-link to the related transaction when the notification carries one.
+  if (link) {
+    const m = link.match(/[?&]q=([^&]+)/);
+    const ref = m ? decodeURIComponent(m[1]) : null;
+    goTab('history');
+    if (ref) {
+      const search = document.getElementById('txn-search-input');
+      if (search) { search.value = ref; loadAllTxns(true); }
+    }
+  }
+}
+
+async function markAllNotificationsRead() {
+  try {
+    await api('POST', '/api/notifications/read-all');
+    document.querySelectorAll('.notif-item.unread').forEach(i => { i.classList.remove('unread'); i.querySelector('.notif-dot')?.remove(); });
+    refreshNotifBadge();
+  } catch (e) {}
+}
+
 // ── TRANSACTIONS ────────────────────────────────────────────────────────
 function transactionStatusPill(status) {
   const labels = {
@@ -2428,6 +2913,14 @@ function transactionStatusPill(status) {
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
     <span>${status === 'pending' ? 'Pending' : status === 'failed' ? 'Failed' : 'Completed'}</span>
   </span>`;
+}
+
+function txnRecipient(description) {
+  const phoneMatch = String(description || '').match(/\b(0[789]\d{9})\b/);
+  if (phoneMatch) return phoneMatch[1].replace(/^(\d{4})(\d{3})(\d{4})$/, '$1•••$3');
+  const meterMatch = String(description || '').match(/\b(\d{6,11})\b/);
+  if (meterMatch) return meterMatch[1];
+  return '';
 }
 
 function txnHTML(t) {
@@ -2445,11 +2938,14 @@ function txnHTML(t) {
   const providerKey = window.TopFlowLogos?.keyFor(t.description);
   const providerLogo = providerKey ? window.TopFlowLogos.image(providerKey) : '';
   const amountText = failed ? fmt(t.amount) : `${t.type === 'credit' ? '+' : pending ? '' : '-'}${fmt(t.amount)}`;
+  const recipient = txnRecipient(t.description);
+  const time = fmtTime(t.created_at);
   return `<div class="txn-item">
     <div class="txn-icon ${cls}${providerLogo ? ' has-provider' : ''}">${providerLogo || icon}</div>
     <div class="txn-info">
-      <div class="txn-desc" title="${escHtml(t.description)}">${escHtml(t.description)}</div>
-      <div class="txn-meta"><span class="txn-date">${fmtDate(t.created_at)}</span>${transactionStatusPill(status)}</div>
+      <div class="txn-title" title="${escHtml(t.description)}">${escHtml(t.description)}</div>
+      ${recipient ? `<div class="txn-recipient">${escHtml(recipient)}</div>` : ''}
+      <div class="txn-meta"><span class="txn-date">${time}</span>${transactionStatusPill(status)}</div>
     </div>
     <div class="txn-amount ${cls}">${amountText}</div>
   </div>`;
@@ -2481,6 +2977,7 @@ let txnFilter = 'all';
   if (side) side.classList.add('active');
   if (tab === 'history') loadAllTxns(true);
   if (tab === 'home') loadRecentTxns();
+  if (tab === 'notifications') loadNotifications(true);
 }
 
 // ── SERVICE SCREENS ───────────────────────────────────────────────────────
@@ -2826,6 +3323,177 @@ function closeReceipt() {
   goTab('home');
 }
 
+// ── TRANSACTION DETAIL ────────────────────────────────────────────────────
+let detailTxn = null;
+
+function txnDetailLines(t) {
+  const recipient = txnRecipient(t.description);
+  const lines = [
+    ['Status', t.status === 'completed' ? 'Successful' : t.status === 'pending' ? 'Pending' : 'Failed'],
+  ];
+  if (recipient) lines.push(['Recipient / Account', recipient]);
+  lines.push(['Amount', fmt(t.amount)]);
+  lines.push(['Fee', '₦0.00']);
+  lines.push(['Total', `${t.type === 'credit' ? '+' : '-'}${fmt(t.amount)}`]);
+  if (t.reference) lines.push(['TopFlowNG reference', t.reference]);
+  if (t.provider_order_id) lines.push(['Provider reference', t.provider_order_id]);
+  const d = new Date(t.created_at);
+  lines.push(['Date', d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })]);
+  lines.push(['Time', d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })]);
+  return lines;
+}
+
+function openTransactionDetail(t) {
+  detailTxn = t;
+  const status = t.status || 'completed';
+  const failed = status === 'failed';
+  const pending = status === 'pending';
+  const statusEl = document.getElementById('txn-detail-status');
+  statusEl.className = 'txn-detail-status ' + (failed ? 'failed' : pending ? 'pending' : 'success');
+  statusEl.innerHTML = (failed
+    ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8 8 8M16 8l-8 8"/></svg>'
+    : pending
+      ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>'
+      : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>')
+    + `<span>${failed ? 'Failed' : pending ? 'Pending' : 'Successful'}</span>`;
+  const providerKey = window.TopFlowLogos?.keyFor(t.description);
+  document.getElementById('txn-detail-provider').innerHTML = providerKey
+    ? `<span class="provider-logo-frame detail">${window.TopFlowLogos.image(providerKey)}</span>`
+    : '';
+  document.getElementById('txn-detail-amount').textContent = `${t.type === 'credit' ? '+' : failed ? '' : '-'}${fmt(t.amount)}`;
+  document.getElementById('txn-detail-amount').className = 'txn-detail-amount ' + (failed ? 'failed' : t.type);
+  document.getElementById('txn-detail-service').textContent = t.description || 'Transaction';
+  document.getElementById('txn-detail-lines').innerHTML = txnDetailLines(t)
+    .map(([l, v]) => `<div class="receipt-line"><span class="receipt-line-label">${escHtml(l)}</span><span class="receipt-line-value">${escHtml(v)}</span></div>`)
+    .join('');
+  document.getElementById('txn-detail-token').innerHTML = '';
+  document.getElementById('txn-detail-overlay').classList.add('open');
+  // Repeat purchase + get help are only useful for completed debits.
+  document.getElementById('btn-get-help').style.display = 'block';
+  document.getElementById('txn-detail-actions').querySelector('.btn-copy-ref').style.display = 'block';
+  document.getElementById('txn-detail-actions').querySelector('#btn-print-receipt').style.display = 'block';
+  // Electricity purchases may carry a durable token — recover it from the order.
+  if (!failed && /electricity/i.test(t.description || '') && t.reference) {
+    (async () => {
+      try {
+        const order = await api('GET', '/api/vtu/orders/' + encodeURIComponent(t.reference));
+        const token = order.electricityToken;
+        if (token) {
+          const el = document.getElementById('txn-detail-token');
+          el.innerHTML = `<div class="receipt-token">${escHtml(token)}</div>
+            <button type="button" class="btn-copy-ref" onclick="copyDetailToken('${escHtml(token)}')" style="margin-top:8px">Copy token</button>`;
+        }
+      } catch (e) {}
+    })();
+  }
+}
+
+function closeTxnDetail() {
+  document.getElementById('txn-detail-overlay').classList.remove('open');
+  detailTxn = null;
+}
+
+function copyDetailRef() {
+  if (!detailTxn) return;
+  const ref = detailTxn.reference || detailTxn.provider_order_id || '';
+  navigator.clipboard.writeText(ref).then(() => {
+    const btn = document.getElementById('btn-copy-detail-ref');
+    const orig = btn.textContent; btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1800);
+  }).catch(() => {});
+}
+
+function copyDetailToken(token) {
+  navigator.clipboard.writeText(token).then(() => {
+    const btn = document.querySelector('#txn-detail-token .btn-copy-ref');
+    const orig = btn.textContent; btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1800);
+  }).catch(() => {});
+}
+
+function transactionReceiptText(t) {
+  const lines = txnDetailLines(t);
+  const text = ['TopFlowNG — Transaction receipt',
+    '--------------------------------------',
+    ...lines.map(([l, v]) => `${l}: ${v}`),
+    '--------------------------------------',
+    'TopFlowNG — secure payment receipt'];
+  return text.join('\n');
+}
+
+async function shareTransactionReceipt() {
+  if (!detailTxn) return;
+  const text = transactionReceiptText(detailTxn);
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'TopFlowNG receipt', text });
+      return;
+    }
+  } catch (e) { /* user cancelled */ }
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('btn-share-receipt');
+    const orig = btn.textContent; btn.textContent = 'Copied to clipboard';
+    setTimeout(() => btn.textContent = orig, 1800);
+  } catch (e) {}
+}
+
+function printTransactionReceipt() {
+  if (!detailTxn) return;
+  const text = transactionReceiptText(detailTxn);
+  const win = window.open('', '_blank', 'width=420,height=640');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html><html><head><title>TopFlowNG Receipt</title>
+    <style>body{font-family:system-ui,sans-serif;padding:32px;max-width:360px;margin:auto;color:#0f1923;line-height:1.6}
+    .brand{font-weight:800;font-size:18px;margin-bottom:4px;color:#0B7E8E}.sub{color:#4a5568;font-size:12px;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;font-size:13px}td{padding:7px 0;vertical-align:top}
+    td:first-child{color:#4a5568;width:45%}td:last-child{font-weight:600;text-align:right}
+    .foot{margin-top:24px;padding-top:16px;border-top:1px dashed #dde3ea;font-size:11px;color:#8896a4;text-align:center}
+    @media print{body{color:#000}}</style></head><body>
+    <div class="brand">TopFlowNG</div><div class="sub">Secure payment receipt</div>
+    <div style="font-size:28px;font-weight:800;margin:16px 0">${escHtml((detailTxn.type === 'credit' ? '+' : '') + fmt(detailTxn.amount))}</div>
+    <table>${txnDetailLines(detailTxn).map(([l, v]) => `<tr><td>${escHtml(l)}</td><td>${escHtml(v)}</td></tr>`).join('')}</table>
+    <div class="foot">TopFlowNG — secure payment receipt</div>
+    <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt></body></html>`);
+  win.document.close();
+}
+
+function openSupportFromTxn() {
+  if (!detailTxn) return;
+  openSupport(detailTxn);
+}
+
+// ── SUPPORT ───────────────────────────────────────────────────────────────
+function openSupport(txn) {
+  const block = document.getElementById('support-help-block');
+  if (txn) {
+    block.hidden = false;
+    document.getElementById('support-ref').value = txn.reference || txn.provider_order_id || '';
+    document.getElementById('support-service').value = txn.description || '';
+    document.getElementById('support-status').value = txn.status || 'completed';
+    document.getElementById('support-title').textContent = 'Transaction help';
+    document.getElementById('support-sub').textContent = 'We are here to help';
+  } else {
+    block.hidden = true;
+    document.getElementById('support-title').textContent = 'Support';
+    document.getElementById('support-sub').textContent = 'How can we help?';
+  }
+  document.getElementById('support-overlay').classList.add('open');
+}
+
+function closeSupport() {
+  document.getElementById('support-overlay').classList.remove('open');
+}
+
+function copySupportRef() {
+  const ref = document.getElementById('support-ref').value;
+  navigator.clipboard.writeText(ref).then(() => {
+    const btn = document.querySelector('#support-help-block .btn-copy-ref');
+    const orig = btn.textContent; btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1800);
+  }).catch(() => {});
+}
+
 // ── FUND WALLET ───────────────────────────────────────────────────────────
 function openFundModal() {
   document.getElementById('fund-modal').classList.add('open');
@@ -3158,6 +3826,7 @@ function goTab(tab) {
     loadAllBeneficiaries();
     loadAutoRecharge();
     loadScheduledPurchases();
+    showAppearanceSection();
   }
 }
 
@@ -3323,12 +3992,72 @@ function updateSchedPlan() {
 
 // ── TRANSACTION SEARCH ────────────────────────────────────────────────────
 let activeTxnFilter = 'all', activeTxnChip = null;
+let activeTxnStatus = 'all', activeTxnStatusChip = null;
+let activeTxnDate = 'all', activeTxnDateChip = null;
+
 function filterTxns(f, el) {
   activeTxnFilter = f; activeTxnChip = el;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.filter-chips .filter-chip[data-cat]').forEach(c => c.classList.remove('active'));
   if (el) el.classList.add('active');
   loadAllTxns(true);
 }
+
+function filterTxnsByStatus(s, el) {
+  activeTxnStatus = s; activeTxnStatusChip = el;
+  document.querySelectorAll('.filter-chip--status').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  loadAllTxns(true);
+}
+
+function filterTxnsByDate(r, el) {
+  activeTxnDate = r; activeTxnDateChip = el;
+  document.querySelectorAll('.filter-chip--date').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  loadAllTxns(true);
+}
+
+function txnDateRange(range) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (range === 'today') return { from: start.toISOString() };
+  if (range === 'week') {
+    const dow = (now.getDay() + 6) % 7; // Monday start
+    const weekStart = new Date(start); weekStart.setDate(start.getDate() - dow);
+    return { from: weekStart.toISOString() };
+  }
+  if (range === 'month') {
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { from: monthStart.toISOString() };
+  }
+  return {};
+}
+
+function txnGroupLabel(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((today - day) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return 'Earlier this week';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function createTxnRow(t) {
+  const row = document.createElement('div');
+  row.className = 'txn-row';
+  row.setAttribute('role', 'button');
+  row.setAttribute('tabindex', '0');
+  row.setAttribute('data-id', t.id);
+  row.innerHTML = txnHTML(t);
+  row.addEventListener('click', () => openTransactionDetail(t));
+  row.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTransactionDetail(t); }
+  });
+  return row;
+}
+
 async function loadAllTxns(reset) {
   if (reset) { txnOffset = 0; document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Loading...</div>'; }
   const limit = 20;
@@ -3336,16 +4065,35 @@ async function loadAllTxns(reset) {
   try {
     const params = new URLSearchParams({ limit, offset: txnOffset });
     if (search) params.set('q', search);
+    if (activeTxnFilter !== 'all') params.set('category', activeTxnFilter);
+    if (activeTxnStatus !== 'all') params.set('status', activeTxnStatus);
+    const range = txnDateRange(activeTxnDate);
+    if (range.from) params.set('from', range.from);
     const data = await api('GET', '/api/wallet/transactions?' + params);
     const txns = data.transactions || [];
     txnTotal = data.total || 0;
-    if (reset) { document.getElementById('all-txns').innerHTML = ''; }
-    txns.forEach(t => { document.getElementById('all-txns').appendChild(createTxnRow(t)); });
+    const el = document.getElementById('all-txns');
+    if (reset) el.innerHTML = '';
+    if (!txns.length && reset) {
+      el.innerHTML = '<div class="txn-empty">No transactions match your filters.</div>';
+    } else {
+      let lastGroup = null;
+      txns.forEach(t => {
+        const group = txnGroupLabel(t.created_at);
+        if (group !== lastGroup) {
+          const h = document.createElement('div');
+          h.className = 'txn-group-label'; h.textContent = group;
+          el.appendChild(h);
+          lastGroup = group;
+        }
+        el.appendChild(createTxnRow(t));
+      });
+    }
     if (txnOffset + limit < txnTotal) {
       const more = document.createElement('button');
       more.className = 'load-more'; more.textContent = 'Load more…';
       more.onclick = () => { txnOffset += limit; loadAllTxns(false); };
-      document.getElementById('all-txns').appendChild(more);
+      el.appendChild(more);
     }
   } catch { document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Failed to load</div>'; }
 }
@@ -3522,22 +4270,117 @@ async function saveBeneficiaryIfChecked(svc, identifier, network) {
   } catch { /* non-critical */ }
 }
 
-// ── THEME ────────────────────────────────────────────────────────────────────
-function toggleTheme() {
-  var html = document.documentElement;
-  var isDark = html.classList.toggle('dark');
-  localStorage.setItem('topflowng-theme', isDark ? 'dark' : 'light');
+// ── THEME & PALETTE ────────────────────────────────────────────────────────
+const THEME_KEY = 'topflowng-theme';
+const PALETTE_KEY = 'topflowng-palette';
+
+function systemPrefersDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-// Apply system preference change live (if user hasn't set a preference)
+function applyThemePreference(pref) {
+  const dark = pref === 'dark' || (pref === 'system' && systemPrefersDark());
+  document.documentElement.classList.toggle('dark', !!dark);
+  localStorage.setItem(THEME_KEY, pref);
+  syncThemeMeta();
+}
+
+function applyPalette(palette) {
+  document.documentElement.setAttribute('data-palette', palette === 'emerald' ? 'emerald' : 'teal');
+  localStorage.setItem(PALETTE_KEY, palette === 'emerald' ? 'emerald' : 'teal');
+  syncThemeMeta();
+}
+
+function currentPalette() {
+  return document.documentElement.getAttribute('data-palette') === 'emerald' ? 'emerald' : 'teal';
+}
+
+function currentThemePref() {
+  return localStorage.getItem(THEME_KEY) || 'system';
+}
+
+function syncThemeMeta() {
+  const dark = document.documentElement.classList.contains('dark');
+  const palette = currentPalette();
+  const meta = document.querySelector('meta[name="theme-color"][media]');
+  if (!meta) return;
+  const brand = palette === 'emerald' ? (dark ? '#20B486' : '#087F5B') : (dark ? '#1CBFCE' : '#0B7E8E');
+  meta.setAttribute('content', dark ? '#0C1828' : brand);
+  meta.removeAttribute('media');
+}
+
+function toggleTheme() {
+  const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+  applyThemePreference(next);
+}
+
+// Apply system preference change live (respects explicit user preference)
 (function() {
   var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
   if (mq) mq.addEventListener('change', function(e) {
-    if (!localStorage.getItem('topflowng-theme')) {
+    if (localStorage.getItem(THEME_KEY) === 'system') {
       document.documentElement.classList.toggle('dark', e.matches);
+      syncThemeMeta();
     }
   });
 })();
+
+function selectPalette(palette) {
+  applyPalette(palette);
+  syncPalettePicker();
+  syncThemeMeta();
+}
+
+function selectTheme(theme) {
+  applyThemePreference(theme);
+  syncThemePicker();
+  syncThemeMeta();
+}
+
+function syncPalettePicker() {
+  const p = currentPalette();
+  document.querySelectorAll('#palette-options .palette-option').forEach(o => {
+    o.setAttribute('aria-checked', o.id === 'palette-' + p ? 'true' : 'false');
+  });
+}
+
+function syncThemePicker() {
+  const t = currentThemePref();
+  document.querySelectorAll('#theme-options .palette-option').forEach(o => {
+    o.setAttribute('aria-checked', o.id === 'theme-' + t ? 'true' : 'false');
+  });
+}
+
+const NOTIF_PREFS_KEY = 'topflowng-notif-prefs';
+
+function saveNotifPrefs() {
+  const prefs = {
+    transactions: document.getElementById('pref-transactions').checked,
+    wallet: document.getElementById('pref-wallet').checked,
+    schedule: document.getElementById('pref-schedule').checked,
+  };
+  localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+  const msg = document.getElementById('notif-prefs-msg');
+  msg.textContent = 'Notification preferences saved.';
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function loadNotifPrefs() {
+  try {
+    const prefs = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || 'null');
+    if (!prefs) return;
+    if (typeof prefs.transactions === 'boolean') document.getElementById('pref-transactions').checked = prefs.transactions;
+    if (typeof prefs.wallet === 'boolean') document.getElementById('pref-wallet').checked = prefs.wallet;
+    if (typeof prefs.schedule === 'boolean') document.getElementById('pref-schedule').checked = prefs.schedule;
+  } catch (e) {}
+}
+
+function showAppearanceSection() {
+  syncPalettePicker();
+  syncThemePicker();
+  loadNotifPrefs();
+}
 
 // ── BOOT ────────────────────────────────────────────────────────────────────
 init();
@@ -3618,7 +4461,7 @@ init();
 /* ── Narrow-screen header fix: hide greeting text at ≤374px so the
    logo + theme toggle + avatar row fits within the 288px content width
    (320px viewport − 32px total padding). At 375px+ the greeting is fine. ── */
-@media (max-width:374px){.header-greeting{display:none}}
+@media (max-width:560px){.header-greeting{display:none}}
 </style>
 
 <!-- ══════════════ QUICK PAY LAUNCHER ══════════════ -->

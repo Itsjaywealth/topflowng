@@ -313,6 +313,10 @@ app.post('/api/auth/login', authLimiter, validate(loginSchema), async (req, res)
 
     security.resetLoginFailures(email);
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    await db.createNotification({
+      userId: user.id, category: 'security', title: 'New sign-in',
+      message: `Your account was signed in from ${req.headers['user-agent'] || 'a new device'}. If this was not you, change your password immediately.`,
+    }).catch(() => {});
     res.json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
     logger.error('Login error', { message: err.message });
@@ -418,8 +422,15 @@ app.get('/api/wallet/balance', authMiddleware, apiLimiter, async (req, res) => {
 app.get('/api/wallet/transactions', authMiddleware, apiLimiter, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-    const txns  = await db.getTransactions(req.user.id, limit);
-    res.json({ transactions: txns });
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+    const q = (req.query.q || '').toString().slice(0, 100) || null;
+    const category = (req.query.category || 'all').toString().slice(0, 20);
+    const status = (req.query.status || 'all').toString().slice(0, 20);
+    let from = null, to = null;
+    if (req.query.from) { const d = new Date(req.query.from); if (!Number.isNaN(d.getTime())) from = d.toISOString(); }
+    if (req.query.to) { const d = new Date(req.query.to); if (!Number.isNaN(d.getTime())) to = d.toISOString(); }
+    const result = await db.getTransactions(req.user.id, { limit, offset, q, category, status, from, to });
+    res.json(result);
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch transactions');
@@ -495,6 +506,13 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
   }
   monitorUncreditedPaystackPayment(reference);
   const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
+  if (result.credited) {
+    await db.createNotification({
+      userId: payment.userId, category: 'wallet', title: 'Wallet funded',
+      message: `₦${Number(payment.amount).toLocaleString()} was added to your wallet via Paystack.`,
+      link: `/api/wallet/transactions?q=${encodeURIComponent(reference)}`,
+    }).catch(() => {});
+  }
   logger.info(`Paystack payment ${result.credited ? 'credited' : 'already credited'}: user ${payment.userId} +₦${payment.amount} [${reference}]`);
   if (reference.startsWith('AR-')) {
     await db.completeAutoRechargeSession(reference).catch(() => {});
@@ -620,6 +638,11 @@ app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
       }
     }
 
+    const snap = current.response_snapshot || current.provider_response;
+    let elecToken = null;
+    if (snap && typeof snap === 'object') {
+      elecToken = String(snap.token || snap.purchasedCode || (snap.raw && (snap.raw.token || snap.raw.purchased_code)) || '') || null;
+    }
     const body = {
       requestId: current.request_id,
       status: current.status,
@@ -629,6 +652,7 @@ app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
       providerOrderId: current.provider_order_id || null,
       providerStatus: current.provider_status || null,
       providerRemark: current.provider_remark || null,
+      electricityToken: elecToken,
       message: current.status === 'pending'
         ? 'Your request is pending provider confirmation. Your wallet has not been debited.'
         : current.status === 'failed'
@@ -645,6 +669,12 @@ app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
 // Purchase rate limiter (per-user, default 10 req/min) applies to all VTU
 // purchase endpoints — airtime, data, cable, electricity, exam, recharge pins.
 app.use('/api/vtu', purchaseLimiter, vtuRouter);
+
+// ── Notification Centre (mounted /api/notifications/*) ─────────────────────
+// Customer-facing read/acknowledge surface only. Events are created by the
+// transaction/wallet flows themselves, never by this router.
+const notificationsRouter = require('./routes/notifications');
+app.use('/api/notifications', notificationsRouter);
 
 // ── AI Assistant (mounted /api/ai/*) — read-only, advisory ─────────────────
 app.use('/api/ai', aiRouter);
@@ -718,6 +748,34 @@ app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (r
   }
 });
 
+app.get('/api/admin/vtu-orders/:requestId', adminMiddleware, async (req, res) => {
+  const requestId = String(req.params.requestId || '').trim();
+  try {
+    const order = await db.getVtuOrderByRequestId(requestId);
+    if (!order) return sendError(res, 404, 'VTU order not found');
+    const snap = order.response_snapshot || order.provider_response;
+    let electricityToken = null;
+    if (snap && typeof snap === 'object') {
+      electricityToken = String(snap.token || snap.purchasedCode || (snap.raw && (snap.raw.token || snap.raw.purchased_code)) || '').trim() || null;
+    }
+    res.json({
+      requestId: order.request_id,
+      serviceType: order.service_type,
+      amount: Number(order.amount),
+      description: order.description,
+      status: order.status,
+      providerOrderId: order.provider_order_id || null,
+      providerStatus: order.provider_status || null,
+      providerRemark: order.provider_remark || null,
+      electricityToken,
+      createdAt: order.created_at,
+    });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch VTU order');
+  }
+});
+
 // ── Admin Routes ─────────────────────────────────────────────────────────────
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   try {
@@ -726,6 +784,42 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch stats');
+  }
+});
+
+// ── Operations Center ─────────────────────────────────────────────────────
+// Single admin endpoint answering "Is TopFlowNG healthy?" without exposing
+// secrets. Combines app/DB health, provider health, reconciliation drift and
+// stale-pending anomalies into an at-a-glance ops summary.
+app.get('/api/admin/ops', adminMiddleware, async (req, res) => {
+  try {
+    const { healthCheck } = require('./providers/vtpass');
+    const [stats, recon, providerHealth] = await Promise.all([
+      db.getAdminStats(),
+      db.getFinancialReconciliation().catch(() => null),
+      healthCheck().catch(() => null),
+    ]);
+    const issues = [];
+    if (stats.stale_pending > 0) issues.push(`${stats.stale_pending} stale pending order(s) need review`);
+    if (recon && !recon.ok) issues.push('Financial ledgers are out of balance');
+    if (providerHealth && providerHealth.status === 'UNAVAILABLE') issues.push('Provider is unreachable');
+    res.json({
+      online: true,
+      dbReady: true,
+      providerHealth,
+      reconciliation: recon,
+      stalePending: stats.stale_pending,
+      pendingOrders: stats.pending_orders,
+      pendingToday: stats.pending_today,
+      failedToday: stats.failed_today,
+      successRateToday: stats.success_rate_today,
+      transactionsToday: stats.transactions_today,
+      expiredClaims: stats.expired_claims,
+      issues,
+    });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch operations summary');
   }
 });
 
@@ -1269,16 +1363,31 @@ function schedulePendingOrderSweep() {
               service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
               amount: Number(row.amount), reference: requestId, newBalance: result.balance,
             });
+            await db.createNotification({
+              userId: row.user_id, category: 'schedule', title: 'Scheduled purchase complete',
+              message: `Your scheduled ${row.service_type} purchase of ₦${Number(row.amount).toLocaleString()} succeeded.`,
+              link: `/api/wallet/transactions?q=${encodeURIComponent(requestId)}`,
+            }).catch(() => {});
           } else if (result.outcome === 'pending') {
             sendOrderStatusEmail(row.email, row.full_name, {
               service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
               amount: Number(row.amount), requestId, status: 'pending',
             });
+            await db.createNotification({
+              userId: row.user_id, category: 'schedule', title: 'Scheduled purchase pending',
+              message: `Your scheduled ${row.service_type} purchase is awaiting provider confirmation.`,
+              link: `/api/wallet/transactions?q=${encodeURIComponent(requestId)}`,
+            }).catch(() => {});
           } else {
             sendOrderStatusEmail(row.email, row.full_name, {
               service: row.service_type, description: `${row.service_type} — ${row.phone || row.identifier}`,
               amount: Number(row.amount), requestId, status: 'failed',
             });
+            await db.createNotification({
+              userId: row.user_id, category: 'schedule', title: 'Scheduled purchase failed',
+              message: `Your scheduled ${row.service_type} purchase could not be completed. You have not been charged.`,
+              link: `/api/wallet/transactions?q=${encodeURIComponent(requestId)}`,
+            }).catch(() => {});
           }
 
           // Advance the schedule on success/pending so it does not re-fire on
@@ -1407,6 +1516,48 @@ async function start() {
   });
 
   const sweepTimer = schedulePendingOrderSweep();
+
+  // ── Ops-health watchdog ─────────────────────────────────────────────────
+  // Periodically evaluates the conditions the alerting module tracks and emits
+  // cooldown-gated ALERT events (no paid monitoring). Recovery clears them.
+  const alerting = require('./lib/alerting');
+  const { healthCheck } = require('./providers/vtpass');
+  async function opsWatchdog() {
+    try {
+      const health = await healthCheck().catch(() => null);
+      const providerDown = !health || health.status === 'UNAVAILABLE';
+      alerting.condition({
+        name: 'vtpass_unreachable',
+        active: providerDown,
+        severity: 'error',
+        fields: { provider: 'vtpass', status: health ? health.status : 'UNAVAILABLE' },
+      });
+      const stats = await db.getAdminStats().catch(() => null);
+      if (stats) {
+        alerting.condition({
+          name: 'stale_pending_orders',
+          active: stats.stale_pending > 0,
+          severity: 'warn',
+          fields: { stalePending: stats.stale_pending },
+        });
+      }
+      const recon = await db.getFinancialReconciliation().catch(() => null);
+      if (recon) {
+        alerting.condition({
+          name: 'ledger_out_of_balance',
+          active: !recon.ok,
+          severity: 'error',
+          fields: { drift: recon.drift },
+        });
+      }
+    } catch (err) {
+      logger.error('Ops health watchdog failed', { message: err.message });
+    }
+  }
+  const opsTimer = setInterval(() => { opsWatchdog(); }, 60 * 1000);
+  opsTimer.unref();
+  const opsFirst = setTimeout(() => { opsWatchdog(); }, 5000);
+  opsFirst.unref();
 
   let shuttingDown = false;
   async function shutdown(signal) {

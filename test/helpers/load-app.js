@@ -54,6 +54,7 @@ const MOCK_SALT_ROUNDS = 4;
 let nextUserId = 1;
 const users = [];
 const resets = [];
+const transactions = [];
 
 const mockDb = {
   async initDB() {},
@@ -146,8 +147,11 @@ const mockDb = {
     return user ? user.wallet : 0;
   },
 
-  async getTransactions(userId, limit = 20) {
-    return [];
+  async getTransactions(userId, { limit = 20, offset = 0, q = null, category = null, status = null, from = null, to = null } = {}) {
+    let list = transactions.filter((t) => t.user_id === userId);
+    if (q) list = list.filter((t) => (t.description || '').toLowerCase().includes(String(q).toLowerCase()) || (t.reference || '').toLowerCase().includes(String(q).toLowerCase()));
+    list = [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(offset, offset + limit);
+    return { transactions: list, total: transactions.filter((t) => t.user_id === userId).length };
   },
 
   async setTransactionPin() {},
@@ -186,7 +190,48 @@ const mockDb = {
     users.length = 0;
     resets.length = 0;
     nextUserId = 1;
+    notifications.length = 0;
   },
+};
+
+const notifications = [];
+
+// ── Mock in-app notifications ────────────────────────────────────────────────
+mockDb.createNotification = async ({ userId, category = 'transaction', title, message, link = null }) => {
+  const n = { id: notifications.length + 1, user_id: userId, category, title, message, link, read_at: null, created_at: new Date().toISOString() };
+  notifications.push(n);
+  return { ...n };
+};
+
+mockDb.getNotifications = async (userId, { limit = 30, offset = 0, category = null, unreadOnly = false } = {}) => {
+  let list = notifications.filter((n) => n.user_id === userId);
+  if (category && category !== 'all') list = list.filter((n) => n.category === category);
+  if (unreadOnly) list = list.filter((n) => !n.read_at);
+  list = [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(offset, offset + limit);
+  return { notifications: list, total: notifications.filter((n) => n.user_id === userId).length };
+};
+
+mockDb.getUnreadNotificationCount = async (userId) => notifications.filter((n) => n.user_id === userId && !n.read_at).length;
+
+mockDb.markNotificationRead = async (userId, id) => {
+  const n = notifications.find((x) => x.id === id && x.user_id === userId);
+  if (!n) return null;
+  n.read_at = n.read_at || new Date().toISOString();
+  return { id, read_at: n.read_at };
+};
+
+mockDb.markAllNotificationsRead = async (userId) => {
+  let count = 0;
+  for (const n of notifications) {
+    if (n.user_id === userId && !n.read_at) { n.read_at = new Date().toISOString(); count++; }
+  }
+  return count;
+};
+
+mockDb.deleteNotification = async (userId, id) => {
+  const idx = notifications.findIndex((x) => x.id === id && x.user_id === userId);
+  if (idx === -1) return null;
+  return notifications.splice(idx, 1)[0];
 };
 
 installMock('database.js', mockDb);

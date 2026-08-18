@@ -211,6 +211,55 @@ await checkInlineSyntax('bizflow.html');
   check('boot seeds brand colors', /function boot\(\)[\s\S]{0,200}?seedBrands\(\)/.test(app));
 }
 
+// ── 10. Dual-palette + theme persistence ────────────────────────────────────
+{
+  const app = read('topflowng.html');
+  check('emerald palette token block present', /html\[data-palette="emerald"\]/.test(app));
+  check('emerald dark palette token block present', /html\.dark\[data-palette="emerald"\]/.test(app));
+  check('no-flash palette init runs before CSS', /<!DOCTYPE html>[\s\S]{0,900}?data-palette/.test(app));
+  check('palette persisted under topflowng-palette', /topflowng-palette/.test(app));
+  check('theme persisted under topflowng-theme', /topflowng-theme/.test(app));
+  check('selectPalette UI control present', /function selectPalette\(/.test(app) && /id="palette-options"/.test(app));
+  check('system appearance option present', /id="theme-system"/.test(app) && /selectTheme\('system'\)/.test(app));
+  check('live system-preference listener present', /prefers-color-scheme/.test(app));
+}
+
+// ── 11. Notification centre surfaces ────────────────────────────────────────
+{
+  const app = read('topflowng.html');
+  check('notification bell in header', /id="notif-bell"/.test(app) && /id="notif-badge"/.test(app));
+  check('notifications screen exists', /id="screen-notifications"/.test(app));
+  check('notification filter chips present', /filterNotifications\('transaction'/ && /filterNotifications\('security'/.test(app));
+  check('mark-all-read action present', /markAllNotificationsRead\(\)/.test(app));
+  check('notification API consumers wired', /api\('GET', '\/api\/notifications/.test(app) && /\/api\/notifications\/read-all/.test(app));
+  check('unread badge refresh on boot', /refreshNotifBadge\(\)/.test(app));
+  check('no fake demo notifications in production markup', !/demo notification/i.test(app) && !/pushDemoNotif/.test(app));
+}
+
+// ── 12. Transaction history + detail + receipts ─────────────────────────────
+{
+  const app = read('topflowng.html');
+  check('history status filters present', /filterTxnsByStatus\('pending'/ && /filterTxnsByStatus\('failed'/.test(app));
+  check('history date filters present', /filterTxnsByDate\('today'/ && /filterTxnsByDate\('month'/.test(app));
+  check('history category filters present', /filterTxns\('wallet'/ && /filterTxns\('credit'/.test(app));
+  check('history date grouping implemented', /txnGroupLabel\(/.test(app) && /txn-group-label/.test(app));
+  check('transaction detail overlay present', /id="txn-detail-overlay"/.test(app));
+  check('transaction detail rows are interactive', /createTxnRow\(t\)/.test(app) && /openTransactionDetail\(t\)/.test(app));
+  check('receipt share/print/download actions present', /shareTransactionReceipt\(\)/.test(app) && /printTransactionReceipt\(\)/.test(app));
+  check('electricity token recovered from order detail', /electricityToken/.test(app) && /api\/vtu\/orders\//.test(app));
+  check('history search filters client+server side', /activeTxnFilter/.test(app));
+}
+
+// ── 13. Support centre ──────────────────────────────────────────────────────
+{
+  const app = read('topflowng.html');
+  check('support overlay present', /id="support-overlay"/.test(app) && /class="support-faq"/.test(app));
+  check('support FAQ items exist', /class="faq-item"/.test(app));
+  check('support reachable from account', /onclick="openSupport\(\)"/.test(app));
+  check('failed-transaction help pre-fills reference', /support-ref/.test(app));
+  check('support email surface exists', /support@topflowng\.com/.test(app));
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log(`\nFrontend/static checks: ${results.length} total, ${failures} failed.`);
 for (const r of results) {

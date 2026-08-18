@@ -241,6 +241,14 @@ button{font-family:var(--font)}
 .recon-flagged{margin:0 22px 18px;border-top:1px solid var(--border);padding-top:12px}
 .recon-flagged h4{font:700 13px/1 var(--font);color:var(--ink);margin-bottom:8px}
 .flagged-user{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:#FFF7EC;border:1px solid #F4DDBC;margin-bottom:6px;font-size:12.5px}
+.ops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:18px 22px}
+.ops-tile{background:var(--mist);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.ops-label{display:block;font:600 11px/1 var(--font);color:var(--mid);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.ops-value{display:block;font:800 16px/1 var(--display);color:var(--ink)}
+.ops-value.ok{color:var(--green-strong)}
+.ops-value.warn{color:var(--amber)}
+.ops-value.bad{color:var(--red)}
+#ops-issues{background:#FFF7EC;border:1px solid #F4DDBC;border-radius:12px;padding:12px 16px;font-size:13px;color:var(--ink)}
 .flagged-user .f-email{flex:1;color:var(--ink);font-weight:600}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font:700 11px/1 var(--font);background:var(--bg,var(--mid));color:var(--fg,#fff)}
 
@@ -541,6 +549,25 @@ tbody tr:hover td{background:var(--mist)}
         <div class="recon-flagged" id="recon-flagged" style="display:none"></div>
       </div>
 
+      <!-- Operations Center -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Operations Center</div>
+          <div class="section-meta"><span id="ops-badge" class="badge" style="--bg:var(--mid);--fg:#fff">Checking…</span></div>
+        </div>
+        <div class="ops-grid" id="ops-grid">
+          <div class="ops-tile" id="ops-online"><span class="ops-label">TopFlowNG</span><span class="ops-value" id="ops-online-val">—</span></div>
+          <div class="ops-tile" id="ops-db"><span class="ops-label">Database</span><span class="ops-value" id="ops-db-val">—</span></div>
+          <div class="ops-tile" id="ops-provider"><span class="ops-label">VTPass provider</span><span class="ops-value" id="ops-provider-val">—</span></div>
+          <div class="ops-tile" id="ops-pending"><span class="ops-label">Pending orders</span><span class="ops-value" id="ops-pending-val">—</span></div>
+          <div class="ops-tile" id="ops-stale"><span class="ops-label">Stale pending</span><span class="ops-value" id="ops-stale-val">—</span></div>
+          <div class="ops-tile" id="ops-rate"><span class="ops-label">Success rate today</span><span class="ops-value" id="ops-rate-val">—</span></div>
+          <div class="ops-tile" id="ops-recon"><span class="ops-label">Ledger balance</span><span class="ops-value" id="ops-recon-val">—</span></div>
+          <div class="ops-tile" id="ops-failed"><span class="ops-label">Failed today</span><span class="ops-value" id="ops-failed-val">—</span></div>
+        </div>
+        <div id="ops-issues" style="margin-top:10px;display:none"></div>
+      </div>
+
       <!-- Recent transactions preview -->
       <div class="section">
         <div class="section-header">
@@ -801,6 +828,7 @@ function initApp() {
   document.getElementById('overview-date').textContent = new Date().toLocaleDateString('en-NG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   loadOverview();
   loadReconciliation();
+  loadOps();
   loadRecentTxns();
   loadTransactions();
   loadUsers();
@@ -855,6 +883,51 @@ async function loadReconciliation() {
     document.getElementById('recon-drift').textContent = '—';
     const badge = document.getElementById('recon-badge');
     badge.textContent = 'Unavailable'; badge.style.setProperty('--bg', 'var(--mid)'); badge.style.setProperty('--fg', '#fff');
+  }
+}
+
+// ── OPERATIONS CENTER ────────────────────────────────────────────────────
+async function loadOps() {
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.className = 'ops-value' + (cls ? ' ' + cls : '');
+  };
+  try {
+    const o = await apiFetch('/api/admin/ops');
+    set('ops-online-val', o.online ? 'Online' : 'Offline', o.online ? 'ok' : 'bad');
+    set('ops-db-val', o.dbReady ? 'Ready' : 'Down', o.dbReady ? 'ok' : 'bad');
+    const ph = o.providerHealth;
+    if (ph && ph.status) {
+      const ok = ph.status === 'OPERATIONAL' || ph.status === 'operational' || ph.status === 'healthy';
+      const warn = ph.status === 'DEGRADED' || ph.status === 'degraded';
+      set('ops-provider-val', ok ? 'Healthy' : warn ? 'Degraded' : 'Down', ok ? 'ok' : warn ? 'warn' : 'bad');
+    } else {
+      set('ops-provider-val', '—');
+    }
+    set('ops-pending-val', String(o.pendingOrders ?? o.pendingToday ?? 0), (o.pendingOrders || 0) > 0 ? 'warn' : 'ok');
+    set('ops-stale-val', String(o.stalePending ?? 0), (o.stalePending || 0) > 0 ? 'bad' : 'ok');
+    set('ops-rate-val', o.successRateToday == null ? '—' : o.successRateToday + '%', (o.successRateToday ?? 100) < 95 ? 'warn' : 'ok');
+    const recon = o.reconciliation;
+    set('ops-recon-val', recon ? (recon.ok ? 'In balance' : 'Out of balance') : '—', recon ? (recon.ok ? 'ok' : 'bad') : '');
+    set('ops-failed-val', String(o.failedToday ?? 0), (o.failedToday || 0) > 0 ? 'warn' : 'ok');
+    const badge = document.getElementById('ops-badge');
+    if (o.issues && o.issues.length) {
+      badge.textContent = 'Action needed';
+      badge.style.setProperty('--bg', 'var(--amber-soft)'); badge.style.setProperty('--fg', 'var(--amber)');
+      const box = document.getElementById('ops-issues');
+      box.style.display = 'block';
+      box.innerHTML = '⚠ ' + o.issues.map((i) => esc(i)).join(' · ');
+    } else {
+      badge.textContent = 'All systems healthy';
+      badge.style.setProperty('--bg', 'var(--green-soft)'); badge.style.setProperty('--fg', 'var(--green-strong)');
+      document.getElementById('ops-issues').style.display = 'none';
+    }
+  } catch (e) {
+    const badge = document.getElementById('ops-badge');
+    badge.textContent = 'Unavailable'; badge.style.setProperty('--bg', 'var(--mid)'); badge.style.setProperty('--fg', '#fff');
+    set('ops-online-val', '—');
   }
 }
 
@@ -1002,6 +1075,24 @@ async function reconcileOrder(reference) {
   }
 }
 
+async function viewOrderToken(requestId) {
+  try {
+    const order = await apiFetch(`/api/admin/vtu-orders/${encodeURIComponent(requestId)}`);
+    if (!order.electricityToken) {
+      alert('No electricity token is stored for this order. If the purchase succeeded, the token may live in the provider response only.');
+      return;
+    }
+    const copyable = order.electricityToken;
+    const ok = confirm(`Electricity token for ${order.requestId}:\n\n${copyable}\n\nCopy to clipboard?`);
+    if (ok) {
+      try { await navigator.clipboard.writeText(copyable); alert('Token copied to clipboard.'); }
+      catch (e) { alert('Token shown above. Copy manually.'); }
+    }
+  } catch (e) {
+    alert(e.message || 'Unable to load this order.');
+  }
+}
+
 // ── VTU ORDERS ────────────────────────────────────────────────────────────
 async function loadVtuOrders() {
   try {
@@ -1029,16 +1120,20 @@ function renderVtuOrders() {
 
 function vtuOrderRow(o) {
   const amt = parseFloat(o.amount);
-  const actions = o.status === 'pending' && o.provider_order_id
-    ? `<button class="reconcile-btn" onclick='reconcileOrder(${esc(JSON.stringify(o.request_id))})'>Reconcile</button>`
-    : '';
+  const actions = [];
+  if (o.status === 'pending' && o.provider_order_id) {
+    actions.push(`<button class="reconcile-btn" onclick='reconcileOrder(${esc(JSON.stringify(o.request_id))})'>Reconcile</button>`);
+  }
+  if (o.service_type === 'electricity' || /electricity/i.test(o.description || '')) {
+    actions.push(`<button class="reconcile-btn" onclick='viewOrderToken(${esc(JSON.stringify(o.request_id))})'>View token</button>`);
+  }
   return `<tr>
     <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(o.request_id||'—')}</td>
     <td>${esc(o.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(o.user_email||'')}</span></td>
     <td>${esc(o.service_type||'—')}</td>
     <td>${esc(o.description||'—')}</td>
     <td class="amount-negative">₦${fmt(amt)}</td>
-    <td>${adminStatusPill(o.status)}${actions}</td>
+    <td>${adminStatusPill(o.status)}${actions.join(' ')}</td>
     <td style="font-family:monospace;font-size:11px;color:var(--mid)">${o.provider_order_id ? esc(o.provider_order_id) : '—'}</td>
     <td style="color:var(--mid);font-size:12px">${fmtDate(o.created_at)}</td>
   </tr>`;
