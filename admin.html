@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="TopFlowNG Admin — manage users, transactions, and wallet services.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#00B67A">
+<meta name="theme-color" content="#0B7E8E">
 <title>TopFlowNG Admin</title>
 <link rel="icon" href="/assets/brand/topflowng-mark.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,35 +15,35 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --green:#00A868;
-  --green-2:#00B67A;
-  --green-strong:#008F57;
-  --green-soft:#E7F8F0;
-  --green-softer:#F1FBF6;
-  --blue:#00A868;
-  --blue-2:#00B67A;
-  --blue-strong:#008F57;
-  --blue-soft:#E7F8F0;
-  --blue-softer:#F1FBF6;
+  --green:#0B7E8E;
+  --green-2:#0E9BAE;
+  --green-strong:#096878;
+  --green-soft:#E0F5F7;
+  --green-softer:#F0FAFB;
+  --blue:#0B7E8E;
+  --blue-2:#0E9BAE;
+  --blue-strong:#096878;
+  --blue-soft:#E0F5F7;
+  --blue-softer:#F0FAFB;
   --red:#E5484D;
-  --amber:#E8912D;
-  --amber-soft:#FEF3E6;
-  --red-soft:#FDEBEC;
-  --ink:#0B1220;
-  --graphite:#55607A;
-  --mid:#8A94A6;
-  --border:#E5E8EE;
-  --mist:#F5F7FA;
+  --amber:#D69E2E;
+  --amber-soft:#FFFBEB;
+  --red-soft:#FEF2F2;
+  --ink:#0F1923;
+  --graphite:#4A5568;
+  --mid:#8896A4;
+  --border:#DDE3EA;
+  --mist:#F4F6F9;
   --white:#FFFFFF;
-  --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --display:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --grad:linear-gradient(135deg,#00B67A 0%,#00A868 55%,#00915B 100%);
-  --grad-ink:linear-gradient(150deg,#0B1220 0%,#101A30 100%);
-  --radius:18px;
-  --radius-sm:12px;
-  --shadow-sm:0 1px 2px rgba(11,18,32,.05),0 1px 3px rgba(11,18,32,.06);
-  --shadow-md:0 6px 24px rgba(11,18,32,.08);
-  --ring:0 0 0 4px rgba(0,168,104,.15);
+  --font:'Inter','Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Plus Jakarta Sans','Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --grad:linear-gradient(135deg,#0B7E8E 0%,#0E9BAE 100%);
+  --grad-ink:linear-gradient(150deg,#0C1828 0%,#132038 100%);
+  --radius:16px;
+  --radius-sm:10px;
+  --shadow-sm:0 1px 3px rgba(11,18,32,.06),0 1px 2px rgba(11,18,32,.05);
+  --shadow-md:0 6px 24px rgba(11,18,32,.10);
+  --ring:0 0 0 4px rgba(11,126,142,.18);
   /* semantic aliases for theme switching */
   --bg:var(--mist);
   --surface:var(--white);
@@ -55,32 +55,40 @@
   --accent-soft:var(--green-soft);
 }
 .dark{
-  --bg:#0E1117;
-  --surface:#161B25;
-  --text:#E8EDF5;
-  --text-2:#9BA4B5;
-  --text-3:#6B7385;
-  --line:#242B38;
-  --mist:#161B25;
-  --white:#1F2635;
-  --ink:#E8EDF5;
-  --graphite:#9BA4B5;
-  --mid:#6B7385;
-  --border:#242B38;
+  --bg:#0C1828;
+  --surface:#132038;
+  --text:#EEF1F5;
+  --text-2:#A0AEC0;
+  --text-3:#637280;
+  --line:#1E3352;
+  --mist:#0C1828;
+  --white:#132038;
+  --ink:#EEF1F5;
+  --graphite:#A0AEC0;
+  --mid:#637280;
+  --border:#1E3352;
   --shadow-sm:0 1px 3px rgba(0,0,0,.35);
   --shadow-md:0 6px 24px rgba(0,0,0,.45);
-  --green-soft:#0D2A1E;
-  --green-softer:#0A1F16;
+  --green:#1CBFCE;
+  --green-2:#22D6E6;
+  --green-strong:#1CBFCE;
+  --green-soft:#0C2535;
+  --green-softer:#0A1F2E;
+  --blue:#1CBFCE;
+  --blue-2:#22D6E6;
+  --blue-strong:#1CBFCE;
+  --blue-soft:#0C2535;
+  --blue-softer:#0A1F2E;
   --red-soft:#2A0F10;
   --amber-soft:#2A1A07;
-  --accent:#2EA86B;
-  --accent-soft:#0D2A1E;
+  --accent:#22D6E6;
+  --accent-soft:#0C2535;
 }
 html,body{height:100%}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
 a{color:inherit;text-decoration:none}
 button{font-family:var(--font)}
-:focus-visible{outline:3px solid rgba(0,168,104,.45);outline-offset:2px}
+:focus-visible{outline:3px solid rgba(11,126,142,.45);outline-offset:2px}
 
 /* ── AUTH SCREEN ── */
 #login-screen{
