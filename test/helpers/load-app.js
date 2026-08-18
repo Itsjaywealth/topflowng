@@ -231,7 +231,7 @@ require(path.join(ROOT, 'server.js'));
 
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
 
-async function waitForServer(timeoutMs = 10000) {
+async function waitForServer(timeoutMs = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {

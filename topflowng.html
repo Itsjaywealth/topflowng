@@ -3544,6 +3544,10 @@ init();
 .pin-prompt-input:focus{border-color:var(--blue);box-shadow:var(--ring)}
 .pin-prompt-error{min-height:18px;color:var(--red);font:500 12px/1.4 var(--font);margin-bottom:12px}
 .pin-prompt-confirm{width:100%;min-height:50px;border:0;border-radius:12px;background:var(--grad);color:var(--white);font:700 14px/1 var(--display);cursor:pointer}
+/* ── Narrow-screen header fix: hide greeting text at ≤374px so the
+   logo + theme toggle + avatar row fits within the 288px content width
+   (320px viewport − 32px total padding). At 375px+ the greeting is fine. ── */
+@media (max-width:374px){.header-greeting{display:none}}
 </style>
 
 <!-- ══════════════ QUICK PAY LAUNCHER ══════════════ -->
