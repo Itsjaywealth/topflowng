@@ -265,3 +265,80 @@ describe('PRODUCT_MAP', () => {
     assert.strictEqual(PRODUCT_MAP.exam.WAEC.serviceID, 'waec');
   });
 });
+
+/**
+ * The structural invariant of the product catalogue: anything the customer UI
+ * can see and select MUST resolve to a provider serviceID + variation code.
+ * An enabled-but-unmapped product would take the customer through a whole
+ * purchase flow only to fail — or, worse, ship a request built from a guessed
+ * variation code. These tests fail the build if the two lists ever drift.
+ */
+describe('catalog ↔ provider mapping completeness', () => {
+  const vtpass = require('../services/vtpass');
+  const pricing = require('../services/pricing');
+
+  test('every listed data plan has a serviceID and variation code', () => {
+    for (const [network, plans] of Object.entries(pricing.DATA_PLANS)) {
+      assert.ok(vtpass.DATA_SERVICE[network], `no data serviceID for ${network}`);
+      for (const plan of plans) {
+        assert.ok(
+          PRODUCT_MAP.data[network] && PRODUCT_MAP.data[network][plan.code],
+          `data plan ${plan.code} is listed for sale but has no provider mapping`,
+        );
+      }
+    }
+  });
+
+  test('every listed cable package has a serviceID and variation code', () => {
+    for (const [provider, plans] of Object.entries(pricing.CABLE_PLANS)) {
+      assert.ok(vtpass.CABLE_SERVICE[provider], `no cable serviceID for ${provider}`);
+      for (const plan of plans) {
+        assert.ok(
+          PRODUCT_MAP.cable[provider] && PRODUCT_MAP.cable[provider][plan.code],
+          `cable package ${plan.code} is listed for sale but has no provider mapping`,
+        );
+      }
+    }
+  });
+
+  test('every listed electricity disco has a serviceID', () => {
+    for (const disco of pricing.ELECTRICITY_DISCOS) {
+      assert.ok(
+        vtpass.DISCO_SERVICE[disco.code],
+        `disco ${disco.code} is listed for sale but has no provider mapping`,
+      );
+    }
+  });
+
+  test('every enabled exam body has a provider mapping', () => {
+    for (const body of pricing.ENABLED_EXAM_BODIES) {
+      assert.ok(
+        PRODUCT_MAP.exam[body],
+        `exam body ${body} is enabled but has no provider mapping`,
+      );
+    }
+  });
+
+  test('no disabled exam body is priced or mapped as purchasable', () => {
+    for (const [code, product] of Object.entries(pricing.EXAM_PRODUCTS)) {
+      if (product.enabled) continue;
+      assert.strictEqual(pricing.EXAM_PRICES[code], undefined, `${code} must not be priced`);
+      assert.strictEqual(pricing.findExamPrice(code), null, `${code} must not resolve a price`);
+      assert.ok(!PRODUCT_MAP.exam[code], `${code} must not be mapped as purchasable`);
+    }
+  });
+
+  test('recharge-card PINs stay unmapped until their serviceIDs are verified', () => {
+    assert.strictEqual(
+      Object.keys(PRODUCT_MAP.recharge || {}).length, 0,
+      'recharge PIN serviceIDs are unverified and must not be mapped',
+    );
+  });
+
+  test('productFor refuses a disabled exam body rather than guessing', () => {
+    assert.throws(
+      () => vtpass.productFor('exam-pin', { examBody: 'NECO', quantity: 1 }),
+      /not available/i,
+    );
+  });
+});

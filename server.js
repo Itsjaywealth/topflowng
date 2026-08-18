@@ -47,7 +47,9 @@ const {
   registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema,
   changePasswordSchema, setPinSchema, resetPinSchema, verifyPinSchema,
   paystackInitSchema, beneficiaryAddSchema,
+  autoRechargeSchema, scheduledPurchaseSchema,
 } = require('./lib/schemas');
+const { validatePlanAmount, validateCablePlanAmount } = require('./services/pricing');
 
 const DUMMY_BCRYPT_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEeO7BmW2g8K7P3XyZGkN6QqKxE6y1yJ2eC';
 
@@ -989,12 +991,9 @@ app.get('/api/auto-recharge/pending', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/auto-recharge', authMiddleware, async (req, res) => {
+app.post('/api/auto-recharge', authMiddleware, apiLimiter, validate(autoRechargeSchema), async (req, res) => {
   try {
-    const { threshold, amount } = req.body;
-    if (!threshold || !amount || threshold < 100 || amount < 100 || amount > 1000000) {
-      return sendError(res, 400, 'Threshold must be at least ₦100, amount ₦100–₦1,000,000');
-    }
+    const { threshold, amount } = req.validated;
     const settings = await db.setAutoRecharge(req.user.id, { threshold, amount });
     res.json({ settings, message: 'Auto-recharge enabled. Wallet will top up when balance drops below ₦' + threshold });
   } catch (err) {
@@ -1024,12 +1023,28 @@ app.get('/api/scheduled-purchases', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/scheduled-purchases', authMiddleware, async (req, res) => {
+app.post('/api/scheduled-purchases', authMiddleware, apiLimiter, validate(scheduledPurchaseSchema), async (req, res) => {
   try {
-    const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = req.body;
-    if (!serviceType || !amount || !frequency || !nextRunAt) {
-      return sendError(res, 400, 'serviceType, amount, frequency and nextRunAt are required');
+    const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = req.validated;
+
+    // A schedule is a future debit, so the same server-side pricing rules that
+    // guard the interactive routes must apply here. Otherwise a schedule could
+    // be stored with a ₦1 amount against a ₦4,000 plan and the sweeper would
+    // deliver the plan while debiting ₦1.
+    if (serviceType === 'data') {
+      if (!planCode) return sendError(res, 400, 'planCode is required for data schedules');
+      try { validatePlanAmount(network, planCode, amount); }
+      catch (e) { return sendError(res, 400, e.message); }
+    } else if (serviceType === 'cable') {
+      if (!planCode) return sendError(res, 400, 'planCode is required for cable schedules');
+      try { validateCablePlanAmount(network, planCode, amount); }
+      catch (e) { return sendError(res, 400, e.message); }
+    } else if (serviceType === 'airtime') {
+      if (!phone) return sendError(res, 400, 'phone is required for airtime schedules');
+    } else if (serviceType === 'electricity') {
+      if (!identifier) return sendError(res, 400, 'identifier (meter number) is required for electricity schedules');
     }
+
     const purchase = await db.createScheduledPurchase(req.user.id, {
       serviceType, planCode, phone, identifier, network, amount, frequency,
       nextRunAt: new Date(nextRunAt),

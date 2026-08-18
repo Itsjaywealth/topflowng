@@ -235,11 +235,23 @@ test('migrations: runner is present and can be run twice without error', async (
   assert.ok(require('fs').existsSync(path.join(dir, '002_vtu_reconcile_attempts.sql')));
 });
 
+// Environment variables the startup-validation tests deliberately omit. They
+// are stripped from the inherited environment first, so the child sees exactly
+// the env each test declares. Without this the assertions silently pass/fail
+// based on whatever the developer happens to have exported in their shell.
+const STARTUP_ENV_KEYS = [
+  'DATABASE_URL', 'JWT_SECRET', 'APP_URL', 'PAYSTACK_SECRET_KEY',
+  'VTPASS_API_KEY', 'VTPASS_SECRET_KEY', 'VTPASS_PUBLIC_KEY',
+  'VTPASS_USERNAME', 'VTPASS_PASSWORD', 'VTPASS_AUTH_TYPE',
+];
+
 function run(env, args) {
+  const base = { ...process.env };
+  for (const key of STARTUP_ENV_KEYS) delete base[key];
   return new Promise((resolve) => {
     const child = spawn(process.execPath, args, {
       cwd: ROOT,
-      env: { ...process.env, ...env },
+      env: { ...base, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let out = '';

@@ -16,7 +16,10 @@ const logger = require('../lib/logger');
 const { authMiddleware, checkTransactionPin } = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rate-limit');
 const { processVtpassPurchase, productFor, buildRequestId, VtpassProductError, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/vtpass');
-const { validatePlanAmount, getCatalog } = require('../services/pricing');
+const {
+  validatePlanAmount, validateCablePlanAmount, getCatalog,
+  findExamPrice, ENABLED_EXAM_BODIES,
+} = require('../services/pricing');
 const { sendPurchaseEmail } = require('../services/email');
 const { resolveRequest, recordRequest } = require('../services/idempotency');
 const { sendError } = require('../lib/errors');
@@ -32,14 +35,10 @@ function withTracing(name, handler) {
   };
 }
 
-const EXAM_BODY_MAP = { WAEC: 'WAEC', NECO: 'NECO', NABTEB: 'NABTEB', JAMB: 'JAMB' };
-// JAMB prices vary by variation (verified 2026-08-18 from vtpass.com/documentation/jamb-pin-vending/)
-const EXAM_PRICES = {
-  WAEC: 3900,
-  NECO: 1000,
-  NABTEB: 1000,
-  JAMB: { 'utme-mock': 7700, 'utme-no-mock': 6200 },
-};
+// Exam bodies and prices come from the single pricing registry
+// (services/pricing.js). Disabled bodies (NECO, NABTEB — not offered by the
+// active provider) are absent from ENABLED_EXAM_BODIES, so they can never be
+// quoted or charged here.
 
 /**
  * Converts a VtpassProductError into a clean user-facing 400 response,
@@ -210,6 +209,10 @@ router.post('/cable', authMiddleware, apiLimiter, validate(cableSchema), withTra
     const cost = parseValidatedAmount(amount);
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
+    // The server — never the client — decides what a bouquet costs. Without
+    // this the client could ask for a ₦24,200 package at a ₦100 amount and the
+    // wallet would only be debited ₦100 on delivery.
+    try { validateCablePlanAmount(provider, planCode, cost); } catch (e) { return sendError(res, 400, e.message); }
 
     const ckProvider = provider.toUpperCase();
     const desc = `${provider} ${planCode} — ${smartCardNumber}`;
@@ -330,18 +333,15 @@ router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySche
 router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), withTracing('vtu.exam-pin', async (req, res) => {
   try {
     const { examBody, examVariation, quantity, pin } = req.validated;
-    const ckBody = EXAM_BODY_MAP[examBody.toUpperCase()];
+    const ckBody = String(examBody || '').toUpperCase();
+    // Fail closed on any body that is not verified AND enabled in the pricing
+    // registry — this is what keeps NECO/NABTEB unpurchasable end to end.
+    if (!ENABLED_EXAM_BODIES.includes(ckBody)) {
+      return sendError(res, 400, `${ckBody} exam PINs are not available yet. Available: ${ENABLED_EXAM_BODIES.join(', ')}.`);
+    }
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
-    // Resolve unit price — JAMB uses variation-based pricing
-    const priceEntry = EXAM_PRICES[ckBody];
-    let unitPrice;
-    if (typeof priceEntry === 'object') {
-      const varKey = examVariation && priceEntry[examVariation] !== undefined ? examVariation : 'utme-no-mock';
-      unitPrice = priceEntry[varKey];
-    } else {
-      unitPrice = priceEntry;
-    }
+    const unitPrice = findExamPrice(ckBody, examVariation);
     if (!unitPrice) return sendError(res, 400, 'Invalid exam body or variation selected.');
     const amount = unitPrice * qty;
     const description = `${ckBody} exam PIN × ${qty}`;

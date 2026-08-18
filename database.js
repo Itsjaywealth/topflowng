@@ -150,6 +150,12 @@ async function initDB() {
       WHERE referral_code IS NOT NULL;
     `).catch(() => {});
 
+    // Supports the referral count (users.referred_by) without a table scan.
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by)
+      WHERE referred_by IS NOT NULL;
+    `).catch(() => {});
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS beneficiaries (
         id          SERIAL PRIMARY KEY,
@@ -876,14 +882,35 @@ async function ensureReferralCode(userId) {
   throw new Error('Could not generate referral code');
 }
 
+/**
+ * Referral stats.
+ *
+ * `totalReferrals` counts users who actually signed up with this user's code
+ * (users.referred_by), which is the real, verifiable signal — it used to count
+ * "Referral bonus" transactions, which nothing in the platform creates, so it
+ * was permanently 0 no matter how many people a user referred.
+ *
+ * `totalEarned` sums referral-bonus credits. There is no reward-payout engine
+ * yet, so this is 0 by design; `rewardsEnabled` tells the UI to present the
+ * programme as invite-tracking rather than promising earnings that would never
+ * arrive.
+ */
 async function getReferralStats(userId) {
   const code = await ensureReferralCode(userId);
-  const { rows } = await pool.query(
-    `SELECT COUNT(*) AS total, COALESCE(SUM(amount),0) AS earned
-     FROM transactions WHERE user_id = $1 AND description ILIKE 'Referral bonus%'`,
-    [userId]
-  );
-  return { referralCode: code, totalReferrals: parseInt(rows[0].total), totalEarned: parseFloat(rows[0].earned) };
+  const [referred, earned] = await Promise.all([
+    pool.query('SELECT COUNT(*) AS total FROM users WHERE referred_by = $1', [userId]),
+    pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS earned
+       FROM transactions WHERE user_id = $1 AND description ILIKE 'Referral bonus%'`,
+      [userId]
+    ),
+  ]);
+  return {
+    referralCode: code,
+    totalReferrals: parseInt(referred.rows[0].total, 10),
+    totalEarned: parseFloat(earned.rows[0].earned),
+    rewardsEnabled: false,
+  };
 }
 
 // ── Beneficiaries ─────────────────────────────────────────────────────────────

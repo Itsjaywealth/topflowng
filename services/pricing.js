@@ -76,7 +76,86 @@ const ELECTRICITY_DISCOS = [
 ];
 
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'];
-const EXAM_PRICES = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
+
+/**
+ * Exam-PIN catalogue.
+ *
+ * `enabled` is the single source of truth consumed by the API, the customer UI
+ * and the admin product registry. A body may only be enabled when its VTPass
+ * serviceID *and* variation code have been verified against the provider
+ * documentation — an enabled-but-unverified product is structurally forbidden,
+ * because it would send money toward a guessed variation code.
+ *
+ *   WAEC — verified: serviceID "waec", variation "waecdirect".
+ *   JAMB — verified 2026-08-18: serviceID "jamb",
+ *          variations utme-mock (₦7,700) / utme-no-mock (₦6,200).
+ *   NECO / NABTEB — VTPass does not currently offer these as purchasable
+ *          services, so they stay disabled and are not priced or advertised.
+ */
+const EXAM_PRODUCTS = {
+  WAEC: {
+    name: 'WAEC Result Checker',
+    enabled: true,
+    verified: true,
+    price: 3900,
+  },
+  JAMB: {
+    name: 'JAMB UTME PIN',
+    enabled: true,
+    verified: true,
+    defaultVariation: 'utme-no-mock',
+    variations: [
+      { code: 'utme-no-mock', name: 'UTME PIN (without mock)', price: 6200 },
+      { code: 'utme-mock', name: 'UTME PIN (with mock)', price: 7700 },
+    ],
+  },
+  NECO: {
+    name: 'NECO Result Checker',
+    enabled: false,
+    verified: true, // verified as UNAVAILABLE on the active provider
+    reason: 'Not offered by the active provider',
+  },
+  NABTEB: {
+    name: 'NABTEB Result Checker',
+    enabled: false,
+    verified: true, // verified as UNAVAILABLE on the active provider
+    reason: 'Not offered by the active provider',
+  },
+};
+
+/**
+ * Flat price lookup for the enabled exam bodies only. Object values mean the
+ * body is variation-priced. Disabled bodies deliberately have NO price entry,
+ * so nothing downstream can quote or charge for them.
+ */
+const EXAM_PRICES = Object.fromEntries(
+  Object.entries(EXAM_PRODUCTS)
+    .filter(([, p]) => p.enabled)
+    .map(([body, p]) => [
+      body,
+      p.variations
+        ? Object.fromEntries(p.variations.map((v) => [v.code, v.price]))
+        : p.price,
+    ])
+);
+
+/** Exam bodies customers may actually purchase. */
+const ENABLED_EXAM_BODIES = Object.keys(EXAM_PRICES);
+
+/**
+ * Resolve the unit price for an exam body (+ optional variation).
+ * Returns null for disabled bodies and unknown variations, so callers fail
+ * closed rather than charging a guessed amount.
+ */
+function findExamPrice(examBody, variation) {
+  const entry = EXAM_PRICES[String(examBody || '').toUpperCase()];
+  if (entry === undefined) return null;
+  if (typeof entry === 'number') return entry;
+  const product = EXAM_PRODUCTS[String(examBody).toUpperCase()];
+  const key = variation && entry[variation] !== undefined ? variation : product.defaultVariation;
+  const price = entry[key];
+  return typeof price === 'number' ? price : null;
+}
 
 /**
  * Look up a data plan by network and plan code. Returns the plan object
@@ -129,11 +208,24 @@ function getCatalog() {
     electricity: ELECTRICITY_DISCOS,
     networks: NETWORKS,
     examPrices: EXAM_PRICES,
+    // Full exam catalogue including the deliberately disabled bodies, so the
+    // UI renders availability from data instead of hardcoding it.
+    examProducts: Object.entries(EXAM_PRODUCTS).map(([code, p]) => ({
+      code,
+      name: p.name,
+      enabled: p.enabled,
+      reason: p.reason || null,
+      price: p.price ?? null,
+      defaultVariation: p.defaultVariation || null,
+      variations: p.variations || null,
+    })),
   };
 }
 
 module.exports = {
-  DATA_PLANS, CABLE_PLANS, ELECTRICITY_DISCOS, NETWORKS, EXAM_PRICES,
-  findDataPlan, findCablePlan, validatePlanAmount, validateCablePlanAmount,
+  DATA_PLANS, CABLE_PLANS, ELECTRICITY_DISCOS, NETWORKS,
+  EXAM_PRICES, EXAM_PRODUCTS, ENABLED_EXAM_BODIES,
+  findDataPlan, findCablePlan, findExamPrice,
+  validatePlanAmount, validateCablePlanAmount,
   getCatalog,
 };
