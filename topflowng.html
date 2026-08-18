@@ -705,6 +705,29 @@ html.dark .icon-moon{display:none}
   font:600 13px/1 var(--font);cursor:pointer;text-align:center}
 .load-more-btn:hover{border-color:var(--brand);color:var(--brand)}
 
+/* Wallet screen */
+.wallet-hero{background:linear-gradient(160deg,var(--brand) 0%,var(--brand-hover) 100%);
+  border-radius:22px;padding:32px 28px;color:#fff;margin-bottom:16px;
+  box-shadow:var(--shadow);position:relative;overflow:hidden}
+.wallet-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:240px;height:240px;
+  border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);pointer-events:none}
+.wallet-hero-label{font:600 12px/1 var(--font);text-transform:uppercase;letter-spacing:.7px;
+  opacity:.85;margin-bottom:10px;position:relative}
+.wallet-hero-amount{font:800 clamp(34px,6vw,48px)/1 var(--display);letter-spacing:-1px;
+  margin-bottom:20px;position:relative}
+.wallet-hero-actions{display:flex;gap:10px;flex-wrap:wrap;position:relative}
+.wallet-hero-actions .btn-fund{background:#fff;color:var(--brand)}
+.wallet-hero-actions .btn-fund:hover{background:rgba(255,255,255,.9);color:var(--brand-hover)}
+.wallet-hero-actions .btn-history-quick{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);color:#fff}
+.wallet-hero-actions .btn-history-quick:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.6);color:#fff}
+.wallet-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.wallet-stat{background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:16px;padding:18px 20px}
+.wallet-stat-label{display:block;font:500 11px/1 var(--font);color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.wallet-stat-value{display:block;font:800 20px/1 var(--display);color:var(--text-primary)}
+.wallet-stat-value--credit{color:var(--success)}
+
 /* At a glance sidebar */
 .at-a-glance{background:var(--surface);border:1px solid var(--border-subtle);
   border-radius:20px;padding:22px;height:fit-content;
@@ -826,7 +849,7 @@ html.dark .icon-moon{display:none}
 #main-app.active-screen ~ .bottom-nav,
 #main-app.active-screen + .bottom-nav,
 .bottom-nav.visible{display:grid}
-.bottom-nav{grid-template-columns:repeat(4,1fr)}
+.bottom-nav{grid-template-columns:repeat(5,1fr)}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:8px 4px;font:600 10px/1 var(--font);color:var(--text-muted);
   transition:color var(--transition);cursor:pointer;border:none;background:none}
@@ -1016,6 +1039,7 @@ html.dark .icon-moon{display:none}
 /* ══════════════════════════════════════════════════════════════
    DESKTOP SIDEBAR LAYOUT (≥900px)
 ══════════════════════════════════════════════════════════════ */
+.sidebar-nav{display:none}
 @media(min-width:900px){
   #main-app.active-screen{flex-direction:row}
   .header{width:272px;flex-shrink:0;border-bottom:none;
@@ -1032,9 +1056,6 @@ html.dark .icon-moon{display:none}
   .screen{padding:28px 32px;max-width:900px}
   .bottom-nav{display:none!important}
   /* sidebar nav */
-  .header::after{
-    content:'';display:flex;flex-direction:column;
-    border-top:1px solid var(--border-subtle);padding:12px}
   .sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:12px;margin-top:auto}
   .sidebar-nav-item{display:flex;align-items:center;gap:11px;
     padding:12px 16px;border-radius:12px;
@@ -1375,6 +1396,13 @@ html.dark .icon-moon{display:none}
       </div>
       <div class="hero-dots" id="hero-dots"></div>
     </div>
+    <nav class="sidebar-nav" aria-label="Primary">
+      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg>Home</button>
+      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg>Wallet</button>
+      <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Services</button>
+      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>History</button>
+      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>Account</button>
+    </nav>
   </header>
 
   <!-- Screens -->
@@ -1463,6 +1491,36 @@ html.dark .icon-moon{display:none}
           </section>
         </aside>
       </div>
+    </div>
+
+    <div class="screen" id="screen-wallet">
+      <div class="wallet-hero">
+        <div class="wallet-hero-label">Available balance</div>
+        <div class="wallet-hero-amount" id="wallet-balance">₦0.00</div>
+        <div class="wallet-hero-actions">
+          <button class="btn-fund" onclick="openFundModal()">Fund wallet</button>
+          <button class="btn-history-quick" onclick="goTab('history')">View transactions</button>
+        </div>
+      </div>
+      <div class="wallet-stats">
+        <div class="wallet-stat">
+          <span class="wallet-stat-label">Total credits</span>
+          <span class="wallet-stat-value wallet-stat-value--credit" id="wallet-credits">₦0.00</span>
+        </div>
+        <div class="wallet-stat">
+          <span class="wallet-stat-label">Total spend</span>
+          <span class="wallet-stat-value" id="wallet-spend">₦0.00</span>
+        </div>
+      </div>
+      <section class="home-activity" aria-labelledby="wallet-activity-heading">
+        <div class="home-section-head">
+          <h2 class="section-title" id="wallet-activity-heading">Wallet activity</h2>
+          <button class="section-link" onclick="goTab('history')">View all</button>
+        </div>
+        <div class="txn-list" id="wallet-txns">
+          <div class="txn-empty">Loading wallet activity…</div>
+        </div>
+      </section>
     </div>
 
     <div class="screen" id="screen-history">
@@ -1604,6 +1662,9 @@ html.dark .icon-moon{display:none}
   <nav class="bottom-nav" aria-label="Primary">
     <button class="nav-item active" id="nav-home" onclick="goTab('home')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg></span>Home
+    </button>
+    <button class="nav-item" id="nav-wallet" onclick="goTab('wallet')">
+      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></span>Wallet
     </button>
     <button class="nav-item" id="nav-services" onclick="openService('airtime')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span>Services
@@ -2329,6 +2390,32 @@ function updateBalance(newBal) {
   user.wallet = newBal;
 }
 
+// ── WALLET SCREEN ─────────────────────────────────────────────────────────
+async function loadWalletData() {
+  try {
+    const [balRes, txnRes] = await Promise.all([
+      api('GET', '/api/wallet/balance'),
+      api('GET', '/api/wallet/transactions?limit=20'),
+    ]);
+    const balance = Number(balRes.balance) || 0;
+    document.getElementById('wallet-balance').textContent = fmt(balance);
+    const txns = txnRes.transactions || [];
+    let credits = 0, spend = 0;
+    for (const t of txns) {
+      if (t.type === 'credit' && t.status === 'completed') credits += Number(t.amount) || 0;
+      if (t.type === 'debit' && t.status === 'completed') spend += Number(t.amount) || 0;
+    }
+    document.getElementById('wallet-credits').textContent = fmt(credits);
+    document.getElementById('wallet-spend').textContent = fmt(spend);
+    const el = document.getElementById('wallet-txns');
+    el.innerHTML = txns.length
+      ? txns.map(txnHTML).join('')
+      : '<div class="txn-empty">No wallet activity yet. Fund your wallet to get started.</div>';
+  } catch {
+    document.getElementById('wallet-balance').textContent = 'Unavailable';
+  }
+}
+
 // ── TRANSACTIONS ────────────────────────────────────────────────────────
 function transactionStatusPill(status) {
   const labels = {
@@ -2387,8 +2474,11 @@ let txnFilter = 'all';
  function _goTab(tab) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('screen-'+tab).classList.add('active');
   document.getElementById('nav-'+tab).classList.add('active');
+  const side = document.getElementById('side-nav-'+tab);
+  if (side) side.classList.add('active');
   if (tab === 'history') loadAllTxns(true);
   if (tab === 'home') loadRecentTxns();
 }
@@ -3060,6 +3150,7 @@ async function setTransactionPin() {
 // Override goTab to load account data on account tab
 function goTab(tab) {
   _goTab(tab);
+  if (tab === 'wallet') loadWalletData();
   if (tab === 'account') {
     loadReferral();
     loadAnalytics();
