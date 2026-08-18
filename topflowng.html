@@ -86,6 +86,22 @@
   --teal-dark:   #096878;
   --grad:        linear-gradient(135deg,#0B7E8E 0%,#0E9BAE 100%);
 
+  /* Brand colors — match each provider's logo/brand identity */
+  --brand-mtn:      #FFCC00;  --brand-mtn-soft:   #FFF4CC;  --brand-mtn-ink:   #8A6D00;
+  --brand-glo:      #009C3F;  --brand-glo-soft:   #E0F5E6;  --brand-glo-ink:   #00702E;
+  --brand-airtel:   #ED1B24;  --brand-airtel-soft:#FDE6E7;  --brand-airtel-ink:#C41219;
+  --brand-9mobile:  #00684D;  --brand-9mobile-soft:#E1F2EC; --brand-9mobile-ink:#00523D;
+  --brand-ikedc:    #C8102E;  --brand-ikedc-soft: #FBE8EB;  --brand-ikedc-ink:  #A00D25;
+  --brand-ekedc:    #EA0C12;  --brand-ekedc-soft: #FDE5E6;  --brand-ekedc-ink:  #BF090E;
+  --brand-aedc:     #002474;  --brand-aedc-soft:  #E6EBF5;  --brand-aedc-ink:   #001B57;
+  --brand-phedc:    #0B7A43;  --brand-phedc-soft: #E3F4EC;  --brand-phedc-ink:  #085D34;
+  --brand-kedc:     #021F82;  --brand-kedc-soft:  #E6EAF6;  --brand-kedc-ink:   #021A67;
+  --brand-ibedc:    #F39500;  --brand-ibedc-soft: #FEF1DE;  --brand-ibedc-ink:  #C17700;
+  --brand-dstv:     #00508F;  --brand-dstv-soft:  #E6F0F8;  --brand-dstv-ink:   #003E6E;
+  --brand-gotv:     #018A3A;  --brand-gotv-soft:  #E1F5E9;  --brand-gotv-ink:   #016B2D;
+  --brand-startimes:#DA251C;  --brand-startimes-soft:#FBE7E6; --brand-startimes-ink:#B31E16;
+  --brand-waec:     #E8A000;  --brand-waec-soft:  #FEF3DD;  --brand-waec-ink:   #B87E00;
+
   /* backward-compat aliases (JS / inline styles may use --green) */
   --green:       #0B7E8E;
   --green-soft:  #E0F5F7;
@@ -755,7 +771,8 @@ select.field-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http:/
   border:1.5px solid var(--border);font:600 13px/1 var(--font);
   color:var(--graphite);cursor:pointer;transition:all var(--transition);
   user-select:none}
-.network-chip.selected{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.network-chip.selected{border-color:var(--brand,var(--teal));background:var(--brand-soft,var(--teal-soft));color:var(--brand-ink,var(--teal))}
+.provider-choice.selected .provider-logo-frame{border-color:var(--brand,var(--teal));box-shadow:0 0 0 1px var(--brand,var(--teal))}
 .provider-choice{display:flex;align-items:center;gap:8px;padding:10px 14px}
 .provider-choice .provider-logo-frame{width:28px;height:28px;border-radius:6px;
   border:1px solid var(--border);overflow:hidden;flex-shrink:0;background:#fff;
@@ -770,7 +787,7 @@ select.field-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http:/
 .amount-preset{padding:8px 14px;border-radius:var(--radius-sm);
   border:1.5px solid var(--border);font:600 13px/1 var(--font);
   color:var(--graphite);cursor:pointer;transition:all var(--transition)}
-.amount-preset.selected{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.amount-preset.selected{border-color:var(--brand,var(--teal));background:var(--brand-soft,var(--teal-soft));color:var(--brand-ink,var(--teal))}
 
 /* Data / cable plan list */
 .data-plans{display:flex;flex-direction:column;gap:8px;margin-top:4px;
@@ -778,9 +795,9 @@ select.field-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http:/
 .data-plan{display:flex;justify-content:space-between;align-items:center;
   padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
   cursor:pointer;transition:all var(--transition)}
-.data-plan.selected{border-color:var(--teal);background:var(--teal-soft)}
+.data-plan.selected{border-color:var(--brand,var(--teal));background:var(--brand-soft,var(--teal-soft))}
 .data-plan-name{font:600 13px/1 var(--display);color:var(--ink)}
-.data-plan-price{font:700 13px/1 var(--display);color:var(--teal)}
+.data-plan-price,.plan-price{font:700 13px/1 var(--display);color:var(--brand,var(--teal))}
 .data-plan-validity{font:400 11px/1 var(--font);color:var(--mid);margin-top:3px}
 
 /* Beneficiary list */
@@ -788,7 +805,7 @@ select.field-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http:/
 .bfr-chip{padding:6px 12px;border-radius:40px;border:1.5px solid var(--border);
   font:600 12px/1 var(--font);color:var(--graphite);cursor:pointer;
   transition:all var(--transition)}
-.bfr-chip:hover{border-color:var(--teal);color:var(--teal)}
+.bfr-chip:hover{border-color:var(--brand,var(--teal));color:var(--brand-ink,var(--teal))}
 .save-bfr-label{display:flex;align-items:center;gap:8px;
   font:500 12px/1 var(--font);color:var(--graphite);margin-bottom:16px;cursor:pointer}
 .save-bfr-label input{accent-color:var(--teal)}
@@ -2292,6 +2309,25 @@ function selectNet(el, group) {
   });
   el.classList.add('selected');
   el.setAttribute('aria-pressed', 'true');
+  applyBrand(el);
+}
+
+const BRAND_KEY = {
+  MTN: 'mtn', GLO: 'glo', Glo: 'glo', AIRTEL: 'airtel', Airtel: 'airtel',
+  '9mobile': '9mobile', '9MOBILE': '9mobile',
+  IKEDC: 'ikedc', EKEDC: 'ekedc', AEDC: 'aedc', PHEDC: 'phedc', KEDC: 'kedc', IBEDC: 'ibedc',
+  DSTV: 'dstv', DStv: 'dstv', GOTV: 'gotv', GOtv: 'gotv', STARTIMES: 'startimes', StarTimes: 'startimes',
+  WAEC: 'waec',
+};
+
+function applyBrand(el) {
+  const name = (el.querySelector('.provider-choice-name')?.textContent.trim() || el.textContent.trim());
+  const key = BRAND_KEY[name];
+  const screen = el.closest('.service-screen');
+  if (!key || !screen) return;
+  screen.style.setProperty('--brand', `var(--brand-${key})`);
+  screen.style.setProperty('--brand-soft', `var(--brand-${key}-soft)`);
+  screen.style.setProperty('--brand-ink', `var(--brand-${key}-ink)`);
 }
 
 function getSelected(container) {
@@ -3687,12 +3723,17 @@ init();
 
   /* ── Boot ───────────────────────────────────────────────────── */
   function boot() {
+    seedBrands();
     renderQuickPay('quickpay-grid');
     renderQuickPay('launcher-grid');
     renderPromos();
     bootOutage();
     wireReceiptCopy();
     wireLauncherBackdrop();
+  }
+
+  function seedBrands() {
+    document.querySelectorAll('.service-screen .network-chip.selected').forEach(el => applyBrand(el));
   }
 
   window.filterQuickPay = filterQuickPay;

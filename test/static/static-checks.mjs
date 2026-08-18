@@ -198,6 +198,17 @@ await checkInlineSyntax('bizflow.html');
   }
   check('password toggle helper defined in both shells',
     /function togglePasswordVisibility\(/.test(app) && /function togglePasswordVisibility\(/.test(read('admin.html')));
+
+  // Brand colors: every provider must have --brand-* vars in :root, and a BRAND_KEY
+  const brandProviders = ['mtn','glo','airtel','9mobile','ikedc','ekedc','aedc','phedc','kedc','ibedc','dstv','gotv','startimes','waec'];
+  check('brand color variables defined for every provider',
+    brandProviders.every((k) => new RegExp(`--brand-${k}:\\s*#[0-9A-Fa-f]{6}`).test(app)
+      && new RegExp(`--brand-${k}-soft:\\s*#[0-9A-Fa-f]{6}`).test(app)
+      && new RegExp(`--brand-${k}-ink:\\s*#[0-9A-Fa-f]{6}`).test(app)));
+  check('brand key map covers every provider',
+    brandProviders.every((k) => new RegExp(`:\\s*'${k}'`).test(app)));
+  check('selectNet applies brand color', /function selectNet[\s\S]{0,400}?applyBrand\(el\)/.test(app));
+  check('boot seeds brand colors', /function boot\(\)[\s\S]{0,200}?seedBrands\(\)/.test(app));
 }
 
 // ── Summary ────────────────────────────────────────────────────────────────

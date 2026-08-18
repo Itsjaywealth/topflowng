@@ -162,6 +162,27 @@ test.describe('logged-in app shell', () => {
     }
   });
 
+  test('provider brand colors apply on selection', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    await expect(page.locator('#main-app')).toBeVisible();
+    await page.evaluate(() => openService('airtime'));
+    const screen = page.locator('#svc-airtime');
+    // Default selected chip is MTN → --brand must resolve to MTN yellow.
+    const resolved = await screen.evaluate((el) => getComputedStyle(el).getPropertyValue('--brand').trim());
+    expect(resolved.toLowerCase()).toBe('#ffcc00');
+    // Switch to Airtel → brand vars must flip to Airtel red.
+    const airtelChip = page.locator('#svc-airtime .provider-choice', { hasText: 'Airtel' });
+    await airtelChip.click();
+    const resolvedAfter = await screen.evaluate((el) => getComputedStyle(el).getPropertyValue('--brand').trim());
+    expect(resolvedAfter.toLowerCase()).toBe('#ed1b24');
+    // Selected chip border/ink use the brand color (Airtel red #ED1B24).
+    await expect.poll(async () => {
+      return airtelChip.evaluate((el) => getComputedStyle(el).borderColor);
+    }).toBe('rgb(237, 27, 36)');
+    await page.evaluate(() => closeService('airtime'));
+  });
+
   test('disabled products are not presented as active providers', async ({ page, request }) => {
     await login(request, page);
     await page.goto('/');
