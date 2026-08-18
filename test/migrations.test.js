@@ -143,13 +143,14 @@ test('migration 001 applies successfully', async () => {
   assert.match(out, /applied 004_auto_recharge\.sql/);
   assert.match(out, /applied 005_scheduled_purchases\.sql/);
   assert.match(out, /applied 006_auto_recharge_sessions\.sql/);
+  assert.match(out, /applied 008_scheduled_execution_claims\.sql/);
   assert.match(out, /applied 007_bizflow_data\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
   assert.deepStrictEqual(rows.map((r) => r.version), [
     '001_vtu_idempotency', '002_vtu_reconcile_attempts', '003_search_indexes',
     '004_auto_recharge', '005_scheduled_purchases', '006_auto_recharge_sessions',
-    '007_bizflow_data',
+    '007_bizflow_data', '008_scheduled_execution_claims',
   ]);
 
   const cols = await q(

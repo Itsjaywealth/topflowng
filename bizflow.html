@@ -688,6 +688,7 @@ let payrollProcessed = JSON.parse(localStorage.getItem('bf_payroll_processed') |
 const fmtN = n => '₦' + parseFloat(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
 const initials = name => (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const escHtml = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const isOverdue = inv => inv.status !== 'paid' && inv.status !== 'draft' && inv.due && new Date(inv.due) < new Date();
 
 // Cloud sync: keep localStorage as the fast local cache, then debounce a PUT
@@ -766,8 +767,8 @@ function renderDashboard() {
   const tbody = document.getElementById('dash-recent-invoices');
   tbody.innerHTML = recent.length ? recent.map(inv => `
     <tr>
-      <td><strong>#${inv.id}</strong></td>
-      <td>${inv.clientName||'—'}</td>
+      <td><strong>#${escHtml(inv.id)}</strong></td>
+      <td>${escHtml(inv.clientName||'—')}</td>
       <td>${fmtN(inv.total)}</td>
       <td>${statusBadge(inv)}</td>
     </tr>`).join('') : `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No invoices yet.</td></tr>`;
@@ -780,7 +781,8 @@ let invoiceSearch = '';
 function statusBadge(inv) {
   if (isOverdue(inv)) return '<span class="badge badge-red">Overdue</span>';
   const map = { draft:'badge-slate', sent:'badge-blue', paid:'badge-green', overdue:'badge-red' };
-  return `<span class="badge ${map[inv.status]||'badge-slate'}">${(inv.status||'draft').charAt(0).toUpperCase()+inv.status.slice(1)}</span>`;
+  const status = Object.prototype.hasOwnProperty.call(map, inv.status) ? inv.status : 'draft';
+  return `<span class="badge ${map[status]}">${escHtml(status.charAt(0).toUpperCase()+status.slice(1))}</span>`;
 }
 
 function filterInvoices(q) { invoiceSearch = q.toLowerCase(); renderInvoices(); }
@@ -803,8 +805,8 @@ function renderInvoices() {
   const tbody = document.getElementById('invoice-list');
   tbody.innerHTML = list.length ? list.map(inv => `
     <tr>
-      <td><strong>#${inv.id}</strong></td>
-      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${initials(inv.clientName)}</span>${inv.clientName||'—'}</div></td>
+      <td><strong>#${escHtml(inv.id)}</strong></td>
+      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${escHtml(initials(inv.clientName))}</span>${escHtml(inv.clientName||'—')}</div></td>
       <td>${fmtDate(inv.created)}</td>
       <td>${fmtDate(inv.due)}</td>
       <td><strong>${fmtN(inv.total)}</strong></td>
@@ -822,7 +824,7 @@ function renderInvoices() {
 
 function populateClientDropdown() {
   const sel = document.getElementById('inv-client');
-  sel.innerHTML = '<option value="">Select client…</option>' + clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  sel.innerHTML = '<option value="">Select client…</option>' + clients.map(c => `<option value="${escHtml(c.id)}">${escHtml(c.name)}</option>`).join('');
 }
 
 function addInvoiceRow() {
@@ -954,8 +956,8 @@ function renderClients() {
     const lastInv = invoices.filter(i=>i.clientId===c.id).sort((a,b)=>new Date(b.created)-new Date(a.created))[0];
     const smap = {active:'badge-green',prospect:'badge-amber',inactive:'badge-slate'};
     return `<tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar">${initials(c.name)}</span><div><strong>${c.name}</strong><div style="font:400 11px/1 var(--font);color:var(--muted);margin-top:2px">${c.contact||''}</div></div></div></td>
-      <td>${c.email||'—'}</td><td>${c.phone||'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar">${escHtml(initials(c.name))}</span><div><strong>${escHtml(c.name)}</strong><div style="font:400 11px/1 var(--font);color:var(--muted);margin-top:2px">${escHtml(c.contact||'')}</div></div></div></td>
+      <td>${escHtml(c.email||'—')}</td><td>${escHtml(c.phone||'—')}</td>
       <td><strong>${fmtN(billed)}</strong></td>
       <td>${lastInv ? fmtDate(lastInv.created) : '—'}</td>
       <td><span class="badge ${smap[c.status]||'badge-slate'}">${(c.status||'active').charAt(0).toUpperCase()+(c.status||'').slice(1)}</span></td>
@@ -1054,8 +1056,8 @@ function renderPayroll() {
     const net = gross - ded;
     const isPaid = paidSet[m.id] === 'paid';
     return `<tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${initials(m.name)}</span><strong>${m.name}</strong></div></td>
-      <td>${m.role||'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:28px;height:28px;line-height:28px;font-size:11px">${escHtml(initials(m.name))}</span><strong>${escHtml(m.name)}</strong></div></td>
+      <td>${escHtml(m.role||'—')}</td>
       <td>${fmtN(gross)}</td>
       <td><span style="color:var(--red)">${fmtN(ded)}</span></td>
       <td><strong>${fmtN(net)}</strong></td>
@@ -1082,7 +1084,7 @@ function runPayroll() {
   document.getElementById('pr-modal-total').textContent = fmtN(total);
   document.getElementById('pr-modal-breakdown').innerHTML = staff.map(m => {
     const net = (parseFloat(m.salary)||0) * 0.895;
-    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font:400 13px/1 var(--font)"><span>${m.name}</span><strong>${fmtN(net)}</strong></div>`;
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font:400 13px/1 var(--font)"><span>${escHtml(m.name)}</span><strong>${fmtN(net)}</strong></div>`;
   }).join('');
   openModal('payroll-modal');
 }
@@ -1108,10 +1110,10 @@ function renderStaff() {
   const container = document.getElementById('staff-list-body');
   container.innerHTML = staff.length ? staff.map(m => `
     <div class="staff-card">
-      <span class="avatar" style="width:40px;height:40px;line-height:40px;font-size:14px">${initials(m.name)}</span>
+      <span class="avatar" style="width:40px;height:40px;line-height:40px;font-size:14px">${escHtml(initials(m.name))}</span>
       <div class="staff-info">
-        <div class="staff-name">${m.name}</div>
-        <div class="staff-role">${m.role||'—'} · ${m.dept||'—'} · <span class="badge badge-slate" style="font-size:10px">${m.type||'full-time'}</span></div>
+        <div class="staff-name">${escHtml(m.name)}</div>
+        <div class="staff-role">${escHtml(m.role||'—')} · ${escHtml(m.dept||'—')} · <span class="badge badge-slate" style="font-size:10px">${escHtml(m.type||'full-time')}</span></div>
       </div>
       <div class="staff-actions">
         <div style="text-align:right;margin-right:8px"><div style="font:700 14px/1 var(--font)">${fmtN(m.salary)}</div><div style="font:400 11px/1 var(--font);color:var(--muted)">per month</div></div>

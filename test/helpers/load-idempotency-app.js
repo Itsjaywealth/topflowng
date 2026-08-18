@@ -54,6 +54,7 @@ const providerState = {
 };
 
 const mockProvider = {
+  getProductRegistry: () => [],
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (value) => {
     const n = Number(value);

@@ -156,6 +156,18 @@ await checkInlineSyntax('bizflow.html');
   check('sw skipWaiting/claim', /skipWaiting\(\)/.test(sw) && /clients\.claim\(\)/.test(sw));
 }
 
+// ── 8. Browser trust-boundary regressions ──────────────────────────────────
+{
+  const app = read('topflowng.html');
+  const biz = read('bizflow.html');
+  check('auth next redirect is same-origin guarded', /function safeNextPath\(/.test(app) && /target\.origin !== window\.location\.origin/.test(app));
+  check('all auth redirects use the safe next resolver', (app.match(/const nx = safeNextPath\(\)/g) || []).length === 3);
+  check('BizFlow defines HTML output encoding', /const escHtml =/.test(biz));
+  check('BizFlow invoice names are encoded', /escHtml\(inv\.clientName/.test(biz));
+  check('BizFlow client names are encoded', /escHtml\(c\.name\)/.test(biz));
+  check('BizFlow staff names are encoded', /escHtml\(m\.name\)/.test(biz));
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log(`\nFrontend/static checks: ${results.length} total, ${failures} failed.`);
 for (const r of results) {

@@ -598,6 +598,28 @@ test('18. scheduled purchase executes a real purchase and advances the schedule'
   assert.ok(reloadedOnce.run_count >= 1, 'run_count incremented');
 });
 
+test('18b. concurrent scheduled sweeps debit and fulfil one occurrence exactly once', async () => {
+  h.providerState.reset();
+  const balBefore = await walletOf(userIdB);
+  const phone = '08136601999';
+  const sched = await db.createScheduledPurchase(userIdB, {
+    serviceType: 'airtime', planCode: null, phone, identifier: null,
+    network: 'MTN', amount: 1000, frequency: 'daily',
+    nextRunAt: new Date(Date.now() - 1000),
+  });
+
+  await Promise.all([
+    scheduledProcessorHooks.processDueScheduledPurchases(),
+    scheduledProcessorHooks.processDueScheduledPurchases(),
+  ]);
+
+  assert.strictEqual(await walletOf(userIdB), balBefore - 1000, 'wallet debited exactly once');
+  const orders = await db.getVtuOrdersByUser(userIdB, { limit: 50 });
+  assert.strictEqual(orders.filter((o) => o.description === `airtime — ${phone}`).length, 1, 'one provider order created');
+  const reloaded = await db.getScheduledPurchaseById(userIdB, sched.id);
+  assert.strictEqual(reloaded.run_count, 1, 'occurrence recorded once');
+});
+
 // ── 20. auto-recharge initiates a Paystack session, emails the link ─────────
 test('20. auto-recharge emails a top-up link and marks the trigger', async () => {
   assert.ok(scheduledProcessorHooks.processDueAutoRecharges, 'auto-recharge hook present');

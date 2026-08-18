@@ -15,7 +15,7 @@ const db = require('../database');
 const logger = require('../lib/logger');
 const { authMiddleware, checkTransactionPin } = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rate-limit');
-const { processVtpassPurchase, productFor, buildRequestId, VtpassProductError, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/vtpass');
+const { processVtpassPurchase, productFor, getProductRegistry, buildRequestId, VtpassProductError, MAX_PURCHASE_AMOUNT, parseValidatedAmount } = require('../services/vtpass');
 const {
   validatePlanAmount, validateCablePlanAmount, getCatalog,
   findExamPrice, ENABLED_EXAM_BODIES,
@@ -90,7 +90,7 @@ function captureError(service, err) {
 
 // ── VTU — Pricing catalog (server-side source of truth) ─────────────────────
 router.get('/plans', (_req, res) => {
-  res.json(getCatalog());
+  res.json({ ...getCatalog(), productRegistry: getProductRegistry() });
 });
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────

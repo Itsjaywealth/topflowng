@@ -169,6 +169,15 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_beneficiaries_user_id ON beneficiaries(user_id);
     `);
 
+    await client.query(`
+      ALTER TABLE scheduled_purchases
+        ADD COLUMN IF NOT EXISTS in_flight_reference TEXT,
+        ADD COLUMN IF NOT EXISTS in_flight_for TIMESTAMPTZ;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_in_flight_reference
+        ON scheduled_purchases (in_flight_reference)
+        WHERE in_flight_reference IS NOT NULL;
+    `).catch(() => {});
+
     console.log('Database schema ready');
   } finally {
     client.release();
@@ -1232,11 +1241,60 @@ async function getDueScheduledPurchases(limit = 20) {
   return rows;
 }
 
+async function withScheduledPurchaseLock(id, callback) {
+  const client = await pool.connect();
+  let locked = false;
+  try {
+    const { rows } = await client.query('SELECT pg_try_advisory_lock(424242, $1) AS locked', [id]);
+    locked = rows[0]?.locked === true;
+    if (!locked) return { skippedLocked: true };
+    return await callback();
+  } finally {
+    if (locked) await client.query('SELECT pg_advisory_unlock(424242, $1)', [id]).catch(() => {});
+    client.release();
+  }
+}
+
+async function getOrCreateScheduledReference(id, generatedReference) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT active, next_run_at, in_flight_for, in_flight_reference FROM scheduled_purchases WHERE id = $1 FOR UPDATE',
+      [id]
+    );
+    const row = rows[0];
+    if (!row) throw new Error(`Scheduled purchase ${id} not found`);
+    if (!row.active || new Date(row.next_run_at).getTime() > Date.now()) {
+      await client.query('COMMIT');
+      return null;
+    }
+    const sameOccurrence = row.in_flight_reference && row.in_flight_for
+      && new Date(row.in_flight_for).getTime() === new Date(row.next_run_at).getTime();
+    const reference = sameOccurrence ? row.in_flight_reference : generatedReference;
+    if (!sameOccurrence) {
+      await client.query(
+        `UPDATE scheduled_purchases
+         SET in_flight_reference = $2, in_flight_for = next_run_at, updated_at = NOW()
+         WHERE id = $1`,
+        [id, reference]
+      );
+    }
+    await client.query('COMMIT');
+    return reference;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 async function recordScheduledRun(id, nextRun) {
   await pool.query(
     `UPDATE scheduled_purchases
      SET last_run_at = NOW(), run_count = run_count + 1,
-         next_run_at = $2, updated_at = NOW()
+         next_run_at = $2, in_flight_reference = NULL, in_flight_for = NULL, updated_at = NOW()
      WHERE id = $1`,
     [id, nextRun]
   );
@@ -1245,10 +1303,24 @@ async function recordScheduledRun(id, nextRun) {
 async function disableScheduledPurchase(id) {
   await pool.query(
     `UPDATE scheduled_purchases
-     SET active = false, last_run_at = NOW(), run_count = run_count + 1, updated_at = NOW()
+     SET active = false, last_run_at = NOW(), run_count = run_count + 1,
+         updated_at = NOW(), in_flight_reference = NULL, in_flight_for = NULL
      WHERE id = $1`,
     [id]
   );
+}
+
+async function setScheduledPurchaseActive(userId, id, active) {
+  const { rows: [row] } = await pool.query(
+    `UPDATE scheduled_purchases
+     SET active = $3,
+         next_run_at = CASE WHEN $3 AND next_run_at <= NOW() THEN NOW() + INTERVAL '5 minutes' ELSE next_run_at END,
+         updated_at = NOW()
+     WHERE id = $1 AND user_id = $2
+     RETURNING *`,
+    [id, userId, active]
+  );
+  return row || null;
 }
 
 async function getScheduledPurchaseById(userId, id) {
@@ -1367,8 +1439,11 @@ module.exports = {
   getScheduledPurchases,
   deleteScheduledPurchase,
   getDueScheduledPurchases,
+  withScheduledPurchaseLock,
+  getOrCreateScheduledReference,
   recordScheduledRun,
   disableScheduledPurchase,
+  setScheduledPurchaseActive,
   getScheduledPurchaseById,
   getVtuOrdersByUser,
 };

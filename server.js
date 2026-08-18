@@ -34,7 +34,7 @@ const axios = require('axios');
 const db = require('./database');
 const logger = require('./lib/logger');
 const security = require('./services/security');
-const { authMiddleware, adminMiddleware } = require('./middleware/auth');
+const { authMiddleware, adminMiddleware, checkTransactionPin } = require('./middleware/auth');
 const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
 const aiRouter = require('./routes/ai').router;
@@ -995,7 +995,7 @@ app.post('/api/auto-recharge', authMiddleware, apiLimiter, validate(autoRecharge
   try {
     const { threshold, amount } = req.validated;
     const settings = await db.setAutoRecharge(req.user.id, { threshold, amount });
-    res.json({ settings, message: 'Auto-recharge enabled. Wallet will top up when balance drops below ₦' + threshold });
+    res.json({ settings, message: 'Low-balance reminder enabled. A Paystack checkout will be created below ₦' + threshold + '; nothing is charged automatically.' });
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to set auto-recharge');
@@ -1025,7 +1025,8 @@ app.get('/api/scheduled-purchases', authMiddleware, async (req, res) => {
 
 app.post('/api/scheduled-purchases', authMiddleware, apiLimiter, validate(scheduledPurchaseSchema), async (req, res) => {
   try {
-    const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt } = req.validated;
+    const { serviceType, planCode, phone, identifier, network, amount, frequency, nextRunAt, pin } = req.validated;
+    await checkTransactionPin(req.user.id, pin);
 
     // A schedule is a future debit, so the same server-side pricing rules that
     // guard the interactive routes must apply here. Otherwise a schedule could
@@ -1064,6 +1065,18 @@ app.delete('/api/scheduled-purchases/:id', authMiddleware, async (req, res) => {
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to cancel scheduled purchase');
+  }
+});
+
+app.patch('/api/scheduled-purchases/:id/status', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    if (typeof req.body?.active !== 'boolean') return sendError(res, 400, 'active must be true or false');
+    const purchase = await db.setScheduledPurchaseActive(req.user.id, parseInt(req.params.id), req.body.active);
+    if (!purchase) return sendError(res, 404, 'Scheduled purchase not found');
+    res.json({ purchase, message: req.body.active ? 'Scheduled purchase resumed.' : 'Scheduled purchase paused.' });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to update scheduled purchase');
   }
 });
 
@@ -1183,17 +1196,23 @@ function schedulePendingOrderSweep() {
     try {
       const due = await db.getDueScheduledPurchases(20);
       for (const row of due) {
-        try {
-          if (parseFloat(row.wallet) < parseFloat(row.amount)) {
-            logger.warn('Scheduled purchase skipped — insufficient balance', { id: row.id, userId: row.user_id });
-            continue;
-          }
-          logger.info('Processing scheduled purchase', { id: row.id, serviceType: row.service_type });
-          const { requestId, product } = buildScheduledPurchaseProduct(row);
-          const result = await processVtpassPurchase({
-            userId: row.user_id, requestId, serviceType: row.service_type,
-            amount: Number(row.amount), description: `${row.service_type} — ${row.phone || row.identifier}`, product,
-          });
+        await db.withScheduledPurchaseLock(row.id, async () => {
+          try {
+            if (parseFloat(row.wallet) < parseFloat(row.amount)) {
+              logger.warn('Scheduled purchase skipped — insufficient balance', { id: row.id, userId: row.user_id });
+              return;
+            }
+            logger.info('Processing scheduled purchase', { id: row.id, serviceType: row.service_type });
+            const built = buildScheduledPurchaseProduct(row);
+            const requestId = await db.getOrCreateScheduledReference(row.id, built.requestId);
+            if (!requestId) return;
+            const existing = await db.getVtuOrderByRequestId(requestId);
+            const result = existing && ['completed', 'pending', 'failed'].includes(existing.status)
+              ? { outcome: existing.status === 'completed' ? 'success' : existing.status, balance: Number(row.wallet) }
+              : await processVtpassPurchase({
+                userId: row.user_id, requestId, serviceType: row.service_type,
+                amount: Number(row.amount), description: `${row.service_type} — ${row.phone || row.identifier}`, product: built.product,
+              });
 
           const nextRun = row.frequency === 'once' ? null : computeNextRun(row.frequency, new Date());
           if (result.outcome === 'success') {
@@ -1221,9 +1240,10 @@ function schedulePendingOrderSweep() {
             await db.disableScheduledPurchase(row.id);
           }
           logger.info('Scheduled purchase executed', { id: row.id, outcome: result.outcome, requestId });
-        } catch (err) {
-          logger.error('Scheduled purchase failed', { id: row.id, message: err.message });
-        }
+          } catch (err) {
+            logger.error('Scheduled purchase failed', { id: row.id, message: err.message });
+          }
+        });
       }
     } catch (err) {
       logger.error('Scheduled purchase sweep failed', { message: err.message });

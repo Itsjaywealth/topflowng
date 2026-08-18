@@ -68,6 +68,7 @@ function installMock(relPath, exports) {
 
 // ── Mock provider (never dials Clubkonnect) ────────────────────────────────
 const mockProvider = {
+  getProductRegistry: () => [],
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (value) => {
     const n = Number(value);

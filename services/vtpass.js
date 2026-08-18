@@ -34,6 +34,9 @@ const config = require('../config');
 const db = require('../database');
 const logger = require('../lib/logger');
 const { ApiError } = require('../lib/errors');
+const {
+  DATA_PLANS, CABLE_PLANS, ELECTRICITY_DISCOS, EXAM_PRODUCTS, NETWORKS,
+} = require('./pricing');
 
 const MAX_PURCHASE_AMOUNT = config.vtpass.maxPurchaseAmount;
 
@@ -100,29 +103,18 @@ const CABLE_SERVICE = { DSTV: 'dstv', GOTV: 'gotv', STARTIMES: 'startimes' };
 const PRODUCT_MAP = {
   data: {
     MTN: {
-      MTN1GB: 'mtn-sme-1gb',
-      MTN2GB: 'mtn-sme-2gb',
-      MTN5GB: 'mtn-sme-5gb',
-      MTN10GB: 'mtn-sme-10gb',
-      MTN20GB: 'mtn-sme-20gb',
+      MTN1GB: 'mtn-1gb-600', MTN2GB: 'mtn-xtra-1000', MTN7GB: 'mtn-7gb-1800',
+      MTN14GB: 'mtn-14.5gb-5000', MTN20GB: 'mtn-20gb-7500',
     },
     GLO: {
-      GLO1GB: 'glo-sme-1gb',
-      GLO2GB: 'glo-sme-2gb',
-      GLO5GB: 'glo-sme-5gb',
-      GLO10GB: 'glo-sme-10gb',
+      GLO1GB: 'glo-dg-495', GLO2GB: 'glo-dg-990', GLO5GB: 'glo-dg-2475', GLO10GB: 'glo-dg-4950',
     },
     AIRTEL: {
-      AIRTEL1GB: 'airtel-sme-1gb',
-      AIRTEL2GB: 'airtel-sme-2gb',
-      AIRTEL5GB: 'airtel-sme-5gb',
-      AIRTEL10GB: 'airtel-sme-10gb',
+      AIRTEL1GB: 'airt-800-7', AIRTEL2GB: 'airt-1500-30', AIRTEL3GB: 'airt-2000', AIRTEL10GB: 'airt-4000',
     },
     '9MOBILE': {
-      '9MOBILE1GB': 'etisalat-sme-1gb',
-      '9MOBILE2GB': 'etisalat-sme-2gb',
-      '9MOBILE5GB': 'etisalat-sme-5gb',
-      '9MOBILE10GB': 'etisalat-sme-10gb',
+      '9MOBILE2GB': 'eti-1000', '9MOBILE4GB': 'eti-2000',
+      '9MOBILE6GB': 'eti-3000', '9MOBILE11GB': 'eti-5000',
     },
   },
   cable: {
@@ -133,14 +125,14 @@ const PRODUCT_MAP = {
       DSTV_COMPACT: 'dstv79',
       DSTV_COMPACTPLUS: 'dstv7',
       DSTV_PREMIUM: 'dstv3',
-      DSTV_ASIA: 'dstv6',
+      DSTV_ASIA: 'dstv10',
     },
     GOTV: {
-      GOTV_SMALLIE: 'gotv-lite',
+      GOTV_SMALLIE: 'gotv-smallie',
       GOTV_JINJA: 'gotv-jinja',
       GOTV_JOLLI: 'gotv-jolli',
       GOTV_MAX: 'gotv-max',
-      GOTV_SUPA: 'gotv-supa-plus',
+      GOTV_SUPA: 'gotv-supa',
     },
     STARTIMES: {
       ST_NOVA: 'nova',
@@ -152,15 +144,9 @@ const PRODUCT_MAP = {
   },
   exam: {
     WAEC: { serviceID: 'waec', variation: 'waecdirect' },
-    // JAMB verified 2026-08-18: serviceID=jamb, variations from vtpass.com/documentation/jamb-pin-vending/
-    JAMB: {
-      serviceID: 'jamb',
-      variation: 'utme-no-mock',           // default (cheaper) variation
-      variations: {
-        'utme-mock': 7700,                 // UTME PIN with Mock — ₦7,700
-        'utme-no-mock': 6200,             // UTME PIN without Mock — ₦6,200
-      },
-    },
+    // JAMB documentation describes the service, but the live variation
+    // endpoint returned no purchasable options on 2026-08-18. It therefore
+    // remains deliberately unmapped and disabled.
   },
   recharge: {
     // Recharge-card PIN (ePIN) vending exists on VTPass but the exact
@@ -282,6 +268,86 @@ function productFor(serviceType, ctx) {
     default:
       throw new VtpassProductError(`Unsupported service type: ${serviceType}`);
   }
+}
+
+/**
+ * Canonical customer/admin product inventory. This is derived from the same
+ * provider mappings used to build purchase requests, so an enabled-but-
+ * unmapped item cannot appear as healthy in diagnostics.
+ */
+function getProductRegistry() {
+  const verifiedAt = '2026-08-18';
+  const rows = [];
+  const push = (row) => rows.push({
+    provider: 'VTPass',
+    priceSource: row.priceSource || 'services/pricing.js',
+    lastVerified: row.lastVerified || verifiedAt,
+    providerAvailability: row.enabled ? 'AVAILABLE' : 'UNAVAILABLE',
+    state: row.enabled ? 'VALID' : (row.state || 'DISABLED'),
+    ...row,
+  });
+
+  for (const network of NETWORKS) {
+    push({
+      category: 'Airtime', displayName: `${network} Airtime`, internalId: `airtime:${network}`,
+      serviceId: NETWORK_SERVICE[network] || null, variation: null,
+      enabled: Boolean(NETWORK_SERVICE[network]), customerUiState: 'enabled', priceSource: 'customer amount within server limits',
+    });
+  }
+  for (const [network, plans] of Object.entries(DATA_PLANS)) {
+    for (const plan of plans) {
+      const variation = lookupProduct('data', plan.code);
+      push({
+        category: 'Data', displayName: `${network} ${plan.name}`, internalId: plan.code,
+        serviceId: DATA_SERVICE[network] || null, variation: variation || null,
+        enabled: Boolean(DATA_SERVICE[network] && variation), customerUiState: variation ? 'enabled' : 'disabled',
+        price: plan.price, state: variation ? 'VALID' : 'UNMAPPED',
+      });
+    }
+  }
+  for (const disco of ELECTRICITY_DISCOS) {
+    push({
+      category: 'Electricity', displayName: disco.name, internalId: disco.code,
+      serviceId: DISCO_SERVICE[disco.code] || null, variation: 'prepaid/postpaid',
+      enabled: Boolean(DISCO_SERVICE[disco.code]), customerUiState: 'enabled', priceSource: 'customer amount within server limits',
+    });
+  }
+  for (const [provider, plans] of Object.entries(CABLE_PLANS)) {
+    for (const plan of plans) {
+      const variation = lookupProduct('cable', plan.code);
+      push({
+        category: 'Cable', displayName: `${provider} ${plan.name}`, internalId: plan.code,
+        serviceId: CABLE_SERVICE[provider] || null, variation: variation || null,
+        enabled: Boolean(CABLE_SERVICE[provider] && variation), customerUiState: variation ? 'enabled' : 'disabled',
+        price: plan.price, state: variation ? 'VALID' : 'UNMAPPED',
+      });
+    }
+  }
+  for (const [code, exam] of Object.entries(EXAM_PRODUCTS)) {
+    const mapping = lookupProduct('exam', code);
+    const variations = exam.variations || [{ code: mapping?.variation || null, name: exam.name, price: exam.price }];
+    for (const variation of variations) {
+      const enabled = Boolean(exam.enabled && exam.verified && mapping && variation.code);
+      push({
+        category: 'Exam', displayName: variation.name || exam.name,
+        internalId: variation.code ? `${code}:${variation.code}` : code,
+        serviceId: mapping?.serviceID || null, variation: variation.code || null,
+        enabled, customerUiState: enabled ? 'enabled' : 'disabled', price: variation.price ?? null,
+        state: enabled ? 'VALID' : (exam.verified ? 'PROVIDER_UNAVAILABLE' : 'UNMAPPED'),
+        providerAvailability: enabled ? 'AVAILABLE' : 'UNAVAILABLE',
+      });
+    }
+  }
+  for (const network of NETWORKS) {
+    const mapping = lookupProduct('recharge', network);
+    push({
+      category: 'Recharge PIN', displayName: `${network} Recharge Card PIN`, internalId: `recharge:${network}`,
+      serviceId: mapping?.serviceID || null, variation: mapping?.variation || null,
+      enabled: false, customerUiState: 'disabled', state: mapping ? 'DISABLED' : 'UNMAPPED',
+      providerAvailability: mapping ? 'UNVERIFIED' : 'UNAVAILABLE', priceSource: 'not configured',
+    });
+  }
+  return rows;
 }
 
 // ── Response normalisation ───────────────────────────────────────────────────
@@ -536,6 +602,7 @@ module.exports = {
   DISCO_SERVICE,
   CABLE_SERVICE,
   productFor,
+  getProductRegistry,
   variationAmount,
   fetchVariations,
   normalizeVtpassResponse,

@@ -1055,7 +1055,7 @@ function toggleTheme() {
 })();
 
 // ── DIAGNOSTICS ────────────────────────────────────────────────────────────
-const PRODUCT_REGISTRY = [
+let PRODUCT_REGISTRY = []; /* Static registry removed: diagnostics must only show the server's live canonical inventory.
   // AIRTIME
   {product:'MTN Airtime',category:'Airtime',provider:'VTPass',serviceID:'mtn',variation:'N/A',status:'VALID',enabled:true},
   {product:'Glo Airtime',category:'Airtime',provider:'VTPass',serviceID:'glo',variation:'N/A',status:'VALID',enabled:true},
@@ -1115,12 +1115,31 @@ const PRODUCT_REGISTRY = [
   {product:'Glo Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
   {product:'Airtel Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
   {product:'9mobile Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
-];
+*/
 
 let diagLoaded = false;
 function loadDiagnostics() {
   if (diagLoaded) return;
   diagLoaded = true;
+  apiFetch('/api/vtu/plans').then(catalog => {
+    if (Array.isArray(catalog.productRegistry)) {
+      PRODUCT_REGISTRY = catalog.productRegistry.map(p => ({
+        product: p.displayName,
+        category: p.category,
+        provider: p.provider,
+        serviceID: p.serviceId || '—',
+        variation: p.variation || '—',
+        status: p.state + ' · ' + p.priceSource + ' · ' + p.lastVerified,
+        enabled: p.enabled === true,
+      }));
+      renderDiagnosticsRegistry();
+    }
+  }).catch(() => {});
+  renderDiagnosticsRegistry();
+  loadProviderHealth();
+}
+
+function renderDiagnosticsRegistry() {
   const valid = PRODUCT_REGISTRY.filter(p => p.enabled).length;
   const disabled = PRODUCT_REGISTRY.filter(p => !p.enabled).length;
   document.getElementById('diag-summary').textContent = `${valid} active · ${disabled} disabled`;
@@ -1139,13 +1158,11 @@ function loadDiagnostics() {
       <td><span class="badge ${sc}">${ss}</span></td>
     </tr>`;
   }).join('');
-  // Load live provider health
-  loadProviderHealth();
 }
 function loadProviderHealth() {
   const el = document.getElementById('diag-health-content');
-  apiFetch('/api/provider/health').then(d => {
-    const status = d.status || 'unknown';
+  apiFetch('/api/providers/health').then(d => {
+    const status = String(d.status || 'unknown').toLowerCase();
     const colour = status === 'healthy' ? 'var(--green-2)' : status === 'degraded' ? 'var(--amber)' : 'var(--red)';
     el.innerHTML = `<div style="display:flex;align-items:center;gap:12px;font-size:14px">
       <span style="width:12px;height:12px;border-radius:50%;background:${colour};flex-shrink:0"></span>

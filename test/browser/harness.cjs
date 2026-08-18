@@ -57,6 +57,7 @@ function installMock(relPath, exports) {
 }
 
 installMock('services/vtpass.js', {
+  getProductRegistry: () => [],
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; },
   buildRequestId: () => 'TEST-' + Date.now().toString(36),

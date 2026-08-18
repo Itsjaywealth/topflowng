@@ -14,55 +14,55 @@
 
 const DATA_PLANS = {
   MTN: [
-    { code: 'MTN1GB',    name: '1GB — 30 days',     price: 350 },
-    { code: 'MTN2GB',    name: '2GB — 30 days',     price: 600 },
-    { code: 'MTN5GB',    name: '5GB — 30 days',     price: 1500 },
-    { code: 'MTN10GB',   name: '10GB — 30 days',    price: 2500 },
-    { code: 'MTN20GB',   name: '20GB — 30 days',    price: 4000 },
+    { code: 'MTN1GB',    name: '1GB + 1GB YouTube Night — 7 days', price: 800 },
+    { code: 'MTN2GB',    name: '2GB + 2 mins — 30 days', price: 1500 },
+    { code: 'MTN7GB',    name: '7GB — 2 days', price: 1800 },
+    { code: 'MTN14GB',   name: '14.5GB — 30 days', price: 5000 },
+    { code: 'MTN20GB',   name: '20GB — 30 days', price: 7500 },
   ],
   GLO: [
-    { code: 'GLO1GB',    name: '1GB — 30 days',     price: 400 },
-    { code: 'GLO2GB',    name: '2GB — 30 days',     price: 650 },
-    { code: 'GLO5GB',    name: '5GB — 30 days',     price: 1500 },
-    { code: 'GLO10GB',   name: '10GB — 30 days',    price: 2500 },
+    { code: 'GLO1GB',    name: '1GB — 30 days', price: 495 },
+    { code: 'GLO2GB',    name: '2GB — 30 days', price: 990 },
+    { code: 'GLO5GB',    name: '5GB — 30 days', price: 2475 },
+    { code: 'GLO10GB',   name: '10GB — 30 days', price: 4950 },
   ],
   AIRTEL: [
-    { code: 'AIRTEL1GB',  name: '1GB — 30 days',    price: 350 },
-    { code: 'AIRTEL2GB',  name: '2GB — 30 days',    price: 600 },
-    { code: 'AIRTEL5GB',  name: '5GB — 30 days',    price: 1500 },
-    { code: 'AIRTEL10GB', name: '10GB — 30 days',   price: 2500 },
+    { code: 'AIRTEL1GB',  name: '1GB — 7 days', price: 800 },
+    { code: 'AIRTEL2GB',  name: '2GB — 30 days', price: 1500 },
+    { code: 'AIRTEL3GB',  name: '3GB — 30 days', price: 2000 },
+    { code: 'AIRTEL10GB', name: '10GB — 30 days', price: 4000 },
   ],
   '9MOBILE': [
-    { code: '9MOBILE1GB',  name: '1GB — 30 days',   price: 400 },
-    { code: '9MOBILE2GB',  name: '2GB — 30 days',   price: 700 },
-    { code: '9MOBILE5GB',  name: '5GB — 30 days',   price: 1500 },
-    { code: '9MOBILE10GB', name: '10GB — 30 days',  price: 2500 },
+    { code: '9MOBILE2GB',  name: '2GB — 30 days', price: 1000 },
+    { code: '9MOBILE4GB',  name: '4.5GB — 30 days', price: 2000 },
+    { code: '9MOBILE6GB',  name: '6.2GB — 30 days', price: 3000 },
+    { code: '9MOBILE11GB', name: '11.4GB — 30 days', price: 5000 },
   ],
 };
 
 const CABLE_PLANS = {
   DSTV: [
-    { code: 'DSTV_PADI',        name: 'Padi',         price: 2150 },
-    { code: 'DSTV_YANGA',       name: 'Yanga',        price: 2950 },
-    { code: 'DSTV_CONFAM',      name: 'Confam',       price: 5100 },
-    { code: 'DSTV_COMPACT',     name: 'Compact',      price: 10500 },
-    { code: 'DSTV_COMPACTPLUS', name: 'Compact Plus', price: 16600 },
-    { code: 'DSTV_PREMIUM',     name: 'Premium',      price: 24200 },
-    { code: 'DSTV_ASIA',        name: 'Asian Add-on', price: 3900 },
+    { code: 'DSTV_PADI',        name: 'Padi',         price: 4400 },
+    { code: 'DSTV_YANGA',       name: 'Yanga',        price: 6000 },
+    { code: 'DSTV_CONFAM',      name: 'Confam',       price: 11000 },
+    { code: 'DSTV_COMPACT',     name: 'Compact',      price: 19000 },
+    { code: 'DSTV_COMPACTPLUS', name: 'Compact Plus', price: 30000 },
+    { code: 'DSTV_PREMIUM',     name: 'Premium',      price: 44500 },
+    { code: 'DSTV_ASIA',        name: 'Premium Asia', price: 50500 },
   ],
   GOTV: [
-    { code: 'GOTV_SMALLIE', name: 'Smallie',  price: 900 },
-    { code: 'GOTV_JINJA',   name: 'Jinja',    price: 1900 },
-    { code: 'GOTV_JOLLI',   name: 'Jolli',    price: 2800 },
-    { code: 'GOTV_MAX',     name: 'Max',      price: 4850 },
-    { code: 'GOTV_SUPA',    name: 'Supa',     price: 6400 },
+    { code: 'GOTV_SMALLIE', name: 'Smallie',  price: 1900 },
+    { code: 'GOTV_JINJA',   name: 'Jinja',    price: 3900 },
+    { code: 'GOTV_JOLLI',   name: 'Jolli',    price: 5800 },
+    { code: 'GOTV_MAX',     name: 'Max',      price: 8500 },
+    { code: 'GOTV_SUPA',    name: 'Supa',     price: 11400 },
   ],
   STARTIMES: [
-    { code: 'ST_NOVA',      name: 'Nova — Basic',  price: 900 },
-    { code: 'ST_BASIC',     name: 'Basic',         price: 1850 },
-    { code: 'ST_SMART',     name: 'Smart',         price: 2600 },
-    { code: 'ST_CLASSIC',   name: 'Classic',       price: 3100 },
-    { code: 'ST_SUPER',     name: 'Super',         price: 6200 },
+    { code: 'ST_NOVA',      name: 'Nova (Dish)',   price: 2100 },
+    { code: 'ST_BASIC',     name: 'Basic (Antenna)', price: 4000 },
+    { code: 'ST_SMART',     name: 'Basic (Dish)',  price: 5100 },
+    { code: 'ST_CLASSIC',   name: 'Classic (Antenna)', price: 6000 },
+    { code: 'ST_SUPER',     name: 'Super (Dish)',  price: 9800 },
   ],
 };
 
@@ -87,8 +87,8 @@ const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'];
  * because it would send money toward a guessed variation code.
  *
  *   WAEC — verified: serviceID "waec", variation "waecdirect".
- *   JAMB — verified 2026-08-18: serviceID "jamb",
- *          variations utme-mock (₦7,700) / utme-no-mock (₦6,200).
+ *   JAMB — live provider catalog returned no purchasable variations on
+ *          2026-08-18, so it is disabled and unpriced.
  *   NECO / NABTEB — VTPass does not currently offer these as purchasable
  *          services, so they stay disabled and are not priced or advertised.
  */
@@ -97,17 +97,14 @@ const EXAM_PRODUCTS = {
     name: 'WAEC Result Checker',
     enabled: true,
     verified: true,
-    price: 3900,
+    price: 5350,
   },
   JAMB: {
     name: 'JAMB UTME PIN',
-    enabled: true,
+    enabled: false,
     verified: true,
     defaultVariation: 'utme-no-mock',
-    variations: [
-      { code: 'utme-no-mock', name: 'UTME PIN (without mock)', price: 6200 },
-      { code: 'utme-mock', name: 'UTME PIN (with mock)', price: 7700 },
-    ],
+    reason: 'No purchasable variations returned by the live provider catalog on 2026-08-18',
   },
   NECO: {
     name: 'NECO Result Checker',

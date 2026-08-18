@@ -207,6 +207,7 @@ installMock('services/email.js', {
 
 // ── Mock provider client (never dials VTPass) ──────────────────────────
 installMock('services/vtpass.js', {
+  getProductRegistry: () => [],
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (value) => {
     const n = Number(value);

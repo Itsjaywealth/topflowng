@@ -133,6 +133,7 @@ test('IDOR: user B cannot cancel user A\'s scheduled purchase', async () => {
       serviceType: 'airtime', network: 'MTN', phone: '08031111111',
       amount: 500, frequency: 'weekly',
       nextRunAt: new Date(Date.now() + 86400000).toISOString(),
+      pin: '1111',
     },
   });
   assert.strictEqual(created.status, 201);
@@ -140,6 +141,22 @@ test('IDOR: user B cannot cancel user A\'s scheduled purchase', async () => {
 
   const listB = await h.api('GET', '/api/scheduled-purchases', { token: tokenB });
   assert.ok(!listB.data.scheduled.some((s) => s.id === id));
+
+  const paused = await h.api('PATCH', `/api/scheduled-purchases/${id}/status`, {
+    token: tokenA, body: { active: false },
+  });
+  assert.strictEqual(paused.status, 200);
+  assert.strictEqual(paused.data.purchase.active, false);
+  const resumed = await h.api('PATCH', `/api/scheduled-purchases/${id}/status`, {
+    token: tokenA, body: { active: true },
+  });
+  assert.strictEqual(resumed.status, 200);
+  assert.strictEqual(resumed.data.purchase.active, true);
+
+  const foreignPause = await h.api('PATCH', `/api/scheduled-purchases/${id}/status`, {
+    token: tokenB, body: { active: false },
+  });
+  assert.strictEqual(foreignPause.status, 404);
 
   const del = await h.api('DELETE', `/api/scheduled-purchases/${id}`, { token: tokenB });
   assert.strictEqual(del.status, 404);
@@ -167,7 +184,7 @@ test('pricing: a data plan cannot be bought below its catalog price', async () =
   const before = await db.getWalletBalance(userIdA);
   const res = await h.api('POST', '/api/vtu/data', {
     token: tokenA,
-    body: { network: 'MTN', phone: '08031234567', planCode: 'MTN10GB', amount: 1, pin: '1111' },
+    body: { network: 'MTN', phone: '08031234567', planCode: 'MTN14GB', amount: 1, pin: '1111' },
   });
   assert.strictEqual(res.status, 400);
   assert.match(res.data.error, /mismatch/i);
@@ -188,7 +205,7 @@ test('pricing: a cable bouquet cannot be bought below its catalog price', async 
 test('pricing: a cable bouquet at its catalog price is accepted', async () => {
   const res = await h.api('POST', '/api/vtu/cable', {
     token: tokenA,
-    body: { provider: 'GOTV', smartCardNumber: '1234567890', planCode: 'GOTV_JOLLI', amount: 2800, pin: '1111' },
+    body: { provider: 'GOTV', smartCardNumber: '1234567890', planCode: 'GOTV_JOLLI', amount: 5800, pin: '1111' },
   });
   assert.ok([200, 202].includes(res.status), `expected success/pending, got ${res.status}`);
 });
@@ -197,9 +214,10 @@ test('pricing: a scheduled data purchase cannot store a tampered amount', async 
   const res = await h.api('POST', '/api/scheduled-purchases', {
     token: tokenA,
     body: {
-      serviceType: 'data', network: 'MTN', planCode: 'MTN10GB', phone: '08031234567',
+      serviceType: 'data', network: 'MTN', planCode: 'MTN14GB', phone: '08031234567',
       amount: 1, frequency: 'monthly',
       nextRunAt: new Date(Date.now() + 86400000).toISOString(),
+      pin: '1111',
     },
   });
   assert.strictEqual(res.status, 400);
@@ -265,7 +283,7 @@ test('products: the exam catalog never prices a disabled body', async () => {
   assert.strictEqual(res.status, 200);
   const { examPrices, examProducts } = res.data;
   assert.ok(examPrices.WAEC, 'WAEC is priced');
-  assert.ok(examPrices.JAMB, 'JAMB is priced');
+  assert.ok(!examPrices.JAMB, 'JAMB is not priced while provider returns no variations');
   assert.strictEqual(examPrices.NECO, undefined, 'NECO must not be priced');
   assert.strictEqual(examPrices.NABTEB, undefined, 'NABTEB must not be priced');
 
@@ -277,8 +295,7 @@ test('products: the exam catalog never prices a disabled body', async () => {
   }
 });
 
-test('products: JAMB prices match the verified provider variations', async () => {
+test('products: JAMB stays disabled when the live provider has no purchasable variations', async () => {
   const res = await h.api('GET', '/api/vtu/plans');
-  assert.deepStrictEqual(res.data.examPrices.JAMB, { 'utme-no-mock': 6200, 'utme-mock': 7700 });
+  assert.strictEqual(res.data.examPrices.JAMB, undefined);
 });
-
