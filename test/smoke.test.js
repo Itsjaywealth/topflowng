@@ -96,13 +96,12 @@ test('security: security headers present', async () => {
 });
 
 test('error contract: unknown API route returns { error } JSON (SPA fallback excluded)', async () => {
-  // /api/* falls through to the SPA fallback in the current contract, so we
-  // assert the documented error shape on an authenticated-route rejection.
-  const res = await fetch(h.BASE_URL + '/api/user/profile');
-  assert.strictEqual(res.status, 401);
+  const res = await fetch(h.BASE_URL + '/api/definitely-not-found');
+  assert.strictEqual(res.status, 404);
+  assert.match(res.headers.get('content-type') || '', /application\/json/);
   const data = await res.json();
   assert.deepStrictEqual(Object.keys(data), ['error']);
-  assert.strictEqual(typeof data.error, 'string');
+  assert.strictEqual(data.error, 'API route not found');
 });
 
 test('login contract: success returns { token, user }', async () => {

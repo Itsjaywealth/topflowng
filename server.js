@@ -1080,6 +1080,9 @@ app.patch('/api/scheduled-purchases/:id/status', authMiddleware, apiLimiter, asy
   }
 });
 
+// Unknown API routes must never masquerade as a successful SPA document.
+app.all('/api/*', (req, res) => sendError(res, 404, 'API route not found'));
+
 // ── SPA Fallback ─────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'topflowng.html'));

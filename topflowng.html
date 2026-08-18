@@ -1491,7 +1491,7 @@ a{color:var(--blue-2);text-decoration:none}
         </div>
         <div class="hero-slide" id="hero-slide-recharge">
           <div class="balance-label">Top-up reminder</div>
-          <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Never run low — top up automatically when your balance drops below a threshold.</div>
+          <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Get a Paystack top-up link when your wallet drops below a threshold. Nothing is charged automatically.</div>
           <div class="header-actions">
             <button class="btn-fund" onclick="goTab('account');setTimeout(()=>{let e=document.getElementById('auto-recharge-section');if(e)e.scrollIntoView({behavior:'smooth'})},100)">Configure</button>
           </div>
@@ -1500,7 +1500,7 @@ a{color:var(--blue-2);text-decoration:none}
           <div class="balance-label">Scheduled purchases</div>
           <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Set up recurring airtime, data or bills — daily, weekly or monthly.</div>
           <div class="header-actions">
-            <button class="btn-fund" onclick="openService('airtime')">Schedule now</button>
+            <button class="btn-fund" onclick="openScheduledModal()">Schedule now</button>
           </div>
         </div>
       </div>
@@ -1920,7 +1920,7 @@ a{color:var(--blue-2);text-decoration:none}
     </div>
     <div class="field total-cost">
       <div class="total-label">Total cost</div>
-      <div class="total-value" id="exam-price">₦3,900.00</div>
+      <div class="total-value" id="exam-price">₦5,350.00</div>
     </div>
     <button class="btn-confirm" id="btn-buy-exam" onclick="buyExamPin()">Purchase Exam PIN</button>
   </div>
