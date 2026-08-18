@@ -23,10 +23,26 @@ const {
 const { sendPurchaseEmail } = require('../services/email');
 const { resolveRequest, recordRequest } = require('../services/idempotency');
 const { sendError } = require('../lib/errors');
+const { normalizeNigerianPhone } = require('../lib/validate');
 const { validate, airtimeSchema, dataSchema, cableSchema, electricitySchema, examPinSchema, rechargePinSchema } = require('../lib/schemas');
 const Sentry = require('@sentry/node');
 
 const router = express.Router();
+
+/**
+ * Resolve the account holder's real phone number for provider requests that
+ * require it (electricity, cable, recharge PIN).
+ *
+ * The JWT payload deliberately carries only { id, email } — it never contains
+ * a phone claim — so `req.user.phone` is always undefined. Reading the phone
+ * from the DB (users.phone is NOT NULL) and normalizing it to the
+ * 0XXXXXXXXXX form VTPass accepts is the robust source of truth. Callers
+ * fail closed when no valid number exists rather than sending an empty phone.
+ */
+async function resolveUserPhone(userId) {
+  const user = await db.findUserById(userId);
+  return user && user.phone ? normalizeNigerianPhone(user.phone) : '';
+}
 
 function withTracing(name, handler) {
   return async (req, res) => {
@@ -234,7 +250,7 @@ router.post('/cable', authMiddleware, apiLimiter, validate(cableSchema), withTra
     try {
       product = productFor('cable', {
         provider: ckProvider, planCode, smartCardNumber,
-        phone: req.user.phone || '',
+        phone: await resolveUserPhone(req.user.id),
       });
     } catch (err) {
       if (productErrorResponse(err, res)) return;
@@ -296,7 +312,7 @@ router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySche
     try {
       product = productFor('electricity', {
         disco: ckDisco, meterType, meterNumber, amount: cost,
-        phone: req.user.phone || '',
+        phone: await resolveUserPhone(req.user.id),
       });
     } catch (err) {
       if (productErrorResponse(err, res)) return;
@@ -422,7 +438,7 @@ router.post('/recharge-pin', authMiddleware, apiLimiter, validate(rechargePinSch
     try {
       product = productFor('recharge-pin', {
         network, amount: amt, quantity: qty,
-        phone: req.user.phone || '',
+        phone: await resolveUserPhone(req.user.id),
       });
     } catch (err) {
       if (productErrorResponse(err, res)) return;

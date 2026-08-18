@@ -42,6 +42,20 @@ test('every Data and Cable plan in the customer catalogue is mapped and enabled'
   }
 });
 
+test('every verified DISCO in the customer catalogue is mapped and enabled', () => {
+  const rows = getProductRegistry();
+  const electricity = rows.filter((r) => r.category === 'Electricity');
+  const discos = require('../services/pricing').ELECTRICITY_DISCOS.map((d) => d.code);
+  assert.equal(discos.length, 12, 'all 12 DISCOs must be listed in pricing');
+  for (const code of discos) {
+    const row = electricity.find((r) => r.internalId === code);
+    assert.ok(row, `registry missing DISCO ${code}`);
+    assert.strictEqual(row.enabled, true, `${code} must be enabled`);
+    assert.ok(row.serviceId, `${code} must have a provider service ID`);
+    assert.strictEqual(row.customerUiState, 'enabled', `${code} must be customer-visible`);
+  }
+});
+
 test('verified VTPass snapshot values are the values enforced at checkout', () => {
   assert.equal(DATA_PLANS.MTN.find((p) => p.code === 'MTN20GB').price, 7500);
   assert.equal(DATA_PLANS.GLO.find((p) => p.code === 'GLO1GB').price, 495);

@@ -189,7 +189,10 @@ test.describe('logged-in app shell', () => {
     const recharge = page.locator('.service-tile', { hasText: 'Recharge Cards' });
     await expect(recharge).toBeDisabled();
     await page.evaluate(() => openService('electricity'));
-    await expect(page.locator('#svc-electricity .provider-choice', { hasText: 'EEDC' })).toHaveCount(0);
+    // All 12 DISCOs verified live on the active provider are selectable.
+    for (const disco of ['IKEDC', 'EKEDC', 'AEDC', 'PHEDC', 'KEDC', 'IBEDC', 'JED', 'KAEDCO', 'EEDC', 'BEDC', 'APLE', 'YEDC']) {
+      await expect(page.locator('#svc-electricity .provider-choice-name').filter({ hasText: new RegExp(`^${disco}$`) })).toHaveCount(1);
+    }
     await page.evaluate(() => closeService('electricity'));
     await page.evaluate(() => openService('exam'));
     for (const body of ['JAMB', 'NECO', 'NABTEB']) {

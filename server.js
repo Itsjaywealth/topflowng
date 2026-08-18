@@ -1210,10 +1210,21 @@ function schedulePendingOrderSweep() {
   // and VTPass-format request ids (YYYYMMDDHHII + suffix), so the sweeper and
   // the interactive routes use the same idempotency + reconciliation paths.
   const { buildRequestId, productFor } = require('./services/vtpass');
+  const { normalizeNigerianPhone } = require('./lib/validate');
 
-  function buildScheduledPurchaseProduct(row) {
+  async function buildScheduledPurchaseProduct(row) {
     const requestId = buildRequestId();
     const serviceType = row.service_type;
+    // Cable and electricity require a valid phone. The scheduled row may not
+    // carry one, so fall back to the account holder's DB phone (normalized to
+    // the 0XXXXXXXXXX form VTPass accepts). Airtime/data already have one.
+    let fallbackPhone = '';
+    if (serviceType === 'cable' || serviceType === 'electricity') {
+      try {
+        const user = await db.findUserById(row.user_id);
+        fallbackPhone = user && user.phone ? normalizeNigerianPhone(user.phone) : '';
+      } catch { /* non-fatal — productFor will surface a clean error if empty */ }
+    }
     switch (serviceType) {
       case 'airtime':
         return { requestId, product: productFor('airtime', { network: row.network, phone: row.phone, amount: Number(row.amount) }) };
@@ -1222,9 +1233,9 @@ function schedulePendingOrderSweep() {
         return { requestId, product: productFor('data', { network: row.network, planCode: row.plan_code, phone: row.phone }) };
       case 'cable':
         if (!row.plan_code) throw new Error('Cable package code missing');
-        return { requestId, product: productFor('cable', { provider: String(row.network || ''), planCode: row.plan_code, smartCardNumber: row.identifier, phone: '' }) };
+        return { requestId, product: productFor('cable', { provider: String(row.network || ''), planCode: row.plan_code, smartCardNumber: row.identifier, phone: fallbackPhone }) };
       case 'electricity':
-        return { requestId, product: productFor('electricity', { disco: String(row.network || ''), meterType: 'prepaid', meterNumber: row.identifier, amount: Number(row.amount), phone: '' }) };
+        return { requestId, product: productFor('electricity', { disco: String(row.network || ''), meterType: 'prepaid', meterNumber: row.identifier, amount: Number(row.amount), phone: fallbackPhone }) };
       default:
         throw new Error(`Unsupported service type: ${serviceType}`);
     }
@@ -1241,7 +1252,7 @@ function schedulePendingOrderSweep() {
               return;
             }
             logger.info('Processing scheduled purchase', { id: row.id, serviceType: row.service_type });
-            const built = buildScheduledPurchaseProduct(row);
+            const built = await buildScheduledPurchaseProduct(row);
             const requestId = await db.getOrCreateScheduledReference(row.id, built.requestId);
             if (!requestId) return;
             const existing = await db.getVtuOrderByRequestId(requestId);

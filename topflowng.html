@@ -98,6 +98,12 @@
   --brand-phedc:    #0B7A43;  --brand-phedc-soft: #E3F4EC;  --brand-phedc-ink:  #085D34;
   --brand-kedc:     #021F82;  --brand-kedc-soft:  #E6EAF6;  --brand-kedc-ink:   #021A67;
   --brand-ibedc:    #F39500;  --brand-ibedc-soft: #FEF1DE;  --brand-ibedc-ink:  #C17700;
+  --brand-jed:      #F09000;  --brand-jed-soft:   #FEF1DD;  --brand-jed-ink:    #C07500;
+  --brand-kaedco:   #004B24;  --brand-kaedco-soft:#E2F2E9;  --brand-kaedco-ink: #003A1C;
+  --brand-eedc:     #E31E24;  --brand-eedc-soft:  #FDE7E8;  --brand-eedc-ink:   #B5171C;
+  --brand-bedc:     #C8102E;  --brand-bedc-soft:  #FBE7EB;  --brand-bedc-ink:   #A00D25;
+  --brand-aple:     #E6A700;  --brand-aple-soft:  #FEF5DC;  --brand-aple-ink:   #B88400;
+  --brand-yedc:     #C01818;  --brand-yedc-soft:  #FBE7E7;  --brand-yedc-ink:   #961212;
   --brand-dstv:     #00508F;  --brand-dstv-soft:  #E6F0F8;  --brand-dstv-ink:   #003E6E;
   --brand-gotv:     #018A3A;  --brand-gotv-soft:  #E1F5E9;  --brand-gotv-ink:   #016B2D;
   --brand-startimes:#DA251C;  --brand-startimes-soft:#FBE7E6; --brand-startimes-ink:#B31E16;
@@ -1693,6 +1699,12 @@ html.dark .icon-moon{display:none}
         <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/phedc.jpg" alt="Port Harcourt Electricity Distribution logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">PHEDC</span><span class="provider-choice-service">Electricity</span></span></div>
         <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/kedc.png" alt="Kano Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">KEDC</span><span class="provider-choice-service">Electricity</span></span></div>
         <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ibedc.png" alt="Ibadan Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">IBEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/jed.png" alt="Jos Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">JED</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/kaedco.png" alt="Kaduna Electric logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">KAEDCO</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/eedc.png" alt="Enugu Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">EEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/bedc.png" alt="Benin Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">BEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/aple.png" alt="Aba Power logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">APLE</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/yedc.png" alt="Yola Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">YEDC</span><span class="provider-choice-service">Electricity</span></span></div>
       </div>
     </div>
     <div class="field"><label>Meter type</label>
@@ -2417,6 +2429,7 @@ const BRAND_KEY = {
   MTN: 'mtn', GLO: 'glo', Glo: 'glo', AIRTEL: 'airtel', Airtel: 'airtel',
   '9mobile': '9mobile', '9MOBILE': '9mobile', 'T2': 't2', 't2': 't2',
   IKEDC: 'ikedc', EKEDC: 'ekedc', AEDC: 'aedc', PHEDC: 'phedc', KEDC: 'kedc', IBEDC: 'ibedc',
+  JED: 'jed', KAEDCO: 'kaedco', EEDC: 'eedc', BEDC: 'bedc', APLE: 'aple', YEDC: 'yedc',
   DSTV: 'dstv', DStv: 'dstv', GOTV: 'gotv', GOtv: 'gotv', STARTIMES: 'startimes', StarTimes: 'startimes',
   WAEC: 'waec',
 };
@@ -3551,7 +3564,7 @@ init();
   var QUICKPAY_SERVICES = [
     { key: 'airtime',     label: 'Airtime',          sub: '4 networks', logos: ['mtn','glo','airtel','t2'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>' },
     { key: 'data',        label: 'Data',             sub: '4 networks', logos: ['mtn','glo','airtel','t2'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a14.5 14.5 0 0 1 20 0"/><path d="M5 13.5a9.5 9.5 0 0 1 14 0"/><path d="M8.5 17a4.5 4.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg>' },
-    { key: 'electricity', label: 'Electricity',      sub: '6 providers', logos: ['ikedc','ekedc','aedc','phedc','kedc','ibedc'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg>' },
+    { key: 'electricity', label: 'Electricity',      sub: '12 providers', logos: ['ikedc','ekedc','aedc','phedc','kedc','ibedc','jed','kaedco','eedc','bedc','aple','yedc'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg>' },
     { key: 'cable',       label: 'Cable TV',         sub: '3 providers', logos: ['dstv','gotv','startimes'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="11" rx="2"/><path d="M8 20h8M12 16v4"/></svg>' },
     { key: 'exam',        label: 'Exam PINs',        sub: 'WAEC available', logos: ['waec'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21H3v-5L15 4Z"/><path d="m13 6 5 5"/></svg>' },
     { key: 'recharge',    label: 'Recharge Cards',   sub: 'Coming soon', disabled: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>' }

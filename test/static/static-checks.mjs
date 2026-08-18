@@ -177,7 +177,7 @@ await checkInlineSyntax('bizflow.html');
 {
   const app = read('topflowng.html');
   const registry = read('assets/provider-logos.js');
-  const required = ['MTN','AIRTEL','GLO','9MOBILE','IKEDC','EKEDC','AEDC','PHEDC','KEDC','IBEDC','DSTV','GOTV','STARTIMES','WAEC','PAYSTACK','VTPASS'];
+  const required = ['MTN','AIRTEL','GLO','9MOBILE','IKEDC','EKEDC','AEDC','PHEDC','KEDC','IBEDC','JED','KAEDCO','EEDC','BEDC','APLE','YEDC','DSTV','GOTV','STARTIMES','WAEC','PAYSTACK','VTPASS','T2'];
   for (const key of required) {
     check(`provider logo mapping ${key}`, new RegExp(`['\"]?${key}['\"]?\\s*:`).test(registry));
   }
@@ -187,7 +187,7 @@ await checkInlineSyntax('bizflow.html');
   check('provider logo alt text present', !/alt:\s*['"]\s*['"]/.test(registry));
   const providerTiles = [...app.matchAll(/class="network-chip provider-choice"[\s\S]*?<\/div>/g)].map((m) => m[0]);
   check('active provider tiles contain no emoji', providerTiles.every((tile) => !/\p{Extended_Pictographic}/u.test(tile)));
-  check('EEDC is not an active customer provider', !/provider-choice[^>]*>[\s\S]{0,500}?EEDC/.test(app));
+  check('all 12 verified DISCOs are active customer providers', ['IKEDC','EKEDC','AEDC','PHEDC','KEDC','IBEDC','JED','KAEDCO','EEDC','BEDC','APLE','YEDC'].every((d) => new RegExp(`provider-choice[^>]*>[\\s\\S]{0,500}?${d}`).test(app)));
   check('recharge-card service tile is disabled', /service-tile" disabled[^>]*>[\s\S]{0,500}?Recharge Cards/.test(app));
   for (const [shell, file] of [['topflowng.html', app], ['admin.html', read('admin.html')]]) {
     const pwFields = [...file.matchAll(/<input type="password"[^>]*id="([^"]+)"/g)].map((m) => m[1]).filter((id) => !/pin/i.test(id));
@@ -200,7 +200,7 @@ await checkInlineSyntax('bizflow.html');
     /function togglePasswordVisibility\(/.test(app) && /function togglePasswordVisibility\(/.test(read('admin.html')));
 
   // Brand colors: every provider must have --brand-* vars in :root, and a BRAND_KEY
-  const brandProviders = ['mtn','glo','airtel','9mobile','ikedc','ekedc','aedc','phedc','kedc','ibedc','dstv','gotv','startimes','waec'];
+  const brandProviders = ['mtn','glo','airtel','9mobile','ikedc','ekedc','aedc','phedc','kedc','ibedc','jed','kaedco','eedc','bedc','aple','yedc','dstv','gotv','startimes','waec'];
   check('brand color variables defined for every provider',
     brandProviders.every((k) => new RegExp(`--brand-${k}:\\s*#[0-9A-Fa-f]{6}`).test(app)
       && new RegExp(`--brand-${k}-soft:\\s*#[0-9A-Fa-f]{6}`).test(app)

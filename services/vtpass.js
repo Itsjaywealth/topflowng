@@ -83,6 +83,12 @@ const DISCO_SERVICE = {
   PHEDC: 'portharcourt-electric',
   KEDC: 'kano-electric',
   IBEDC: 'ibadan-electric',
+  JED: 'jos-electric',
+  KAEDCO: 'kaduna-electric',
+  EEDC: 'enugu-electric',
+  BEDC: 'benin-electric',
+  APLE: 'aba-electric',
+  YEDC: 'yola-electric',
   KEDCO: 'kano-electric',
   IKEJA: 'ikeja-electric',
 };

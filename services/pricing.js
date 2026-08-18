@@ -73,6 +73,12 @@ const ELECTRICITY_DISCOS = [
   { code: 'PHEDC',  name: 'Port Harcourt Electric' },
   { code: 'KEDC',   name: 'Kano Electric' },
   { code: 'IBEDC',  name: 'Ibadan Electric' },
+  { code: 'JED',    name: 'Jos Electric' },
+  { code: 'KAEDCO', name: 'Kaduna Electric' },
+  { code: 'EEDC',   name: 'Enugu Electric' },
+  { code: 'BEDC',   name: 'Benin Electric' },
+  { code: 'APLE',   name: 'Aba Electric' },
+  { code: 'YEDC',   name: 'Yola Electric' },
 ];
 
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'];
