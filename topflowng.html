@@ -2008,16 +2008,16 @@ async function handleReset() {
 }
 
 function openAuthFromMarketing(tab = 'login') {
-  document.getElementById('marketing').classList.remove('active');
-  document.getElementById('auth-screen').classList.add('active');
+  document.getElementById('marketing').classList.remove('active-screen');
+  document.getElementById('auth-screen').classList.add('active-screen');
   showAuthTab(tab);
 }
 
 function logout() {
   localStorage.removeItem('tf_token');
   token = null; user = null;
-  document.getElementById('auth-screen').classList.add('active');
-  document.getElementById('main-app').classList.remove('active');
+  document.getElementById('auth-screen').classList.add('active-screen');
+  document.getElementById('main-app').classList.remove('active-screen');
   showAuthTab('login');
 }
 
@@ -2032,13 +2032,13 @@ async function init() {
   if (rst) {
     resetToken = rst;
     window.history.replaceState({}, '', '/');
-    document.getElementById('auth-screen').classList.add('active');
+    document.getElementById('auth-screen').classList.add('active-screen');
     showAuthTab('reset');
     return;
   }
 
   if (!token) {
-    document.getElementById('marketing').classList.add('active');
+    document.getElementById('marketing').classList.add('active-screen');
     return;
   }
 
@@ -2052,13 +2052,13 @@ async function init() {
   } catch {
     localStorage.removeItem('tf_token');
     token = null;
-    document.getElementById('auth-screen').classList.add('active');
+    document.getElementById('auth-screen').classList.add('active-screen');
   }
 }
 
 function launchApp() {
-  document.getElementById('auth-screen').classList.remove('active');
-  document.getElementById('main-app').classList.add('active');
+  document.getElementById('auth-screen').classList.remove('active-screen');
+  document.getElementById('main-app').classList.add('active-screen');
     goTab('home');
   updateUserUI();
   loadBalance();
@@ -2072,7 +2072,7 @@ function launchApp() {
   // (and statuses) every 15s so a confirmed/failed order shows up without a
   // manual reload even when no receipt is open.
   setInterval(() => {
-    if (document.getElementById('main-app').classList.contains('active')) checkPendingOrders();
+    if (document.getElementById('main-app').classList.contains('active-screen')) checkPendingOrders();
   }, 15000);
 }
 
@@ -3437,7 +3437,7 @@ init();
     if (ov) ov.hidden = true;
     document.body.style.overflow = '';
     var from = $('quickpay-input');
-    if (from && document.getElementById('main-app').classList.contains('active')) from.focus();
+    if (from && document.getElementById('main-app').classList.contains('active-screen')) from.focus();
   }
 
   document.addEventListener('keydown', function (e) {
