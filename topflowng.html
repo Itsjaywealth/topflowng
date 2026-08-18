@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <!-- Theme init — runs synchronously before any CSS renders to prevent flash -->
+<script src="/assets/provider-logos.js"></script>
 <script>
 (function(){
   var t = localStorage.getItem('topflowng-theme');
@@ -16,6 +17,7 @@
 <meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and 9mobile airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0B6B45" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#2EA86B" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/assets/brand/topflowng-mark.svg" type="image/svg+xml">
 <link rel="canonical" href="https://topflowng.com/">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -338,7 +340,12 @@ a{color:var(--blue-2);text-decoration:none}
 
 /* ── Logomark ────────────────────────────────────────────────────────── */
 .logo-mark{display:inline-flex;flex:none;align-items:center;justify-content:center;vertical-align:middle}
-.logo-mark svg{width:100%;height:100%;display:block}
+.logo-mark svg,.logo-mark img{width:100%;height:100%;display:block}
+.provider-logo{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;object-position:center;flex:none}
+.provider-logo-frame{width:38px;height:38px;padding:5px;border:1px solid var(--border);border-radius:11px;display:inline-flex;align-items:center;justify-content:center;flex:none;background:#fff}
+.provider-logo-frame.compact{width:32px;height:32px;padding:4px;border-radius:9px}
+.provider-logo-frame.receipt{width:52px;height:52px;padding:7px;border-radius:14px;margin:0 auto 14px}
+html.dark .provider-logo-frame{background:#fff;border-color:rgba(255,255,255,.18)}
 
 /* ═══════════════════════════════════════════════════════════════════
    MARKETING LANDING — conversion-first
@@ -710,6 +717,12 @@ a{color:var(--blue-2);text-decoration:none}
 .tile-recharge{background:var(--teal-soft);color:var(--teal)}
 .tile-label{font:700 14.5px/1 var(--display);color:var(--ink)}
 .tile-last{font:500 11.5px/1.5 var(--font);color:var(--mid)}
+.tile-provider-row{display:flex;align-items:center;gap:5px;min-height:26px;flex-wrap:wrap}
+.tile-provider-row .provider-logo-frame{width:26px;height:26px;padding:3px;border-radius:8px}
+.tile-provider-row .availability{font:700 10.5px/1 var(--font);color:var(--green-strong);margin-left:2px}
+.service-tile:disabled{cursor:not-allowed;opacity:.62;background:var(--mist)}
+.payment-provider{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--mist);font:700 12px/1.3 var(--font);color:var(--graphite)}
+.payment-provider .provider-logo-frame{width:34px;height:34px;padding:5px}
 
 .txn-list{display:flex;flex-direction:column;gap:4px}
 .txn-item{
@@ -723,6 +736,9 @@ a{color:var(--blue-2);text-decoration:none}
   font:800 18px/1 var(--display);
 }
 .txn-icon svg{width:20px;height:20px}
+.txn-icon .provider-logo{width:30px;height:30px}
+.txn-icon.has-provider{background:#fff;border:1px solid var(--border);padding:4px}
+html.dark .txn-icon.has-provider{background:#fff}
 .txn-icon.credit{background:var(--green-soft);color:var(--green-strong)}
 .txn-icon.debit{background:#EFF1F5;color:var(--graphite)}
 .txn-icon.failed{background:var(--red-soft);color:var(--red)}
@@ -1004,6 +1020,12 @@ a{color:var(--blue-2);text-decoration:none}
   background:var(--green-soft);border-color:var(--green);color:var(--green-2);
   box-shadow:inset 0 0 0 1px var(--green);
 }
+.network-chip.provider-choice{display:inline-flex;align-items:center;gap:7px;padding:7px 11px 7px 7px}
+.network-chip.provider-choice .provider-logo-frame{width:28px;height:28px;padding:3px;border-radius:8px;border-color:rgba(15,23,42,.1)}
+.network-chip.provider-choice .provider-choice-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.network-chip.provider-choice .provider-choice-name{font-weight:800;line-height:1}
+.network-chip.provider-choice .provider-choice-service{font-size:10px;line-height:1;color:var(--mid);font-weight:600}
+.network-chip.provider-choice.selected .provider-choice-service{color:inherit;opacity:.76}
 .amount-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .amount-preset{
   border:1.5px solid var(--border);background:var(--white);color:var(--ink);
@@ -1088,6 +1110,8 @@ a{color:var(--blue-2);text-decoration:none}
 }
 .receipt-overlay.open .receipt-card{transform:translateY(0)}
 .receipt-dots{display:flex;justify-content:center;gap:5px;margin-bottom:24px}
+.receipt-brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;font:800 14px/1 var(--display);color:var(--ink)}
+.receipt-brand img{width:28px;height:28px}
 .receipt-dots span{width:6px;height:6px;border-radius:50%;background:var(--border)}
 .receipt-dots span:nth-child(2){background:var(--green-2)}
 .receipt-check{
@@ -1221,7 +1245,7 @@ a{color:var(--blue-2);text-decoration:none}
 <section id="marketing" aria-label="TopFlowNG introduction">
   <nav class="marketing-nav">
     <div class="marketing-brand">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="mlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#mlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>
       TopFlow<span>NG</span>
     </div>
     <div class="marketing-nav-links" id="marketing-nav-links">
@@ -1345,7 +1369,7 @@ a{color:var(--blue-2);text-decoration:none}
       <div class="marketing-footer-cols">
         <div class="marketing-footer-brand">
           <div class="marketing-brand">
-            <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="flg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#flg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+            <span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>
             TopFlow<span>NG</span>
           </div>
           <p>Airtime, data, electricity and cable TV payments from one Naira wallet.</p>
@@ -1376,7 +1400,7 @@ a{color:var(--blue-2);text-decoration:none}
   <div>
   <div class="auth-header">
     <div class="auth-logo">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="alg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#alg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>
       TopFlowNG
     </div>
     <div class="auth-tagline">Pay for the things you use, with your wallet in view.</div>
@@ -1466,7 +1490,7 @@ a{color:var(--blue-2);text-decoration:none}
     <div class="workspace-header">
       <div class="workspace-topline">
         <div class="wordmark">
-          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="wlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#wlg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+          <span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>
           TopFlow<span>NG</span>
         </div>
         <div class="workspace-profile">
@@ -1523,29 +1547,29 @@ a{color:var(--blue-2);text-decoration:none}
               <button class="service-tile" onclick="openService('airtime')">
                 <span class="tile-icon tile-airtime" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span>
                 <span class="tile-label">Airtime</span>
-                <span class="tile-last">MTN · Glo · Airtel · 9mobile</span>
+                <span class="tile-provider-row"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/mtn.svg" alt="MTN logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/glo.png" alt="Glo logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/airtel.png" alt="Airtel logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/9mobile.webp" alt="9mobile logo"></span><span class="availability">Available</span></span>
               </button>
               <button class="service-tile" onclick="openService('data')">
                 <span class="tile-icon tile-data" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a14.5 14.5 0 0 1 20 0"/><path d="M5 13.5a9.5 9.5 0 0 1 14 0"/><path d="M8.5 17a4.5 4.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg></span>
                 <span class="tile-label">Data</span>
-                <span class="tile-last">MTN · Glo · Airtel · 9mobile</span>
+                <span class="tile-provider-row"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/mtn.svg" alt="MTN logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/glo.png" alt="Glo logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/airtel.png" alt="Airtel logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/9mobile.webp" alt="9mobile logo"></span><span class="availability">Available</span></span>
               </button>
               <button class="service-tile" onclick="openService('electricity')">
                 <span class="tile-icon tile-elec" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg></span>
                 <span class="tile-label">Electricity</span>
-                <span class="tile-last">IKEDC · EKEDC · AEDC</span>
+                <span class="tile-provider-row"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ikedc.png" alt="Ikeja Electric logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ekedc.png" alt="Eko Electricity Distribution Company logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/aedc.png" alt="Abuja Electricity Distribution Company logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/phedc.jpg" alt="Port Harcourt Electricity Distribution logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/kedc.png" alt="Kano Electricity Distribution Company logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ibedc.png" alt="Ibadan Electricity Distribution Company logo"></span><span class="availability">Available</span></span>
               </button>
               <button class="service-tile" onclick="openService('cable')">
                 <span class="tile-icon tile-cable" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="11" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
                 <span class="tile-label">Cable TV</span>
-                <span class="tile-last">DStv · GOtv · StarTimes</span>
+                <span class="tile-provider-row"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/dstv.png" alt="DStv logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/gotv.png" alt="GOtv logo"></span><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/startimes.png" alt="StarTimes logo"></span><span class="availability">Available</span></span>
               </button>
               <button class="service-tile" onclick="openService('exam')">
                 <span class="tile-icon tile-exam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21H3v-5L15 4Z"/><path d="m13 6 5 5"/></svg></span>
                 <span class="tile-label">Exam PINs</span>
-                <span class="tile-last">WAEC</span>
+                <span class="tile-provider-row"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/waec.png" alt="WAEC logo"></span><span class="availability">WAEC available</span></span>
               </button>
-              <button class="service-tile" onclick="openService('recharge')">
+              <button class="service-tile" disabled aria-disabled="true" title="Recharge card PINs are not yet available">
                 <span class="tile-icon tile-recharge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></span>
                 <span class="tile-label">Recharge Cards</span>
                 <span class="tile-last">Coming soon</span>
@@ -1761,10 +1785,10 @@ a{color:var(--blue-2);text-decoration:none}
     <div id="svc-airtime-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Network</label>
       <div class="network-chips">
-        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'airtime')">MTN</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'airtime')">Glo</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'airtime')">Airtel</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'airtime')">9mobile</div>
+        <div role="button" tabindex="0" class="network-chip provider-choice selected" onclick="selectNet(this,'airtime')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/mtn.svg" alt="MTN logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">MTN</span><span class="provider-choice-service">Airtime</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'airtime')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/glo.png" alt="Glo logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">Glo</span><span class="provider-choice-service">Airtime</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'airtime')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/airtel.png" alt="Airtel logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">Airtel</span><span class="provider-choice-service">Airtime</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'airtime')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/9mobile.webp" alt="9mobile logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">9mobile</span><span class="provider-choice-service">Airtime</span></span></div>
       </div>
     </div>
     <div class="field"><label for="airtime-phone">Phone number</label>
@@ -1797,10 +1821,10 @@ a{color:var(--blue-2);text-decoration:none}
     <div id="svc-data-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Network</label>
       <div class="network-chips">
-        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'data');loadDataPlans()">MTN</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">Glo</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">Airtel</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'data');loadDataPlans()">9mobile</div>
+        <div role="button" tabindex="0" class="network-chip provider-choice selected" onclick="selectNet(this,'data');loadDataPlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/mtn.svg" alt="MTN logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">MTN</span><span class="provider-choice-service">Data</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'data');loadDataPlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/glo.png" alt="Glo logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">Glo</span><span class="provider-choice-service">Data</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'data');loadDataPlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/airtel.png" alt="Airtel logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">Airtel</span><span class="provider-choice-service">Data</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'data');loadDataPlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/9mobile.webp" alt="9mobile logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">9mobile</span><span class="provider-choice-service">Data</span></span></div>
       </div>
     </div>
     <div class="field"><label for="data-phone">Phone number</label>
@@ -1825,11 +1849,12 @@ a{color:var(--blue-2);text-decoration:none}
     <div id="svc-electricity-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Disco</label>
       <div class="network-chips" style="flex-wrap:wrap">
-        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'electricity')">IKEDC</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">EKEDC</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">AEDC</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">EEDC</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'electricity')">PHEDC</div>
+        <div role="button" tabindex="0" class="network-chip provider-choice selected" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ikedc.png" alt="Ikeja Electric logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">IKEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ekedc.png" alt="Eko Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">EKEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/aedc.png" alt="Abuja Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">AEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/phedc.jpg" alt="Port Harcourt Electricity Distribution logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">PHEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/kedc.png" alt="Kano Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">KEDC</span><span class="provider-choice-service">Electricity</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'electricity')"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/ibedc.png" alt="Ibadan Electricity Distribution Company logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">IBEDC</span><span class="provider-choice-service">Electricity</span></span></div>
       </div>
     </div>
     <div class="field"><label>Meter type</label>
@@ -1868,9 +1893,9 @@ a{color:var(--blue-2);text-decoration:none}
     <div id="svc-cable-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Provider</label>
       <div class="network-chips">
-        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'cable');loadCablePlans()">DStv</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'cable');loadCablePlans()">GOtv</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'cable');loadCablePlans()">StarTimes</div>
+        <div role="button" tabindex="0" class="network-chip provider-choice selected" onclick="selectNet(this,'cable');loadCablePlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/dstv.png" alt="DStv logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">DStv</span><span class="provider-choice-service">Cable TV</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'cable');loadCablePlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/gotv.png" alt="GOtv logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">GOtv</span><span class="provider-choice-service">Cable TV</span></span></div>
+        <div role="button" tabindex="0" class="network-chip provider-choice" onclick="selectNet(this,'cable');loadCablePlans()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/startimes.png" alt="StarTimes logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">StarTimes</span><span class="provider-choice-service">Cable TV</span></span></div>
       </div>
     </div>
     <div class="field"><label for="cable-card">Smart card / IUC number</label>
@@ -1895,7 +1920,7 @@ a{color:var(--blue-2);text-decoration:none}
     <div id="svc-exam-error" class="svc-error" role="alert"></div>
     <div class="field"><label>Exam body</label>
       <div class="network-chips exam-body-chips">
-        <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'exam-body');updateExamPrice()">WAEC</div>
+        <div role="button" tabindex="0" class="network-chip provider-choice selected" onclick="selectNet(this,'exam-body');updateExamPrice()"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/waec.png" alt="WAEC logo"></span><span class="provider-choice-copy"><span class="provider-choice-name">WAEC</span><span class="provider-choice-service">Exam PIN</span></span></div>
         <div role="button" tabindex="-1" aria-disabled="true" class="network-chip" style="opacity:0.42;cursor:not-allowed;pointer-events:none" title="Not yet available — check back soon">NECO</div>
         <div role="button" tabindex="-1" aria-disabled="true" class="network-chip" style="opacity:0.42;cursor:not-allowed;pointer-events:none" title="Not yet available — check back soon">NABTEB</div>
         <div role="button" tabindex="-1" aria-disabled="true" class="network-chip" style="opacity:0.42;cursor:not-allowed;pointer-events:none" title="Provider currently has no purchasable variations">JAMB</div>
@@ -1977,8 +2002,10 @@ a{color:var(--blue-2);text-decoration:none}
 <!-- ══════════════ RECEIPT OVERLAY ══════════════ -->
 <div class="receipt-overlay" id="receipt-overlay" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
   <div class="receipt-card">
+    <div class="receipt-brand"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"><span>TopFlowNG</span></div>
     <div class="receipt-dots"><span></span><span></span><span></span></div>
     <div class="receipt-check" id="receipt-check"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <div id="receipt-provider-logo"></div>
     <div class="receipt-title" id="receipt-title">Done!</div>
     <div class="receipt-sub" id="receipt-sub">Transaction successful</div>
     <div id="receipt-token"></div>
@@ -1995,6 +2022,7 @@ a{color:var(--blue-2);text-decoration:none}
   <div class="modal-card">
     <div class="modal-title" id="fund-modal-title">Fund your wallet</div>
     <div class="modal-sub">Pay with card, bank transfer, or USSD via Paystack.</div>
+    <div class="payment-provider"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/paystack.svg" alt="Paystack logo"></span><span>Secure checkout provided by Paystack</span></div>
     <div id="fund-modal-error" class="modal-error" role="alert"></div>
     <div class="field">
       <label for="fund-amount">Amount (₦)</label>
@@ -2456,9 +2484,11 @@ function txnHTML(t) {
         ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>'
         : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4M5 12l7-7 7 7"/></svg>';
   const cls  = failed ? 'failed' : t.type;
+  const providerKey = window.TopFlowLogos?.keyFor(t.description);
+  const providerLogo = providerKey ? window.TopFlowLogos.image(providerKey) : '';
   const amountText = failed ? fmt(t.amount) : `${t.type === 'credit' ? '+' : pending ? '' : '-'}${fmt(t.amount)}`;
   return `<div class="txn-item">
-    <div class="txn-icon ${cls}" aria-hidden="true">${icon}</div>
+    <div class="txn-icon ${cls}${providerLogo ? ' has-provider' : ''}">${providerLogo || icon}</div>
     <div class="txn-info">
       <div class="txn-desc" title="${escHtml(t.description)}">${escHtml(t.description)}</div>
       <div class="txn-meta"><span class="txn-date">${fmtDate(t.created_at)}</span>${transactionStatusPill(status)}</div>
@@ -2525,7 +2555,7 @@ function selectNet(el, group) {
 
 function getSelected(container) {
   const sel = container.querySelector('.network-chip.selected');
-  return sel ? sel.textContent.trim() : '';
+  return sel ? (sel.querySelector('.provider-choice-name')?.textContent.trim() || sel.textContent.trim()) : '';
 }
 
 function selectAmt(el, inputId) {
@@ -2792,6 +2822,11 @@ function showReceipt({ title, sub, lines, token: elecToken, pending = false, fai
       : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
   document.getElementById('receipt-token').innerHTML = elecToken
     ? `<div class="receipt-token">${escHtml(elecToken)}</div>` : '';
+  const providerLine = (lines || []).find(([label]) => /^(network|disco|provider|exam body)$/i.test(label));
+  const providerKey = window.TopFlowLogos?.keyFor(providerLine?.[1] || title);
+  document.getElementById('receipt-provider-logo').innerHTML = providerKey
+    ? `<span class="provider-logo-frame receipt">${window.TopFlowLogos.image(providerKey)}</span>`
+    : '';
   const linesEl = document.getElementById('receipt-lines');
   linesEl.innerHTML = lines.map(([l,v]) =>
     `<div class="receipt-line"><span class="receipt-line-label">${escHtml(l)}</span><span class="receipt-line-value">${escHtml(v)}</span></div>`
@@ -2991,6 +3026,10 @@ function showExamPinsReceipt(examBody, qty, amount, reference, pins) {
   document.getElementById('receipt-sub').textContent = `${qty} PIN${qty > 1 ? 's' : ''} purchased successfully.`;
   document.getElementById('receipt-check').innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
   document.getElementById('receipt-check').classList.remove('pop','pending');
+  const providerKey = window.TopFlowLogos?.keyFor(examBody);
+  document.getElementById('receipt-provider-logo').innerHTML = providerKey
+    ? `<span class="provider-logo-frame receipt">${window.TopFlowLogos.image(providerKey)}</span>`
+    : '';
   const tokenEl = document.getElementById('receipt-token');
   tokenEl.innerHTML = pins
     ? `<div class="receipt-pins">${escHtml(String(pins)).replace(/,/g,'<br>')}</div><button class="copy-pins-btn" onclick="copyPins(this)">Copy PINs</button>`
@@ -3538,6 +3577,10 @@ init();
 .quickpay-ic svg{width:20px;height:20px}
 .quickpay-label{font:700 14px/1 var(--display);color:var(--ink)}
 .quickpay-sub{font:500 11.5px/1.4 var(--font);color:var(--mid);margin-top:-2px}
+.quickpay-logos{display:flex;align-items:center;gap:4px;min-height:22px;flex-wrap:wrap}
+.quickpay-logos .provider-logo-frame{width:24px;height:20px;border-radius:6px;padding:2px}
+.quickpay-logos .provider-logo{max-width:19px;max-height:15px}
+.quickpay-item:disabled{cursor:not-allowed;opacity:.58;transform:none}
 .quickpay-empty{grid-column:1/-1;padding:18px;text-align:center;font:500 13px/1.5 var(--font);color:var(--mid);border:1px dashed var(--border);border-radius:14px}
 
 .quickpay-launcher{position:fixed;inset:0;z-index:70;background:rgba(10,16,26,.52);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
@@ -3627,19 +3670,23 @@ init();
 
   /* ── Quick Pay catalogue ────────────────────────────────────── */
   var QUICKPAY_SERVICES = [
-    { key: 'airtime',     label: 'Airtime',          sub: 'MTN · Glo · Airtel · 9mobile', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>' },
-    { key: 'data',        label: 'Data',             sub: 'MTN · Glo · Airtel · 9mobile', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a14.5 14.5 0 0 1 20 0"/><path d="M5 13.5a9.5 9.5 0 0 1 14 0"/><path d="M8.5 17a4.5 4.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg>' },
-    { key: 'electricity', label: 'Electricity',      sub: 'IKEDC · EKEDC · AEDC · EEDC', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg>' },
-    { key: 'cable',       label: 'Cable TV',         sub: 'DStv · GOtv · StarTimes',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="11" rx="2"/><path d="M8 20h8M12 16v4"/></svg>' },
-    { key: 'exam',        label: 'Exam PINs',        sub: 'WAEC',  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21H3v-5L15 4Z"/><path d="m13 6 5 5"/></svg>' },
-    { key: 'recharge',    label: 'Recharge Cards',   sub: 'Coming soon', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>' }
+    { key: 'airtime',     label: 'Airtime',          sub: '4 networks', logos: ['mtn','glo','airtel','9mobile'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>' },
+    { key: 'data',        label: 'Data',             sub: '4 networks', logos: ['mtn','glo','airtel','9mobile'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a14.5 14.5 0 0 1 20 0"/><path d="M5 13.5a9.5 9.5 0 0 1 14 0"/><path d="M8.5 17a4.5 4.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg>' },
+    { key: 'electricity', label: 'Electricity',      sub: '6 providers', logos: ['ikedc','ekedc','aedc','phedc','kedc','ibedc'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg>' },
+    { key: 'cable',       label: 'Cable TV',         sub: '3 providers', logos: ['dstv','gotv','startimes'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="11" rx="2"/><path d="M8 20h8M12 16v4"/></svg>' },
+    { key: 'exam',        label: 'Exam PINs',        sub: 'WAEC available', logos: ['waec'], icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21H3v-5L15 4Z"/><path d="m13 6 5 5"/></svg>' },
+    { key: 'recharge',    label: 'Recharge Cards',   sub: 'Coming soon', disabled: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>' }
   ];
 
   function quickpayHTML(svc) {
+    var logos = (svc.logos || []).map(function (key) {
+      return '<span class="provider-logo-frame">' + window.TopFlowLogos.image(key) + '</span>';
+    }).join('');
     return '<button type="button" class="quickpay-item" data-svc="' + svc.key + '" ' +
-      'onclick="openLauncherService(\'' + svc.key + '\')">' +
+      (svc.disabled ? 'disabled aria-disabled="true" title="Coming soon"' : 'onclick="openLauncherService(\'' + svc.key + '\')"') + '>' +
       '<span class="quickpay-ic" aria-hidden="true">' + svc.icon + '</span>' +
       '<span class="quickpay-label">' + esc(svc.label) + '</span>' +
+      (logos ? '<span class="quickpay-logos">' + logos + '</span>' : '') +
       '<span class="quickpay-sub">' + esc(svc.sub) + '</span>' +
       '</button>';
   }

@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#00B67A">
 <title>TopFlowNG Admin</title>
+<link rel="icon" href="/assets/brand/topflowng-mark.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -95,6 +96,12 @@ button{font-family:var(--font)}
 }
 .login-brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 .login-brand .logo-mark{width:40px;height:40px}
+.logo-mark img{width:100%;height:100%;display:block}
+.provider-logo{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;object-position:center}
+.provider-logo-frame{width:32px;height:32px;padding:4px;border:1px solid var(--border);border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;background:#fff}
+.provider-cell{display:flex;align-items:center;gap:9px;min-width:0}
+.provider-cell .provider-logo-frame{width:30px;height:30px}
+.provider-health{display:flex;align-items:center;gap:12px;font-size:14px}
 .login-brand-text{line-height:1.05}
 .login-brand-text .brand-name{font:800 20px/1 var(--display);letter-spacing:-.5px;color:var(--ink)}
 .login-brand-text .brand-name span{color:var(--blue)}
@@ -318,7 +325,7 @@ tbody tr:hover td{background:var(--mist)}
 <div id="login-screen">
   <div class="login-card">
     <div class="login-brand">
-      <span class="logo-mark"><svg viewBox="0 0 40 40" width="40" height="40"><defs><linearGradient id="alg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#alg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"></span>
       <div class="login-brand-text"><div class="brand-name">Top<span>Flow</span>NG</div></div>
     </div>
     <h1>Admin Portal</h1>
@@ -340,7 +347,7 @@ tbody tr:hover td{background:var(--mist)}
 <div id="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <span class="logo-mark"><svg viewBox="0 0 40 40" width="34" height="34"><defs><linearGradient id="slg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B67A"/><stop offset="1" stop-color="#00915B"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#slg)"/><path d="M23.5 8 14 22h6.5L16.5 32 26 18h-6.5l4-10z" fill="#fff"/></svg></span>
+      <span class="logo-mark"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"></span>
       <div class="brand-name">Top<span>Flow</span>NG</div>
     </div>
     <nav class="nav-menu">
@@ -680,6 +687,7 @@ tbody tr:hover td{background:var(--mist)}
   </main>
 </div>
 
+<script src="/assets/provider-logos.js"></script>
 <script>
 const API = '';
 let TOKEN = localStorage.getItem('admin_token') || '';
@@ -879,10 +887,12 @@ function txnRow(t) {
   const action = canReconcile
     ? `<button class="reconcile-btn" onclick='reconcileOrder(${esc(JSON.stringify(t.reference))})'>Check status</button>`
     : '';
+  const providerKey = window.TopFlowLogos?.keyFor(t.description);
+  const providerLogo = providerKey ? `<span class="provider-logo-frame">${window.TopFlowLogos.image(providerKey)}</span>` : '';
   return `<tr>
     <td style="font-family:monospace;font-size:11px;color:var(--mid)">${esc(t.reference||'—').substring(0,18)}${t.provider_order_id ? `<br><span style="font-size:10px">CK: ${esc(t.provider_order_id)}</span>` : ''}</td>
     <td>${esc(t.user_name||'Unknown')}<br><span style="font-size:11px;color:var(--mid)">${esc(t.user_email||'')}</span></td>
-    <td>${esc(t.description||'—')}</td>
+    <td><div class="provider-cell">${providerLogo}<span>${esc(t.description||'—')}</span></div></td>
     <td class="${isCredit?'amount-positive':'amount-negative'}">${isCredit?'+':'-'}₦${fmt(amt)}</td>
     <td>${adminStatusPill(t.status || 'completed')}${action}</td>
     <td style="color:var(--mid);font-size:12px">${fmtDate(t.created_at)}</td>
@@ -1148,10 +1158,12 @@ function renderDiagnosticsRegistry() {
     const sc = p.enabled ? 'badge-success' : 'badge-danger';
     const ss = p.enabled ? 'Enabled' : 'Disabled';
     const pc = p.status.startsWith('VALID') ? 'badge-success' : p.status.startsWith('PROVIDER') ? 'badge-danger' : 'badge-warn';
+    const productKey = window.TopFlowLogos?.keyFor(p.product);
+    const productLogo = productKey ? `<span class="provider-logo-frame">${window.TopFlowLogos.image(productKey)}</span>` : '';
     return `<tr>
-      <td><strong>${esc(p.product)}</strong></td>
+      <td><div class="provider-cell">${productLogo}<strong>${esc(p.product)}</strong></div></td>
       <td>${esc(p.category)}</td>
-      <td>${esc(p.provider)}</td>
+      <td><div class="provider-cell"><span class="provider-logo-frame">${window.TopFlowLogos.image('VTPASS')}</span><span>${esc(p.provider)}</span></div></td>
       <td><code style="font-size:11px">${esc(p.serviceID)}</code></td>
       <td><code style="font-size:11px">${esc(p.variation)}</code></td>
       <td><span class="badge ${pc}">${esc(p.status)}</span></td>
@@ -1163,8 +1175,9 @@ function loadProviderHealth() {
   const el = document.getElementById('diag-health-content');
   apiFetch('/api/providers/health').then(d => {
     const status = String(d.status || 'unknown').toLowerCase();
-    const colour = status === 'healthy' ? 'var(--green-2)' : status === 'degraded' ? 'var(--amber)' : 'var(--red)';
-    el.innerHTML = `<div style="display:flex;align-items:center;gap:12px;font-size:14px">
+    const colour = status === 'healthy' || status === 'operational' ? 'var(--green-2)' : status === 'degraded' ? 'var(--amber)' : 'var(--red)';
+    el.innerHTML = `<div class="provider-health">
+      <span class="provider-logo-frame">${window.TopFlowLogos.image('VTPASS')}</span>
       <span style="width:12px;height:12px;border-radius:50%;background:${colour};flex-shrink:0"></span>
       <strong style="color:${colour}">${status.toUpperCase()}</strong>
       <span style="color:var(--text-3);font-size:12px">— last checked ${fmtDate(d.checkedAt || new Date())}</span>

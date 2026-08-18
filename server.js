@@ -152,6 +152,25 @@ app.use('/icons/:file', (req, res) => {
   });
 });
 
+// Public brand assets — only the dedicated provider/brand folders and the
+// shared logo registry are exposed. Source notes and every other repository
+// file remain private.
+app.get('/assets/provider-logos.js', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'assets', 'provider-logos.js'), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+app.get('/assets/:group/:file', (req, res) => {
+  const { group, file } = req.params;
+  if (!['providers', 'brand'].includes(group)
+      || !/^[A-Za-z0-9._-]+\.(?:png|jpe?g|svg|webp)$/i.test(file)) {
+    return res.status(404).end();
+  }
+  res.sendFile(path.join(__dirname, 'assets', group, file), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
 app.use((req, res, next) => {
   if (ROOT_ASSET_PATHS.has(req.path)) {
     return res.sendFile(path.join(__dirname, req.path), (err) => {

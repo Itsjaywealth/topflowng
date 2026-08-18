@@ -2,10 +2,10 @@
  * TopFlowNG — browser UI quality checks (Playwright).
  *
  * Coverage:
- *   - responsive (320 / 375 / 768 / 1024 / 1440) — no horizontal overflow
+ *   - responsive provider-logo layout from 320 through 1920px
  *   - unlabeled inputs and empty accessible names
  *   - essential navigation present
- *   - the six service purchase forms open
+ *   - enabled service purchase forms open; unavailable products stay disabled
  *   - admin login screen renders
  *   - PWA / static asset availability
  */
@@ -14,7 +14,7 @@
 
 const { test, expect } = require('@playwright/test');
 
-const WIDTHS = [320, 375, 768, 1024, 1440];
+const WIDTHS = [320, 360, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
 
 const SERVICES = [
   ['airtime', 'Buy airtime'],
@@ -22,7 +22,6 @@ const SERVICES = [
   ['electricity', 'Pay electricity'],
   ['cable', 'Pay cable TV'],
   ['exam', 'Buy Exam PINs'],
-  ['recharge', 'Recharge Cards'],
 ];
 
 test.describe('landing page', () => {
@@ -85,6 +84,24 @@ test.describe('static/PWA assets', () => {
     '/sitemap.xml',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
+    '/assets/brand/topflowng-mark.svg',
+    '/assets/provider-logos.js',
+    '/assets/providers/mtn.svg',
+    '/assets/providers/airtel.png',
+    '/assets/providers/glo.png',
+    '/assets/providers/9mobile.webp',
+    '/assets/providers/ikedc.png',
+    '/assets/providers/ekedc.png',
+    '/assets/providers/aedc.png',
+    '/assets/providers/phedc.jpg',
+    '/assets/providers/kedc.png',
+    '/assets/providers/ibedc.png',
+    '/assets/providers/dstv.png',
+    '/assets/providers/gotv.png',
+    '/assets/providers/startimes.png',
+    '/assets/providers/waec.png',
+    '/assets/providers/paystack.svg',
+    '/assets/providers/vtpass.png',
   ];
   for (const p of PATHS) {
     test(`${p} returns 200`, async ({ request }) => {
@@ -122,6 +139,61 @@ test.describe('logged-in app shell', () => {
     expect(joined).toContain('Services');
     expect(joined).toContain('History');
     expect(joined).toContain('Account');
+  });
+
+  test('enabled provider logos load, are labeled, and map uniquely', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    await expect(page.locator('#main-app')).toBeVisible();
+    for (const service of ['airtime', 'data', 'electricity', 'cable', 'exam']) {
+      await page.evaluate((name) => openService(name), service);
+      const logos = page.locator(`#svc-${service} .provider-choice img.provider-logo`);
+      await expect(logos.first()).toBeVisible();
+      const audit = await logos.evaluateAll((images) => images.map((img) => ({
+        src: new URL(img.src).pathname,
+        alt: img.alt,
+        loaded: img.complete && img.naturalWidth > 0 && img.naturalHeight > 0,
+      })));
+      expect(audit.every((item) => item.loaded && item.alt.trim())).toBe(true);
+      expect(new Set(audit.map((item) => item.src)).size).toBe(audit.length);
+      const tileText = await page.locator(`#svc-${service} .provider-choice`).allTextContents();
+      expect(tileText.join('')).not.toMatch(/\p{Extended_Pictographic}/u);
+      await page.evaluate((name) => closeService(name), service);
+    }
+  });
+
+  test('disabled products are not presented as active providers', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    const recharge = page.locator('.service-tile', { hasText: 'Recharge Cards' });
+    await expect(recharge).toBeDisabled();
+    await page.evaluate(() => openService('electricity'));
+    await expect(page.locator('#svc-electricity .provider-choice', { hasText: 'EEDC' })).toHaveCount(0);
+    await page.evaluate(() => closeService('electricity'));
+    await page.evaluate(() => openService('exam'));
+    for (const body of ['JAMB', 'NECO', 'NABTEB']) {
+      await expect(page.locator('#svc-exam .network-chip', { hasText: body })).toHaveAttribute('aria-disabled', 'true');
+    }
+  });
+
+  test('provider logos remain visible in light and dark themes', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    for (const dark of [false, true]) {
+      await page.evaluate((enabled) => document.documentElement.classList.toggle('dark', enabled), dark);
+      await page.evaluate(() => openService('electricity'));
+      const audit = await page.locator('#svc-electricity .provider-choice img.provider-logo').evaluateAll((images) => images.map((img) => {
+        const rect = img.getBoundingClientRect();
+        const frame = img.closest('.provider-logo-frame');
+        return {
+          loaded: img.complete && img.naturalWidth > 0,
+          visible: rect.width > 0 && rect.height > 0,
+          frame: getComputedStyle(frame).backgroundColor,
+        };
+      }));
+      expect(audit.every((item) => item.loaded && item.visible && item.frame !== 'rgba(0, 0, 0, 0)')).toBe(true);
+      await page.evaluate(() => closeService('electricity'));
+    }
   });
 
   for (const w of WIDTHS) {

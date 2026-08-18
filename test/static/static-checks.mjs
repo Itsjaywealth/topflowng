@@ -173,6 +173,24 @@ await checkInlineSyntax('bizflow.html');
   check('BizFlow staff names are encoded', /escHtml\(m\.name\)/.test(biz));
 }
 
+// ── 9. Provider logo integrity ─────────────────────────────────────────────
+{
+  const app = read('topflowng.html');
+  const registry = read('assets/provider-logos.js');
+  const required = ['MTN','AIRTEL','GLO','9MOBILE','IKEDC','EKEDC','AEDC','PHEDC','KEDC','IBEDC','DSTV','GOTV','STARTIMES','WAEC','PAYSTACK','VTPASS'];
+  for (const key of required) {
+    check(`provider logo mapping ${key}`, new RegExp(`['\"]?${key}['\"]?\\s*:`).test(registry));
+  }
+  const paths = [...registry.matchAll(/src:\s*['"](\/assets\/providers\/[^'"]+)['"]/g)].map((m) => m[1]);
+  check('provider logo mappings are unique', new Set(paths).size === paths.length);
+  check('provider logo files exist', paths.every((p) => fs.existsSync(path.join(ROOT, p.slice(1)))));
+  check('provider logo alt text present', !/alt:\s*['"]\s*['"]/.test(registry));
+  const providerTiles = [...app.matchAll(/class="network-chip provider-choice"[\s\S]*?<\/div>/g)].map((m) => m[0]);
+  check('active provider tiles contain no emoji', providerTiles.every((tile) => !/\p{Extended_Pictographic}/u.test(tile)));
+  check('EEDC is not an active customer provider', !/provider-choice[^>]*>[\s\S]{0,500}?EEDC/.test(app));
+  check('recharge-card service tile is disabled', /service-tile" disabled[^>]*>[\s\S]{0,500}?Recharge Cards/.test(app));
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log(`\nFrontend/static checks: ${results.length} total, ${failures} failed.`);
 for (const r of results) {

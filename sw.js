@@ -1,13 +1,15 @@
-// TopFlowNG Service Worker v5
+// TopFlowNG Service Worker v6
 // Network-first for every /api/ request (never cached — tokens and private
 // responses are never stored). Navigations are network-only so a previously
 // cached app shell can never hide a deployment.
 // Cache-first for immutable static assets only. skipWaiting + clients.claim
 // mean a new version takes over on the next load — no stale-asset trap.
-const CACHE = 'topflowng-v5';
+const CACHE = 'topflowng-v6';
 const STATIC = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/assets/brand/topflowng-mark.svg',
+  '/assets/provider-logos.js',
 ];
 
 self.addEventListener('install', e => {
