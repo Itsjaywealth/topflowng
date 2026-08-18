@@ -225,6 +225,22 @@ app.get('/api/ready', async (_req, res) => {
   return res.status(503).json({ status: 'unready', component: 'database' });
 });
 
+// ── Provider health (read-only) ───────────────────────────────────────────────
+// Lets the owned application run independently of the reseller frontend:
+// reports whether the configured utility provider (VTPass) is reachable so the
+// UI can degrade purchase flows gracefully. No secrets, no purchase, no raw
+// provider bodies — only a status + latency, cached for a short window.
+app.get('/api/providers/health', async (_req, res) => {
+  try {
+    const { healthCheck } = require('./providers/vtpass');
+    const health = await healthCheck();
+    const code = health.status === 'UNAVAILABLE' ? 503 : 200;
+    return res.status(code).json({ provider: 'vtpass', ...health });
+  } catch {
+    return res.status(503).json({ provider: 'vtpass', status: 'UNAVAILABLE', reason: 'error' });
+  }
+});
+
 // ── Auth Routes ──────────────────────────────────────────────────────────────
 app.post('/api/auth/register', authLimiter, validate(registerSchema), async (req, res) => {
   try {

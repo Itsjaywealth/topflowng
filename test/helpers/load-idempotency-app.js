@@ -59,6 +59,14 @@ const mockProvider = {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : null;
   },
+  buildRequestId: () => 'TEST-' + Date.now().toString(36),
+  VtpassProductError: class VtpassProductError extends Error {
+    constructor(message) { super(message); this.name = 'VtpassProductError'; this.code = 'VTPASS_PRODUCT_UNAVAILABLE'; }
+  },
+  productFor: (serviceType, ctx) => ({ serviceID: 'test-' + serviceType, ...(ctx || {}) }),
+  authConfig: () => ({ headers: {} }),
+  assertConfigured: () => {},
+  fetchVariations: async () => [],
   VTPASS_SUCCESS_CODES: new Set(['000']),
   normalizeVtpassResponse: (raw) => ({ ...raw, status: raw.response_description || raw.response, remark: raw.response_description }),
   queryVtpassOrder: async () => {

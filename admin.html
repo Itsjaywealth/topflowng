@@ -362,6 +362,58 @@ tbody tr:hover td{background:var(--mist)}
         </div>
       </div>
 
+      <!-- Launch health (today) -->
+      <div class="stats-grid" style="margin-top:18px">
+        <div class="stat-card green">
+          <div class="stat-top">
+            <div class="stat-ico green"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+          </div>
+          <div class="stat-label">Transactions Today</div>
+          <div class="stat-value" id="lh-txns-today">—</div>
+          <div class="stat-sub">Ledger entries today</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-top">
+            <div class="stat-ico green"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+          </div>
+          <div class="stat-label">Completed Today</div>
+          <div class="stat-value" id="lh-completed">—</div>
+          <div class="stat-sub">Successful debits</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-top">
+            <div class="stat-ico amber"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+          </div>
+          <div class="stat-label">Pending Today</div>
+          <div class="stat-value" id="lh-pending">—</div>
+          <div class="stat-sub">Awaiting confirmation</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-ico ink"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 8v4l3 2"/><path d="M3 3v6h6"/></svg></div>
+          </div>
+          <div class="stat-label">Success Rate Today</div>
+          <div class="stat-value" id="lh-rate">—</div>
+          <div class="stat-sub">Completed vs settled</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-ico ink"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          </div>
+          <div class="stat-label">New Users Today</div>
+          <div class="stat-value" id="lh-users-today">—</div>
+          <div class="stat-sub">Registrations today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-ico ink"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/></svg></div>
+          </div>
+          <div class="stat-label">Avg Amount Today</div>
+          <div class="stat-value" id="lh-avg">—</div>
+          <div class="stat-sub">Per completed debit</div>
+        </div>
+      </div>
+
       <!-- Financial reconciliation -->
       <div class="section">
         <div class="section-header">
@@ -610,6 +662,13 @@ async function loadOverview() {
     document.getElementById('stat-users').textContent = num(stats.total_users || 0);
     document.getElementById('stat-txns').textContent = num(stats.total_transactions || 0);
     document.getElementById('stat-orders').textContent = num(stats.pending_orders || 0);
+    const el = (id) => document.getElementById(id);
+    el('lh-txns-today').textContent = num(stats.transactions_today || 0);
+    el('lh-completed').textContent = num(stats.completed_today || 0);
+    el('lh-pending').textContent = num(stats.pending_today || 0);
+    el('lh-rate').textContent = stats.success_rate_today == null ? '—' : stats.success_rate_today + '%';
+    el('lh-users-today').textContent = num(stats.new_users_today || 0);
+    el('lh-avg').textContent = stats.avg_transaction_amount_today == null ? '—' : '₦' + fmt(stats.avg_transaction_amount_today);
   } catch(e) { console.error('Stats error:', e.message); }
 }
 

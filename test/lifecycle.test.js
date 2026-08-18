@@ -220,19 +220,20 @@ test('7. reconcile endpoint settles once, tracks attempts, no re-debit', async (
 });
 
 // ── 8. pending order without a provider ID is safely rejected ────────────────
-test('8. reconcile of order without provider_order_id → 409, no query, no debit', async () => {
+// ── 8. reconcile requeries by request_id (no provider id needed) ─────────────
+test('8. reconcile of order without provider_order_id requeries by request_id', async () => {
   h.providerState.reset();
   const rid = orderId('NOPID');
   await createPendingOrder(rid, userIdB, 2000, { withProviderId: false });
   const balBefore = await walletOf(userIdB);
 
   const r = await h.api('POST', `/api/admin/vtu-orders/${rid}/reconcile`, { token: tokenA });
-  assert.strictEqual(r.status, 409);
-  assert.strictEqual(h.providerState.queryCalls, 0, 'provider never queried');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.data.outcome, 'pending');
+  assert.strictEqual(h.providerState.queryCalls, 1, 'requery by request_id is supported');
   assert.strictEqual(await walletOf(userIdB), balBefore, 'no debit');
   const order = await db.getVtuOrderByRequestId(rid);
   assert.strictEqual(order.status, 'pending');
-  assert.strictEqual(order.reconcile_attempts, 0, 'no attempt recorded for unqueryable order');
 });
 
 // ── 9. provider success + local failure leaves a recoverable pending order ───

@@ -37,19 +37,23 @@ DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DB?sslmode=require
 JWT_SECRET=<64+ random hex>
 APP_URL=https://topflowng.com
 PAYSTACK_SECRET_KEY=sk_live_...
-VTPASS_API_KEY=...
-VTPASS_SECRET_KEY=...
-VTPASS_PUBLIC_KEY=...
+VTPASS_AUTH_TYPE=basic          # basic | apikey
+VTPASS_USERNAME=<vtpass email>  # basic mode
+VTPASS_PASSWORD=<vtpass pw>     # basic mode
+# API-key mode (VTPASS_AUTH_TYPE=apikey) requires API IP whitelisting and uses:
+# VTPASS_API_KEY / VTPASS_SECRET_KEY / VTPASS_PUBLIC_KEY
 ```
 
-> **Mandatory integrations:** `PAYSTACK_SECRET_KEY` and `VTPASS_*` are
-> required for **every** production deployment — wallet top-up (Paystack) and VTU
-> sales (VTPass) are the platform's only money-moving flows and there is no
-> supported payments/VTU-disabled mode. Keep them in the required set and do not
-> weaken this check: boot-time validation only proves a value was supplied;
-> authenticity is confirmed by each provider on the first live call. There is
-> intentionally no opt-out flag — pausing payments is expressed operationally
-> (stop routing traffic), never by booting without the keys.
+> **Mandatory integrations:** `PAYSTACK_SECRET_KEY` and the VTPass auth set
+> (either Basic — `VTPASS_USERNAME`/`VTPASS_PASSWORD` with `VTPASS_AUTH_TYPE=basic` —
+> or API keys) are required for **every** production deployment — wallet top-up
+> (Paystack) and VTU sales (VTPass) are the platform's only money-moving flows
+> and there is no supported payments/VTU-disabled mode. Keep them in the required
+> set and do not weaken this check: boot-time validation only proves a value was
+> supplied; authenticity is confirmed by each provider on the first live call.
+> There is intentionally no opt-out flag — pausing payments is expressed
+> operationally (stop routing traffic), never by booting without the keys.
+> Basic auth bypasses the VTPass API IP whitelist, so it is the recommended mode.
 
 **Strongly recommended:** `RESEND_API_KEY` (password reset / purchase emails),
 `PAYSTACK_WEBHOOK_SECRET`, `SENTRY_DSN`, `OPENROUTER_API_KEY` (AI assistant),

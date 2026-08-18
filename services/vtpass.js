@@ -526,4 +526,6 @@ module.exports = {
   normalizeVtpassResponse,
   queryVtpassOrder,
   processVtpassPurchase,
+  authConfig,
+  assertConfigured,
 };

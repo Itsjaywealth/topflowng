@@ -716,14 +716,34 @@ async function creditVerifiedPaystackPayment(reference, userId, amount) {
 async function getAdminStats() {
   const { rows } = await pool.query(`
     SELECT
-      (SELECT COUNT(*) FROM users)::int                                           AS total_users,
-      (SELECT COUNT(*) FROM transactions)::int                                    AS total_transactions,
+      (SELECT COUNT(*) FROM users)::int                                 AS total_users,
+      (SELECT COUNT(*) FROM transactions)::int                          AS total_transactions,
       (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'credit')  AS total_credited,
       (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'debit'
          AND status = 'completed')                                                 AS total_debited,
-      (SELECT COUNT(*) FROM vtu_orders WHERE status IN ('pending','submitted'))  AS pending_orders
+      (SELECT COUNT(*) FROM vtu_orders WHERE status IN ('pending','submitted'))  AS pending_orders,
+      (SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE)::int        AS new_users_today,
+      (SELECT COUNT(*) FROM transactions WHERE created_at >= CURRENT_DATE)::int  AS transactions_today,
+      (SELECT COUNT(*) FROM transactions WHERE created_at >= CURRENT_DATE
+         AND status = 'completed' AND type = 'debit')::int                       AS completed_today,
+      (SELECT COUNT(*) FROM transactions WHERE created_at >= CURRENT_DATE
+         AND status = 'failed')::int                                             AS failed_today,
+      (SELECT COUNT(*) FROM vtu_orders WHERE created_at >= CURRENT_DATE
+         AND status IN ('pending','submitted'))::int                             AS pending_today,
+      (SELECT COUNT(*) FROM vtu_orders)::int                            AS vtu_orders_total,
+      (SELECT COUNT(*) FROM vtu_orders WHERE status = 'completed')::int AS vtu_completed_total,
+      (SELECT COUNT(*) FROM vtu_orders WHERE status = 'failed')::int    AS vtu_failed_total,
+      (SELECT COUNT(*) FROM vtu_orders WHERE status IN ('pending','submitted'))::int AS vtu_pending_total
   `);
-  return rows[0];
+  const s = rows[0];
+  const doneToday = (s.completed_today || 0) + (s.failed_today || 0);
+  s.success_rate_today = doneToday > 0 ? Math.round(((s.completed_today || 0) / doneToday) * 1000) / 10 : null;
+  const avg = await pool.query(
+    `SELECT AVG(amount)::float AS avg_amount FROM transactions
+     WHERE created_at >= CURRENT_DATE AND status = 'completed' AND type = 'debit'`
+  );
+  s.avg_transaction_amount_today = avg.rows[0]?.avg_amount != null ? parseFloat(avg.rows[0].avg_amount) : null;
+  return s;
 }
 
 async function getAllTransactions({ limit = 50, offset = 0, type, status, q, from, to } = {}) {

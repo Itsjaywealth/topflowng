@@ -73,9 +73,13 @@ PORT                    = 3000
 NODE_ENV                = production
 APP_URL                 = https://topflowng.com
 
-VTPASS_API_KEY       = (your VTPass API key)
-VTPASS_SECRET_KEY    = (your VTPass secret key)
-VTPASS_PUBLIC_KEY    = (your VTPass public key)
+VTPASS_AUTH_TYPE    = basic          # basic | apikey
+VTPASS_USERNAME     = (your VTPass email)
+VTPASS_PASSWORD     = (your VTPass password)
+# Only needed when VTPASS_AUTH_TYPE=apikey (requires API IP whitelisting):
+# VTPASS_API_KEY   = (your VTPass API key)
+# VTPASS_SECRET_KEY= (your VTPass secret key)
+# VTPASS_PUBLIC_KEY= (your VTPass public key)
 
 PAYSTACK_SECRET_KEY     = sk_live_xxxxxxxxxxxxxxxxxxxxxx
 PAYSTACK_PUBLIC_KEY     = pk_live_xxxxxxxxxxxxxxxxxxxxxx
