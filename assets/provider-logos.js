@@ -6,6 +6,7 @@
     AIRTEL: { src: '/assets/providers/airtel.png', alt: 'Airtel logo' },
     GLO: { src: '/assets/providers/glo.png', alt: 'Glo logo' },
     '9MOBILE': { src: '/assets/providers/9mobile.webp', alt: '9mobile logo' },
+    T2: { src: '/assets/providers/t2.png', alt: 'T2 logo' },
     IKEDC: { src: '/assets/providers/ikedc.png', alt: 'Ikeja Electric logo' },
     EKEDC: { src: '/assets/providers/ekedc.png', alt: 'Eko Electricity Distribution Company logo' },
     AEDC: { src: '/assets/providers/aedc.png', alt: 'Abuja Electricity Distribution Company logo' },
@@ -21,7 +22,7 @@
   });
 
   const aliases = Object.freeze([
-    ['9MOBILE', /\b(9mobile|etisalat)\b/i],
+    ['T2', /\b(t2|9mobile|etisalat)\b/i],
     ['STARTIMES', /\bstartimes\b/i],
     ['PHEDC', /\b(phedc|phed|port harcourt electric(?:ity)?)\b/i],
     ['IKEDC', /\b(ikedc|ikeja electric)\b/i],
