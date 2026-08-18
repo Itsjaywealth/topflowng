@@ -33,11 +33,40 @@ function withTracing(name, handler) {
 }
 
 const EXAM_BODY_MAP = { WAEC: 'WAEC', NECO: 'NECO', NABTEB: 'NABTEB', JAMB: 'JAMB' };
-const EXAM_PRICES = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
+// JAMB prices vary by variation (verified 2026-08-18 from vtpass.com/documentation/jamb-pin-vending/)
+const EXAM_PRICES = {
+  WAEC: 3900,
+  NECO: 1000,
+  NABTEB: 1000,
+  JAMB: { 'utme-mock': 7700, 'utme-no-mock': 6200 },
+};
 
+/**
+ * Converts a VtpassProductError into a clean user-facing 400 response,
+ * stripping all internal mapping keys, provider codes, and env-var references.
+ */
 function productErrorResponse(err, res) {
   if (err instanceof VtpassProductError) {
-    res.status(400).json({ error: err.message });
+    const msg = err.message || '';
+    let userMsg;
+    if (msg.includes('is not mapped on the active provider') || msg.includes('are not mapped on the active provider')) {
+      userMsg = 'This plan is temporarily unavailable. Please try another plan or contact support.';
+    } else if (msg.includes('not yet configured on the active provider') || msg.includes('Configure it via VTPASS_PRODUCT_MAP')) {
+      userMsg = 'Recharge card PINs are not yet available. Please check back soon.';
+    } else if (msg.includes('are not available on the active provider')) {
+      userMsg = msg.replace(/\s*Only [^.]+can be purchased\.?/gi, '').replace(/\s*\([^)]*\)/g, '').trim() || 'This exam body is not currently available. Please try WAEC or contact support.';
+    } else if (msg.includes('Unsupported network:')) {
+      userMsg = 'This network is not supported. Please select a different network.';
+    } else if (msg.includes('Unsupported electricity provider:')) {
+      userMsg = 'This electricity provider is not currently supported.';
+    } else if (msg.includes('Unsupported meter type:')) {
+      userMsg = 'This meter type is not supported. Please select Prepaid or Postpaid.';
+    } else if (msg.includes('Unsupported service type:')) {
+      userMsg = 'This service is not available at this time.';
+    } else {
+      userMsg = msg.replace(/\s*\([^)]*\)/g, '').trim();
+    }
+    res.status(400).json({ error: userMsg || 'This service is temporarily unavailable. Please try again.' });
     return true;
   }
   return false;
@@ -300,11 +329,21 @@ router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySche
 // ── Exam PIN ──────────────────────────────────────────────────────────────────
 router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), withTracing('vtu.exam-pin', async (req, res) => {
   try {
-    const { examBody, quantity, pin } = req.validated;
+    const { examBody, examVariation, quantity, pin } = req.validated;
     const ckBody = EXAM_BODY_MAP[examBody.toUpperCase()];
     await checkTransactionPin(req.user.id, pin);
     const qty = Math.max(1, Math.min(5, parseInt(quantity) || 1));
-    const amount = EXAM_PRICES[ckBody] * qty;
+    // Resolve unit price — JAMB uses variation-based pricing
+    const priceEntry = EXAM_PRICES[ckBody];
+    let unitPrice;
+    if (typeof priceEntry === 'object') {
+      const varKey = examVariation && priceEntry[examVariation] !== undefined ? examVariation : 'utme-no-mock';
+      unitPrice = priceEntry[varKey];
+    } else {
+      unitPrice = priceEntry;
+    }
+    if (!unitPrice) return sendError(res, 400, 'Invalid exam body or variation selected.');
+    const amount = unitPrice * qty;
     const description = `${ckBody} exam PIN × ${qty}`;
 
     const resolved = await resolveRequest({
@@ -322,7 +361,7 @@ router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), wi
 
     let product;
     try {
-      product = productFor('exam-pin', { examBody: ckBody, quantity: qty });
+      product = productFor('exam-pin', { examBody: ckBody, quantity: qty, examVariation: examVariation || undefined });
     } catch (err) {
       if (productErrorResponse(err, res)) return;
       throw err;

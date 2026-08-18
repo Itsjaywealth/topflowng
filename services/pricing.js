@@ -42,16 +42,13 @@ const DATA_PLANS = {
 
 const CABLE_PLANS = {
   DSTV: [
-    { code: 'DSTV_PADI',     name: 'Padi',        price: 2150 },
-    { code: 'DSTV_YANGA',    name: 'Yanga',       price: 2950 },
-    { code: 'DSTV_CONFAM',   name: 'Confam',      price: 5100 },
-    { code: 'DSTV_COMPACT',  name: 'Compact',     price: 10500 },
+    { code: 'DSTV_PADI',        name: 'Padi',         price: 2150 },
+    { code: 'DSTV_YANGA',       name: 'Yanga',        price: 2950 },
+    { code: 'DSTV_CONFAM',      name: 'Confam',       price: 5100 },
+    { code: 'DSTV_COMPACT',     name: 'Compact',      price: 10500 },
     { code: 'DSTV_COMPACTPLUS', name: 'Compact Plus', price: 16600 },
-    { code: 'DSTV_PREMIUM',  name: 'Premium',     price: 24200 },
-    { code: 'DSTV_COMFORT',  name: 'Comfort Plus', price: 15400 },
-    { code: 'DSTV_CONFAM',   name: 'Confam',       price: 8100 },
-    { code: 'DSTV_YANDA',    name: 'Yanga',        price: 5900 },
-    { code: 'DSTV_ASIA',     name: 'Asian Add-on', price: 3900 },
+    { code: 'DSTV_PREMIUM',     name: 'Premium',      price: 24200 },
+    { code: 'DSTV_ASIA',        name: 'Asian Add-on', price: 3900 },
   ],
   GOTV: [
     { code: 'GOTV_SMALLIE', name: 'Smallie',  price: 900 },

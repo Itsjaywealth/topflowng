@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>try{if(localStorage.getItem('tfadmin-theme')==='dark'||(localStorage.getItem('tfadmin-theme')!=='light'&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -42,9 +43,40 @@
   --shadow-sm:0 1px 2px rgba(11,18,32,.05),0 1px 3px rgba(11,18,32,.06);
   --shadow-md:0 6px 24px rgba(11,18,32,.08);
   --ring:0 0 0 4px rgba(0,168,104,.15);
+  /* semantic aliases for theme switching */
+  --bg:var(--mist);
+  --surface:var(--white);
+  --text:var(--ink);
+  --text-2:var(--graphite);
+  --text-3:var(--mid);
+  --line:var(--border);
+  --accent:var(--green-2);
+  --accent-soft:var(--green-soft);
+}
+.dark{
+  --bg:#0E1117;
+  --surface:#161B25;
+  --text:#E8EDF5;
+  --text-2:#9BA4B5;
+  --text-3:#6B7385;
+  --line:#242B38;
+  --mist:#161B25;
+  --white:#1F2635;
+  --ink:#E8EDF5;
+  --graphite:#9BA4B5;
+  --mid:#6B7385;
+  --border:#242B38;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.35);
+  --shadow-md:0 6px 24px rgba(0,0,0,.45);
+  --green-soft:#0D2A1E;
+  --green-softer:#0A1F16;
+  --red-soft:#2A0F10;
+  --amber-soft:#2A1A07;
+  --accent:#2EA86B;
+  --accent-soft:#0D2A1E;
 }
 html,body{height:100%}
-body{font-family:var(--font);background:var(--mist);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
 a{color:inherit;text-decoration:none}
 button{font-family:var(--font)}
 :focus-visible{outline:3px solid rgba(0,168,104,.45);outline-offset:2px}
@@ -126,6 +158,27 @@ button{font-family:var(--font)}
   transition:all .15s;
 }
 .logout-btn:hover{background:rgba(255,255,255,.09);color:var(--white)}
+.theme-toggle-btn{
+  display:flex;align-items:center;gap:9px;width:100%;
+  margin-bottom:12px;padding:9px 14px;
+  background:transparent;border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.72);border-radius:9px;
+  font:600 12px/1 var(--font);cursor:pointer;transition:all .15s;
+}
+.theme-toggle-btn:hover{background:rgba(255,255,255,.09);color:var(--white)}
+.theme-toggle-btn svg{flex-shrink:0}
+
+/* ── DARK MODE SECTION OVERRIDES ── */
+.dark .section,.dark .stat-card,.dark .login-card{background:var(--surface);border-color:var(--line)}
+.dark .stat-ico.ink{background:#1F2635}
+.dark th{background:var(--bg);color:var(--text-2)}
+.dark td{border-color:var(--line);color:var(--text)}
+.dark .tab-bar{border-color:var(--line)}
+.dark .tab{color:var(--text-3)}
+.dark .tab.active{color:var(--accent);background:var(--accent-soft)}
+.dark .field input{background:var(--bg);border-color:var(--line);color:var(--text)}
+.dark .badge{opacity:.85}
+.dark #login-screen{background:var(--bg)}
 
 .main{margin-left:240px;padding:38px 42px;min-height:100vh;max-width:1500px}
 .page-title{font:800 30px/1.1 var(--display);letter-spacing:-.8px;margin-bottom:6px}
@@ -194,6 +247,9 @@ tbody tr:hover td{background:var(--mist)}
 }
 .badge.admin{background:#EDE9FE;color:#5B21B6}
 .badge.user{background:#EEF1F6;color:var(--graphite)}
+.badge.badge-success{background:var(--green-soft);color:var(--green-strong)}
+.badge.badge-danger{background:var(--red-soft);color:var(--red)}
+.badge.badge-warn{background:var(--amber-soft);color:var(--amber)}
 .amount-positive{color:var(--green-strong);font-weight:700}
 .amount-negative{color:var(--red);font-weight:700}
 
@@ -304,8 +360,17 @@ tbody tr:hover td{background:var(--mist)}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14 11 16l4-4"/></svg>
         Orders
       </div>
+      <div class="nav-item" onclick="showTab('diagnostics')" id="nav-diagnostics" role="button" tabindex="0">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M20.19 8.93a10 10 0 0 1 0 6.14"/><path d="M3.81 15.07a10 10 0 0 1 0-6.14"/><path d="M15.07 20.19a10 10 0 0 1-6.14 0"/><path d="M8.93 3.81a10 10 0 0 1 6.14 0"/></svg>
+        Diagnostics
+      </div>
     </nav>
     <div class="sidebar-footer">
+      <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg id="theme-icon-sun" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg id="theme-icon-moon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span id="theme-label">Dark mode</span>
+      </button>
       <div class="sidebar-user">
         <strong id="sidebar-name">Admin</strong>
         <span id="sidebar-email"></span>
@@ -570,6 +635,48 @@ tbody tr:hover td{background:var(--mist)}
         </div>
       </div>
     </div>
+
+    <!-- DIAGNOSTICS -->
+    <div id="tab-diagnostics" style="display:none">
+      <div class="page-title">Provider Diagnostics</div>
+      <div class="page-sub">Product mapping health — every service the platform exposes. Admins only.</div>
+
+      <!-- Alert banners -->
+      <div style="background:var(--amber-soft);border:1px solid rgba(232,145,45,.35);border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:var(--ink)">
+        <strong>NECO &amp; NABTEB exam pins</strong> — VTPass does not currently offer NECO or NABTEB as purchasable services. These products are <strong>DISABLED</strong> on the customer UI. Action required if VTPass adds support: verify serviceID + variation codes, update <code>services/vtpass.js</code>, re-enable chips in <code>topflowng.html</code>.
+      </div>
+      <div style="background:var(--amber-soft);border:1px solid rgba(232,145,45,.35);border-radius:12px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:var(--ink)">
+        <strong>Recharge card PINs (ePIN)</strong> — VTPass recharge-PIN serviceIDs are merchant-specific and unverified. Product is <strong>DISABLED</strong>. Customers are directed to use airtime top-up instead. Configure via <code>VTPASS_PRODUCT_MAP</code> env variable once confirmed.
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Product Mapping Registry</div>
+          <div class="section-meta" id="diag-summary"></div>
+        </div>
+        <table id="diag-table">
+          <thead><tr>
+            <th>Product</th><th>Category</th><th>Provider</th>
+            <th>Service ID</th><th>Variation</th>
+            <th>Status</th><th>Customer UI</th>
+          </tr></thead>
+          <tbody id="diag-body">
+            <tr><td colspan="7" class="table-empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section" style="margin-top:24px">
+        <div class="section-header">
+          <div class="section-title">Provider Health</div>
+          <div class="section-meta">Live VTPass API reachability</div>
+        </div>
+        <div style="padding:18px 24px" id="diag-health-content">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -918,9 +1025,136 @@ async function exportCsv() {
 
 // ── NAV ────────────────────────────────────────────────────────────────────
 function showTab(tab) {
-  ['overview','transactions','users','orders'].forEach(t => {
+  ['overview','transactions','users','orders','diagnostics'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
     document.getElementById('nav-'+t).classList.toggle('active', t===tab);
+  });
+  if (tab === 'diagnostics') loadDiagnostics();
+}
+
+// ── THEME ──────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  try { localStorage.setItem('tfadmin-theme', isDark ? 'dark' : 'light'); } catch(e) {}
+  const sun = document.getElementById('theme-icon-sun');
+  const moon = document.getElementById('theme-icon-moon');
+  const lbl = document.getElementById('theme-label');
+  if (isDark) { sun.style.display='none'; moon.style.display=''; lbl.textContent='Light mode'; }
+  else { sun.style.display=''; moon.style.display='none'; lbl.textContent='Dark mode'; }
+}
+// Init icon on load
+(function() {
+  const isDark = document.documentElement.classList.contains('dark');
+  const sun = document.getElementById('theme-icon-sun');
+  const moon = document.getElementById('theme-icon-moon');
+  const lbl = document.getElementById('theme-label');
+  if (sun && moon && lbl) {
+    if (isDark) { sun.style.display='none'; moon.style.display=''; lbl.textContent='Light mode'; }
+    else { sun.style.display=''; moon.style.display='none'; lbl.textContent='Dark mode'; }
+  }
+})();
+
+// ── DIAGNOSTICS ────────────────────────────────────────────────────────────
+const PRODUCT_REGISTRY = [
+  // AIRTIME
+  {product:'MTN Airtime',category:'Airtime',provider:'VTPass',serviceID:'mtn',variation:'N/A',status:'VALID',enabled:true},
+  {product:'Glo Airtime',category:'Airtime',provider:'VTPass',serviceID:'glo',variation:'N/A',status:'VALID',enabled:true},
+  {product:'Airtel Airtime',category:'Airtime',provider:'VTPass',serviceID:'airtel',variation:'N/A',status:'VALID',enabled:true},
+  {product:'9mobile Airtime',category:'Airtime',provider:'VTPass',serviceID:'etisalat',variation:'N/A',status:'VALID',enabled:true},
+  // DATA
+  {product:'MTN 1GB SME',category:'Data',provider:'VTPass',serviceID:'mtn-data',variation:'mtn-sme-1gb',status:'VALID',enabled:true},
+  {product:'MTN 2GB SME',category:'Data',provider:'VTPass',serviceID:'mtn-data',variation:'mtn-sme-2gb',status:'VALID',enabled:true},
+  {product:'MTN 5GB SME',category:'Data',provider:'VTPass',serviceID:'mtn-data',variation:'mtn-sme-5gb',status:'VALID',enabled:true},
+  {product:'MTN 10GB SME',category:'Data',provider:'VTPass',serviceID:'mtn-data',variation:'mtn-sme-10gb',status:'VALID',enabled:true},
+  {product:'MTN 20GB SME',category:'Data',provider:'VTPass',serviceID:'mtn-data',variation:'mtn-sme-20gb',status:'VALID',enabled:true},
+  {product:'Glo 1GB SME',category:'Data',provider:'VTPass',serviceID:'glo-data',variation:'glo-sme-1gb',status:'VALID',enabled:true},
+  {product:'Glo 2GB SME',category:'Data',provider:'VTPass',serviceID:'glo-data',variation:'glo-sme-2gb',status:'VALID',enabled:true},
+  {product:'Glo 5GB SME',category:'Data',provider:'VTPass',serviceID:'glo-data',variation:'glo-sme-5gb',status:'VALID',enabled:true},
+  {product:'Glo 10GB SME',category:'Data',provider:'VTPass',serviceID:'glo-data',variation:'glo-sme-10gb',status:'VALID',enabled:true},
+  {product:'Airtel 1GB SME',category:'Data',provider:'VTPass',serviceID:'airtel-data',variation:'airtel-sme-1gb',status:'VALID',enabled:true},
+  {product:'Airtel 2GB SME',category:'Data',provider:'VTPass',serviceID:'airtel-data',variation:'airtel-sme-2gb',status:'VALID',enabled:true},
+  {product:'Airtel 5GB SME',category:'Data',provider:'VTPass',serviceID:'airtel-data',variation:'airtel-sme-5gb',status:'VALID',enabled:true},
+  {product:'Airtel 10GB SME',category:'Data',provider:'VTPass',serviceID:'airtel-data',variation:'airtel-sme-10gb',status:'VALID',enabled:true},
+  {product:'9mobile 1GB SME',category:'Data',provider:'VTPass',serviceID:'etisalat-data',variation:'etisalat-sme-1gb',status:'VALID',enabled:true},
+  {product:'9mobile 2GB SME',category:'Data',provider:'VTPass',serviceID:'etisalat-data',variation:'etisalat-sme-2gb',status:'VALID',enabled:true},
+  {product:'9mobile 5GB SME',category:'Data',provider:'VTPass',serviceID:'etisalat-data',variation:'etisalat-sme-5gb',status:'VALID',enabled:true},
+  {product:'9mobile 10GB SME',category:'Data',provider:'VTPass',serviceID:'etisalat-data',variation:'etisalat-sme-10gb',status:'VALID',enabled:true},
+  // ELECTRICITY
+  {product:'Ikeja Electric (IKEDC)',category:'Electricity',provider:'VTPass',serviceID:'ikeja-electric',variation:'prepaid/postpaid',status:'VALID',enabled:true},
+  {product:'Eko Electric (EKEDC)',category:'Electricity',provider:'VTPass',serviceID:'eko-electric',variation:'prepaid/postpaid',status:'VALID',enabled:true},
+  {product:'Abuja Electric (AEDC)',category:'Electricity',provider:'VTPass',serviceID:'abuja-electric',variation:'prepaid/postpaid',status:'VALID',enabled:true},
+  {product:'PH Electric (PHEDC)',category:'Electricity',provider:'VTPass',serviceID:'portharcourt-electric',variation:'prepaid/postpaid',status:'VALID',enabled:true},
+  {product:'Kano Electric (KEDC)',category:'Electricity',provider:'VTPass',serviceID:'kano-electric',variation:'prepaid/postpaid',status:'VALID',enabled:true},
+  {product:'Ibadan Electric (IBEDC)',category:'Electricity',provider:'VTPass',serviceID:'ibadan-electric',variation:'prepaid/postpaid',status:'VALID',enabled:true},
+  // CABLE
+  {product:'DStv Padi',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv-padi',status:'VALID',enabled:true},
+  {product:'DStv Yanga',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv-yanga',status:'VALID',enabled:true},
+  {product:'DStv Confam',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv-confam',status:'VALID',enabled:true},
+  {product:'DStv Compact',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv79',status:'VALID',enabled:true},
+  {product:'DStv Compact+',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv7',status:'VALID',enabled:true},
+  {product:'DStv Premium',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv3',status:'VALID',enabled:true},
+  {product:'DStv Asia',category:'Cable',provider:'VTPass',serviceID:'dstv',variation:'dstv6',status:'VALID',enabled:true},
+  {product:'GOtv Lite',category:'Cable',provider:'VTPass',serviceID:'gotv',variation:'gotv-lite',status:'VALID',enabled:true},
+  {product:'GOtv Jinja',category:'Cable',provider:'VTPass',serviceID:'gotv',variation:'gotv-jinja',status:'VALID',enabled:true},
+  {product:'GOtv Jolli',category:'Cable',provider:'VTPass',serviceID:'gotv',variation:'gotv-jolli',status:'VALID',enabled:true},
+  {product:'GOtv Max',category:'Cable',provider:'VTPass',serviceID:'gotv',variation:'gotv-max',status:'VALID',enabled:true},
+  {product:'GOtv Supa+',category:'Cable',provider:'VTPass',serviceID:'gotv',variation:'gotv-supa-plus',status:'VALID',enabled:true},
+  {product:'StarTimes Nova',category:'Cable',provider:'VTPass',serviceID:'startimes',variation:'nova',status:'VALID',enabled:true},
+  {product:'StarTimes Basic',category:'Cable',provider:'VTPass',serviceID:'startimes',variation:'basic',status:'VALID',enabled:true},
+  {product:'StarTimes Smart',category:'Cable',provider:'VTPass',serviceID:'startimes',variation:'smart',status:'VALID',enabled:true},
+  {product:'StarTimes Classic',category:'Cable',provider:'VTPass',serviceID:'startimes',variation:'classic',status:'VALID',enabled:true},
+  {product:'StarTimes Super',category:'Cable',provider:'VTPass',serviceID:'startimes',variation:'super',status:'VALID',enabled:true},
+  // EXAM
+  {product:'WAEC Result Checker',category:'Exam',provider:'VTPass',serviceID:'waec',variation:'waecdirect',status:'VALID',enabled:true},
+  {product:'JAMB UTME (No Mock)',category:'Exam',provider:'VTPass',serviceID:'jamb',variation:'utme-no-mock (₦6,200)',status:'VALID — verified 2026-08-18',enabled:true},
+  {product:'JAMB UTME (With Mock)',category:'Exam',provider:'VTPass',serviceID:'jamb',variation:'utme-mock (₦7,700)',status:'VALID — verified 2026-08-18',enabled:true},
+  {product:'NECO Result Checker',category:'Exam',provider:'VTPass',serviceID:'—',variation:'—',status:'PROVIDER UNAVAILABLE',enabled:false},
+  {product:'NABTEB Result Checker',category:'Exam',provider:'VTPass',serviceID:'—',variation:'—',status:'PROVIDER UNAVAILABLE',enabled:false},
+  // RECHARGE CARDS
+  {product:'MTN Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
+  {product:'Glo Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
+  {product:'Airtel Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
+  {product:'9mobile Recharge Card PIN',category:'Recharge PIN',provider:'VTPass',serviceID:'unverified',variation:'—',status:'UNVERIFIED — DISABLED',enabled:false},
+];
+
+let diagLoaded = false;
+function loadDiagnostics() {
+  if (diagLoaded) return;
+  diagLoaded = true;
+  const valid = PRODUCT_REGISTRY.filter(p => p.enabled).length;
+  const disabled = PRODUCT_REGISTRY.filter(p => !p.enabled).length;
+  document.getElementById('diag-summary').textContent = `${valid} active · ${disabled} disabled`;
+  const tbody = document.getElementById('diag-body');
+  tbody.innerHTML = PRODUCT_REGISTRY.map(p => {
+    const sc = p.enabled ? 'badge-success' : 'badge-danger';
+    const ss = p.enabled ? 'Enabled' : 'Disabled';
+    const pc = p.status.startsWith('VALID') ? 'badge-success' : p.status.startsWith('PROVIDER') ? 'badge-danger' : 'badge-warn';
+    return `<tr>
+      <td><strong>${esc(p.product)}</strong></td>
+      <td>${esc(p.category)}</td>
+      <td>${esc(p.provider)}</td>
+      <td><code style="font-size:11px">${esc(p.serviceID)}</code></td>
+      <td><code style="font-size:11px">${esc(p.variation)}</code></td>
+      <td><span class="badge ${pc}">${esc(p.status)}</span></td>
+      <td><span class="badge ${sc}">${ss}</span></td>
+    </tr>`;
+  }).join('');
+  // Load live provider health
+  loadProviderHealth();
+}
+function loadProviderHealth() {
+  const el = document.getElementById('diag-health-content');
+  apiFetch('/api/provider/health').then(d => {
+    const status = d.status || 'unknown';
+    const colour = status === 'healthy' ? 'var(--green-2)' : status === 'degraded' ? 'var(--amber)' : 'var(--red)';
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:12px;font-size:14px">
+      <span style="width:12px;height:12px;border-radius:50%;background:${colour};flex-shrink:0"></span>
+      <strong style="color:${colour}">${status.toUpperCase()}</strong>
+      <span style="color:var(--text-3);font-size:12px">— last checked ${fmtDate(d.checkedAt || new Date())}</span>
+    </div>
+    ${d.message ? `<div style="margin-top:8px;font-size:13px;color:var(--text-2)">${esc(d.message)}</div>` : ''}`;
+  }).catch(() => {
+    el.innerHTML = '<span style="color:var(--mid);font-size:13px">Provider health check unavailable (requires active session)</span>';
   });
 }
 

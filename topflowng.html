@@ -1,12 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Theme init — runs synchronously before any CSS renders to prevent flash -->
+<script>
+(function(){
+  var t = localStorage.getItem('topflowng-theme');
+  if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+  }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Subscriptions in Nigeria</title>
 <meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and 9mobile airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#00B67A">
+<meta name="theme-color" content="#0B6B45" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#2EA86B" media="(prefers-color-scheme: dark)">
 <link rel="canonical" href="https://topflowng.com/">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -62,64 +71,201 @@
    Fintech-first · Figma-grade tokens · dark-ready · accessible
    ═══════════════════════════════════════════════════════════════════ */
 :root{
-  /* Brand */
-  --green:#00A868;
-  --green-2:#00B67A;
-  --green-strong:#008F57;
-  --green-deep:#007A4A;
-  --green-soft:#E7F8F0;
-  --green-softer:#F1FBF6;
-  --blue:#00A868;
-  --blue-2:#00B67A;
-  --blue-strong:#008F57;
-  --blue-soft:#E7F8F0;
-  --blue-softer:#F1FBF6;
+  /* ── New semantic tokens ──────────────────────────────────────────────── */
+  --bg:#F7F8FA;
+  --surface:#FFFFFF;
+  --surface-raised:#FFFFFF;
+  --surface-muted:#F2F4F7;
+  --text-primary:#0C1421;
+  --text-secondary:#3D4A5C;
+  --text-muted:#6B7B8D;
+  --border:#E4E8EE;
+  --accent:#0B6B45;
+  --accent-hover:#095A3A;
+  --accent-soft:#E8F5EE;
+  --accent-subtle:#D1EDE0;
+  --success:#1A8C55;
+  --success-soft:#E6F5EE;
+  --warning:#C47B1A;
+  --warning-soft:#FEF3E2;
+  --danger:#C62B3B;
+  --danger-soft:#FEE8EB;
+  --info:#1A5FAD;
+  --info-soft:#E5EFFA;
+  --focus:rgba(11,107,69,0.2);
 
-  /* Semantic */
-  --red:#E5484D;
-  --red-soft:#FDEBEC;
-  --amber:#E8912D;
-  --amber-soft:#FEF3E6;
+  /* ── Backward-compat aliases (existing CSS uses these names) ─────────── */
+  --green:#0B6B45;
+  --green-2:#0B6B45;
+  --green-strong:#0B6B45;
+  --green-deep:#095A3A;
+  --green-soft:#E8F5EE;
+  --green-softer:#F0FAF5;
+  --blue:#0B6B45;
+  --blue-2:#1A5FAD;
+  --blue-strong:#1A5FAD;
+  --blue-soft:#E5EFFA;
+  --blue-softer:#EEF4FB;
+  --red:#C62B3B;
+  --red-soft:#FEE8EB;
+  --amber:#C47B1A;
+  --amber-soft:#FEF3E2;
   --violet:#6C3FCE;
   --violet-soft:#F1EBFE;
   --teal:#0E8E96;
   --teal-soft:#E8F6F7;
-  --navy:#2F5DC0;
-  --navy-soft:#E7EEFB;
-
-  /* Neutrals */
-  --ink:#0B1220;
-  --graphite:#46506A;
-  --mid:#677287;
-  --border:#E5E8EE;
-  --mist:#F4F6FA;
-  --surface:#FFFFFF;
+  --navy:#1A5FAD;
+  --navy-soft:#E5EFFA;
+  --ink:#0C1421;
+  --graphite:#3D4A5C;
+  --mid:#6B7B8D;
+  --mist:#F7F8FA;
   --white:#FFFFFF;
 
-  /* Type */
+  /* ── Type ───────────────────────────────────────────────────────────────── */
   --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --display:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 
-  /* Surfaces & effects */
-  --grad:linear-gradient(135deg,#00B67A 0%,#00A868 55%,#00915B 100%);
-  --grad-ink:linear-gradient(150deg,#0B1220 0%,#101A30 100%);
-  --grad-soft:linear-gradient(135deg,#E7F8F0 0%,#F1FBF6 60%,#F6FBF8 100%);
+  /* ── Surfaces & effects ─────────────────────────────────────────────────── */
+  --grad:linear-gradient(135deg,#0B6B45 0%,#0E7B50 55%,#095A3A 100%);
+  --grad-ink:linear-gradient(150deg,#0C1421 0%,#111B2C 100%);
+  --grad-soft:linear-gradient(135deg,#E8F5EE 0%,#F0FAF5 60%,#F5FAF7 100%);
   --radius:18px;
   --radius-sm:12px;
   --radius-xs:9px;
-  --shadow-xs:0 1px 2px rgba(11,18,32,.06);
-  --shadow-sm:0 1px 2px rgba(11,18,32,.05),0 2px 10px rgba(11,18,32,.05);
-  --shadow-md:0 10px 30px -10px rgba(11,18,32,.16);
-  --shadow-lg:0 28px 64px -24px rgba(11,18,32,.32);
-  --ring:0 0 0 4px rgba(0,168,104,.16);
-  --ring-error:0 0 0 4px rgba(229,72,77,.14);
+  --shadow-xs:0 1px 2px rgba(12,20,33,.06);
+  --shadow-sm:0 1px 2px rgba(12,20,33,.05),0 2px 10px rgba(12,20,33,.05);
+  --shadow-md:0 10px 30px -10px rgba(12,20,33,.14);
+  --shadow-lg:0 28px 64px -24px rgba(12,20,33,.28);
+  --ring:0 0 0 4px rgba(11,107,69,.18);
+  --ring-error:0 0 0 4px rgba(198,43,59,.14);
   --blur:blur(16px);
 
-  /* Motion */
+  /* ── Motion ────────────────────────────────────────────────────────────── */
   --ease:cubic-bezier(.2,.8,.2,1);
   --dur:200ms;
   --dur-slow:320ms;
 }
+
+/* ── Dark theme ──────────────────────────────────────────────────────────── */
+html.dark{
+  --bg:#0D1117;
+  --surface:#161B22;
+  --surface-raised:#1C2330;
+  --surface-muted:#21262D;
+  --text-primary:#E6EDF3;
+  --text-secondary:#8B949E;
+  --text-muted:#6E7681;
+  --border:#30363D;
+  --accent:#2EA86B;
+  --accent-hover:#3DBF7A;
+  --accent-soft:rgba(46,168,107,0.15);
+  --accent-subtle:rgba(46,168,107,0.08);
+  --success:#2EA86B;
+  --success-soft:rgba(46,168,107,0.15);
+  --warning:#D29922;
+  --warning-soft:rgba(210,153,34,0.15);
+  --danger:#F85149;
+  --danger-soft:rgba(248,81,73,0.15);
+  --info:#58A6FF;
+  --info-soft:rgba(88,166,255,0.15);
+  --focus:rgba(46,168,107,0.25);
+
+  /* Backward-compat aliases for dark */
+  --green:#2EA86B;
+  --green-2:#2EA86B;
+  --green-strong:#2EA86B;
+  --green-deep:#3DBF7A;
+  --green-soft:rgba(46,168,107,0.15);
+  --green-softer:rgba(46,168,107,0.08);
+  --blue:#2EA86B;
+  --blue-2:#58A6FF;
+  --blue-strong:#58A6FF;
+  --blue-soft:rgba(88,166,255,0.15);
+  --blue-softer:rgba(88,166,255,0.08);
+  --red:#F85149;
+  --red-soft:rgba(248,81,73,0.15);
+  --amber:#D29922;
+  --amber-soft:rgba(210,153,34,0.15);
+  --violet:#C0AAFF;
+  --violet-soft:rgba(192,170,255,0.15);
+  --teal:#39D3D3;
+  --teal-soft:rgba(57,211,211,0.15);
+  --navy:#58A6FF;
+  --navy-soft:rgba(88,166,255,0.15);
+  --ink:#E6EDF3;
+  --graphite:#8B949E;
+  --mid:#6E7681;
+  --border:#30363D;
+  --mist:#0D1117;
+  --surface:#161B22;
+  --white:#161B22;
+  --grad:linear-gradient(135deg,#2EA86B 0%,#258F5A 55%,#1D7248 100%);
+  --grad-ink:linear-gradient(150deg,#0D1117 0%,#161B22 100%);
+  --grad-soft:linear-gradient(135deg,rgba(46,168,107,0.15) 0%,rgba(46,168,107,0.08) 100%);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.24);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.22),0 2px 10px rgba(0,0,0,.28);
+  --shadow-md:0 10px 30px -10px rgba(0,0,0,.48);
+  --shadow-lg:0 28px 64px -24px rgba(0,0,0,.7);
+  --ring:0 0 0 4px rgba(46,168,107,.28);
+  --ring-error:0 0 0 4px rgba(248,81,73,.22);
+}
+
+/* ── Theme toggle ────────────────────────────────────────────────────── */
+.theme-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:11px;border:1.5px solid var(--border);
+  background:var(--surface);color:var(--text-secondary);
+  cursor:pointer;flex:none;
+  transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease),color var(--dur) var(--ease);
+}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.theme-toggle svg{width:18px;height:18px;pointer-events:none}
+.theme-toggle .icon-sun{display:none}
+.theme-toggle .icon-moon{display:block}
+html.dark .theme-toggle .icon-sun{display:block}
+html.dark .theme-toggle .icon-moon{display:none}
+
+/* ── Dark mode surface overrides ─────────────────────────────────────── */
+html.dark #marketing,
+html.dark .marketing-section,
+html.dark .marketing-ledger,
+html.dark .marketing-service-card,
+html.dark .marketing-why-card,
+html.dark .marketing-step,
+html.dark .marketing-rate-card,
+html.dark .marketing-footer{background:var(--surface)}
+html.dark .marketing-main{background:var(--surface)}
+html.dark #app-header{background:rgba(13,17,23,.85)}
+html.dark .home-services,html.dark .home-activity,
+html.dark .at-a-glance,html.dark .promo-card,
+html.dark .account-card,html.dark .referral-card,
+html.dark .pin-section,html.dark .analytics-tile,
+html.dark .quickpay-bar{background:var(--surface);border-color:var(--border)}
+html.dark .service-tile{background:var(--surface);border-color:var(--border)}
+html.dark .network-chip{background:var(--surface);border-color:var(--border);color:var(--text-secondary)}
+html.dark .data-plan{background:var(--surface);border-color:var(--border)}
+html.dark .auth-body{background:var(--surface);border-color:var(--border)}
+html.dark .receipt-card,html.dark .modal-card,html.dark .panel-card{background:var(--surface)}
+html.dark .field input,html.dark .field-input{background:var(--surface);border-color:var(--border);color:var(--text-primary)}
+html.dark .filter-chip{background:var(--surface);border-color:var(--border);color:var(--text-secondary)}
+html.dark .glance-block{background:var(--surface-muted)}
+html.dark .txn-item:hover{background:var(--surface-muted)}
+html.dark .txn-icon.debit{background:var(--surface-muted)}
+html.dark .acct-icon{background:var(--surface-muted)}
+html.dark .referral-stat{background:var(--surface-muted)}
+html.dark .amount-preset{background:var(--surface);border-color:var(--border);color:var(--text-primary)}
+html.dark .beneficiary-item{background:var(--surface);border-color:var(--border)}
+html.dark .bottom-nav{background:rgba(22,27,34,.92);border-color:var(--border)}
+html.dark .svc-header{background:rgba(13,17,23,.88)}
+html.dark .svc-body{background:var(--bg)}
+html.dark .service-screen{background:var(--bg)}
+html.dark .history-search{background:var(--surface);border-color:var(--border);color:var(--text-primary)}
+html.dark .load-more{background:var(--surface);border-color:var(--border);color:var(--text-primary)}
+html.dark .quickpay-launcher-card{background:var(--surface)}
+html.dark .auth-tabs{background:var(--surface-muted)}
+html.dark .auth-tab.active{background:var(--surface-raised)}
+html.dark .marketing-cta{background:var(--surface-raised)}
 @media (prefers-reduced-motion: reduce){
   *{transition-duration:.01ms !important;animation-duration:.01ms !important}
 }
@@ -128,14 +274,16 @@ html,body{margin:0;padding:0}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{
   font-family:var(--font);
-  background:var(--mist);
-  color:var(--ink);
+  background:var(--bg);
+  color:var(--text-primary);
   line-height:1.5;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
   overflow-x:hidden;
   min-height:100vh;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease);
 }
+html.dark body{color-scheme:dark}
 button{font-family:var(--font);cursor:pointer;-webkit-tap-highlight-color:transparent}
 input,select,textarea{font-family:var(--font);font-size:15px;color:var(--ink)}
 [hidden]{display:none !important}
@@ -1323,6 +1471,10 @@ a{color:var(--blue-2);text-decoration:none}
         </div>
         <div class="workspace-profile">
           <div class="header-greeting">Good day, <span class="header-name" id="header-name">—</span></div>
+          <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark / light mode">
+            <svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
+            <svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
           <button class="header-avatar" id="header-avatar" onclick="goTab('account')" aria-label="Open account">T</button>
         </div>
       </div>
@@ -1744,9 +1896,18 @@ a{color:var(--blue-2);text-decoration:none}
     <div class="field"><label>Exam body</label>
       <div class="network-chips exam-body-chips">
         <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'exam-body');updateExamPrice()">WAEC</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">NECO</div>
-        <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">NABTEB</div>
+        <div role="button" tabindex="-1" class="network-chip" style="opacity:0.42;cursor:not-allowed;pointer-events:none" title="Not yet available â check back soon">NECO</div>
+        <div role="button" tabindex="-1" class="network-chip" style="opacity:0.42;cursor:not-allowed;pointer-events:none" title="Not yet available â check back soon">NABTEB</div>
         <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'exam-body');updateExamPrice()">JAMB</div>
+      </div>
+    </div>
+    <!-- JAMB variation selector — shown only when JAMB is selected -->
+    <div id="jamb-variation-row" style="display:none;margin-bottom:2px">
+      <div class="field"><label>JAMB Type</label>
+        <div class="network-chips" id="jamb-var-chips">
+          <div role="button" tabindex="0" class="network-chip selected" id="jamb-var-no-mock" onclick="selectJambVariation('utme-no-mock')">UTME â No Mock &nbsp;&#x20A6;6,200</div>
+          <div role="button" tabindex="0" class="network-chip" id="jamb-var-mock" onclick="selectJambVariation('utme-mock')">UTME with Mock &nbsp;&#x20A6;7,700</div>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -1773,7 +1934,11 @@ a{color:var(--blue-2);text-decoration:none}
   </div>
   <div class="svc-body">
     <div id="svc-recharge-error" class="svc-error" role="alert"></div>
-    <div class="field"><label>Network</label>
+    <div class="sys-banner warn" role="status" style="margin-bottom:16px">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span class="sys-banner-text"><strong>Recharge card PINs are not yet available.</strong> This service is being configured. Please use Airtime top-up instead.</span>
+    </div>
+    <div class="field" style="opacity:0.45;pointer-events:none;user-select:none"><label>Network</label>
       <div class="network-chips">
         <div role="button" tabindex="0" class="network-chip selected" onclick="selectNet(this,'recharge-net')">MTN</div>
         <div role="button" tabindex="0" class="network-chip" onclick="selectNet(this,'recharge-net')">Glo</div>
@@ -2724,13 +2889,21 @@ document.addEventListener('keydown', e => {
 });
 
 // ── EXAM PIN ──────────────────────────────────────────────────────────────────
-const EXAM_PRICE_MAP = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: 4700 };
+// JAMB prices vary by variation (utme-mock=7700, utme-no-mock=6200)
+const EXAM_PRICE_MAP = { WAEC: 3900, NECO: 1000, NABTEB: 1000, JAMB: { 'utme-mock': 7700, 'utme-no-mock': 6200 } };
+let _jambVariation = 'utme-no-mock';
 
 function updateExamPrice() {
-  const body = getSelected(document.querySelector('#svc-exam .network-chips')) || 'WAEC';
+  const body = getSelected(document.querySelector('#svc-exam .exam-body-chips')) || 'WAEC';
   const qty  = parseInt(document.getElementById('exam-qty').textContent) || 1;
-  const price = (EXAM_PRICE_MAP[body] || 3900) * qty;
-  document.getElementById('exam-price').textContent = fmt(price);
+  // Show/hide JAMB variation selector
+  const jambRow = document.getElementById('jamb-variation-row');
+  if (jambRow) jambRow.style.display = body === 'JAMB' ? 'block' : 'none';
+  const priceEntry = EXAM_PRICE_MAP[body];
+  const unitPrice = typeof priceEntry === 'object'
+    ? (priceEntry[_jambVariation] || 6200)
+    : (priceEntry || 3900);
+  document.getElementById('exam-price').textContent = fmt(unitPrice * qty);
 }
 
 function changeQty(elId, delta) {
@@ -2740,12 +2913,25 @@ function changeQty(elId, delta) {
   if (elId === 'exam-qty') updateExamPrice();
 }
 
+function selectJambVariation(variation) {
+  _jambVariation = variation;
+  ['utme-mock','utme-no-mock'].forEach(v => {
+    const el = document.getElementById('jamb-var-' + v.replace('utme-',''));
+    if (el) el.classList.toggle('selected', v === variation);
+  });
+  updateExamPrice();
+}
+
 async function buyExamPin() {
   hideErr('svc-exam-error');
-  const examBody = getSelected(document.querySelector('#svc-exam .network-chips'));
+  const examBody = getSelected(document.querySelector('#svc-exam .exam-body-chips'));
   const quantity = parseInt(document.getElementById('exam-qty').textContent) || 1;
   if (!examBody) return showErr('svc-exam-error', 'Select an exam body.');
-  const amount = (EXAM_PRICE_MAP[examBody] || 3900) * quantity;
+  const priceEntry = EXAM_PRICE_MAP[examBody];
+  const unitPrice = typeof priceEntry === 'object'
+    ? (priceEntry[_jambVariation] || 6200)
+    : (priceEntry || 3900);
+  const amount = unitPrice * quantity;
   if (amount > (user.wallet || 0)) return showErr('svc-exam-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
   let pin;
   try { pin = await requestTransactionPin(); } catch { return; }
@@ -2753,7 +2939,11 @@ async function buyExamPin() {
   document.getElementById('btn-buy-exam').dataset.label = 'Purchase Exam PIN';
   setLoading('btn-buy-exam', true, 'Processing…');
   try {
-    const data = await api('POST', '/api/vtu/exam-pin', Object.assign({ examBody, quantity }, pin ? { pin } : {}));
+    const examVar = examBody === 'JAMB' ? _jambVariation : undefined;
+    const payload = { examBody, quantity };
+    if (examVar) payload.examVariation = examVar;
+    if (pin) payload.pin = pin;
+    const data = await api('POST', '/api/vtu/exam-pin', payload);
     if (data.pending) {
       closeService('exam');
       showReceipt({ title: 'Order submitted', sub: data.message, pending: true, lines: [['Exam body', examBody], ['Quantity', quantity], ['Amount', fmt(amount)], ['Reference', data.reference]] });
@@ -3006,7 +3196,7 @@ async function loadScheduledPurchases() {
           <div style="font:700 13.5px/1.3 var(--font);color:var(--ink);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
           <div style="font:500 12px/1.5 var(--font);color:var(--mid);margin-top:3px">Every <b style="color:var(--blue-2);text-transform:capitalize">${s.frequency}</b> · ₦${Number(s.amount).toLocaleString()} · next ${next}</div>
         </div>
-        <button class="btn-sched-cancel" onclick="cancelScheduledPurchase(${s.id})" aria-label="Cancel scheduled purchase">✕</button>`;
+        <button class="btn-sched-cancel" onclick="cancelScheduledPurchase(${s.id})" aria-label="Cancel scheduled purchase"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m7 7 10 10M17 7 7 17"/></svg></button>`;
       list.appendChild(item);
     });
   } catch {
@@ -3266,6 +3456,23 @@ async function saveBeneficiaryIfChecked(svc, identifier, network) {
   } catch { /* non-critical */ }
 }
 
+// ── THEME ────────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  var html = document.documentElement;
+  var isDark = html.classList.toggle('dark');
+  localStorage.setItem('topflowng-theme', isDark ? 'dark' : 'light');
+}
+
+// Apply system preference change live (if user hasn't set a preference)
+(function() {
+  var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq) mq.addEventListener('change', function(e) {
+    if (!localStorage.getItem('topflowng-theme')) {
+      document.documentElement.classList.toggle('dark', e.matches);
+    }
+  });
+})();
+
 // ── BOOT ────────────────────────────────────────────────────────────────────
 init();
 
@@ -3344,7 +3551,7 @@ init();
   <div class="quickpay-launcher-card">
     <div class="quickpay-launcher-head">
       <h2>Quick pay</h2>
-      <button type="button" class="quickpay-launcher-close" onclick="closeLauncher()" aria-label="Close quick pay">×</button>
+      <button type="button" class="quickpay-launcher-close" onclick="closeLauncher()" aria-label="Close quick pay"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
     <div class="quickpay-search">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -3674,7 +3881,7 @@ init();
   <div class="receipt-card" style="padding:28px 24px 36px;border-radius:20px 20px 0 0">
     <div class="pin-prompt-head">
       <h3 class="pin-prompt-title" id="pin-prompt-title">Enter Transaction PIN</h3>
-      <button class="pin-prompt-close" onclick="cancelPinPrompt()" aria-label="Cancel PIN prompt">×</button>
+      <button class="pin-prompt-close" onclick="cancelPinPrompt()" aria-label="Cancel PIN prompt"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
     <p class="pin-prompt-sub">Enter your 4–6 digit PIN to authorise this purchase.</p>
     <input type="password" id="pin-prompt-input" inputmode="numeric" pattern="\d{4,6}" maxlength="6"

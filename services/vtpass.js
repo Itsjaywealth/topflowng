@@ -152,6 +152,15 @@ const PRODUCT_MAP = {
   },
   exam: {
     WAEC: { serviceID: 'waec', variation: 'waecdirect' },
+    // JAMB verified 2026-08-18: serviceID=jamb, variations from vtpass.com/documentation/jamb-pin-vending/
+    JAMB: {
+      serviceID: 'jamb',
+      variation: 'utme-no-mock',           // default (cheaper) variation
+      variations: {
+        'utme-mock': 7700,                 // UTME PIN with Mock — ₦7,700
+        'utme-no-mock': 6200,             // UTME PIN without Mock — ₦6,200
+      },
+    },
   },
   recharge: {
     // Recharge-card PIN (ePIN) vending exists on VTPass but the exact
@@ -244,9 +253,15 @@ function productFor(serviceType, ctx) {
           `${ctx.examBody} exam pins are not available on the active provider. Only ${Object.keys(PRODUCT_MAP.exam).join(', ')} pins can be purchased.`
         );
       }
+      // Multi-variation exams (e.g. JAMB: utme-mock vs utme-no-mock)
+      const varCode = entry.variations
+        ? (ctx.examVariation && Object.prototype.hasOwnProperty.call(entry.variations, ctx.examVariation)
+            ? ctx.examVariation
+            : entry.variation)
+        : entry.variation;
       return {
         serviceID: entry.serviceID,
-        variation_code: entry.variation,
+        variation_code: varCode,
         quantity: Number(ctx.quantity || 1),
       };
     }
