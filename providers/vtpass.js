@@ -34,7 +34,7 @@ async function getBalance() {
       timeout: Math.min(config.vtpass.timeoutMs, 15000),
     });
     const data = response.data || {};
-    const raw = data.content?.balance ?? data.balance ?? data.data?.balance;
+    const raw = data.content?.transactions?.balance ?? data.content?.balance ?? data.balance ?? data.data?.balance;
     const value = Number(raw);
     return Number.isFinite(value) ? value : null;
   } catch {
