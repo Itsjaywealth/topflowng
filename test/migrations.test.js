@@ -24,11 +24,16 @@ const { Pool } = require('pg');
 const PG_HOST = process.env.PG_HOST || '127.0.0.1';
 const PG_PORT = Number(process.env.PG_PORT || 55432);
 const PG_USER = process.env.PG_USER || 'postgres';
+const PG_PASSWORD = process.env.PG_PASSWORD || '';
 const ADMIN_DB = 'postgres';
 
+const _pgAuth = PG_PASSWORD
+  ? `${encodeURIComponent(PG_USER)}:${encodeURIComponent(PG_PASSWORD)}`
+  : encodeURIComponent(PG_USER);
+
 const DB_NAME = `topflowng_mig_${process.pid}`;
-const TEST_DB_URL = `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${DB_NAME}`;
-const ADMIN_URL = `postgres://${PG_USER}@${PG_HOST}:${PG_PORT}/${ADMIN_DB}`;
+const TEST_DB_URL = `postgres://${_pgAuth}@${PG_HOST}:${PG_PORT}/${DB_NAME}`;
+const ADMIN_URL = `postgres://${_pgAuth}@${PG_HOST}:${PG_PORT}/${ADMIN_DB}`;
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MIGRATE_JS = path.join(REPO_ROOT, 'migrations', 'migrate.js');

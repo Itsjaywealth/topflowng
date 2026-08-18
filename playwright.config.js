@@ -29,7 +29,17 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Allow CI / sandbox envs to override the Chromium binary when the
+        // version bundled with this Playwright release is not pre-installed.
+        ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+          ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } }
+          : {}),
+      },
+    },
   ],
   webServer: {
     command: 'node test/browser/harness.cjs',
