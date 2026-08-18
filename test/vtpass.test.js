@@ -246,17 +246,29 @@ describe('VT_FAILURE_CODES', () => {
 });
 
 describe('PRODUCT_MAP', () => {
-  test('has data plans for all networks', () => {
+  test('has data plans for all networks (flat plan-code keys)', () => {
     for (const net of ['MTN', 'GLO', 'AIRTEL', '9MOBILE']) {
-      assert.ok(PRODUCT_MAP.data[net], `Missing data plans for ${net}`);
-      assert.ok(Object.keys(PRODUCT_MAP.data[net]).length > 0);
+      const plans = require('../services/pricing').DATA_PLANS[net] || [];
+      assert.ok(plans.length > 0, `No customer data plans listed for ${net}`);
+      for (const plan of plans) {
+        assert.ok(
+          PRODUCT_MAP.data[plan.code],
+          `Missing data variation for ${plan.code} (${net})`,
+        );
+      }
     }
   });
 
-  test('has cable packages for DSTV, GOTV, STARTIMES', () => {
+  test('has cable packages for DSTV, GOTV, STARTIMES (flat plan-code keys)', () => {
     for (const provider of ['DSTV', 'GOTV', 'STARTIMES']) {
-      assert.ok(PRODUCT_MAP.cable[provider], `Missing cable packages for ${provider}`);
-      assert.ok(Object.keys(PRODUCT_MAP.cable[provider]).length > 0);
+      const plans = require('../services/pricing').CABLE_PLANS[provider] || [];
+      assert.ok(plans.length > 0, `No customer cable packages listed for ${provider}`);
+      for (const plan of plans) {
+        assert.ok(
+          PRODUCT_MAP.cable[plan.code],
+          `Missing cable variation for ${plan.code} (${provider})`,
+        );
+      }
     }
   });
 
@@ -282,7 +294,7 @@ describe('catalog ↔ provider mapping completeness', () => {
       assert.ok(vtpass.DATA_SERVICE[network], `no data serviceID for ${network}`);
       for (const plan of plans) {
         assert.ok(
-          PRODUCT_MAP.data[network] && PRODUCT_MAP.data[network][plan.code],
+          PRODUCT_MAP.data[plan.code],
           `data plan ${plan.code} is listed for sale but has no provider mapping`,
         );
       }
@@ -294,7 +306,7 @@ describe('catalog ↔ provider mapping completeness', () => {
       assert.ok(vtpass.CABLE_SERVICE[provider], `no cable serviceID for ${provider}`);
       for (const plan of plans) {
         assert.ok(
-          PRODUCT_MAP.cable[provider] && PRODUCT_MAP.cable[provider][plan.code],
+          PRODUCT_MAP.cable[plan.code],
           `cable package ${plan.code} is listed for sale but has no provider mapping`,
         );
       }

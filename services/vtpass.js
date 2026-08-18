@@ -101,46 +101,37 @@ const CABLE_SERVICE = { DSTV: 'dstv', GOTV: 'gotv', STARTIMES: 'startimes' };
  * toward a guessed variation code.
  */
 const PRODUCT_MAP = {
+  // NOTE: keys are the flat TopFlowNG plan codes (DATA_PLANS/CABLE_PLANS `.code`),
+  // NOT network-nested. lookupProduct(kind, planCode) reads PRODUCT_MAP[kind][key]
+  // directly, so nesting by network silently unmaps every plan. All variation
+  // codes below were re-verified against the live VTPass service-variations
+  // catalogue on 2026-08-18.
   data: {
-    MTN: {
-      MTN1GB: 'mtn-1gb-600', MTN2GB: 'mtn-xtra-1000', MTN7GB: 'mtn-7gb-1800',
-      MTN14GB: 'mtn-14.5gb-5000', MTN20GB: 'mtn-20gb-7500',
-    },
-    GLO: {
-      GLO1GB: 'glo-dg-495', GLO2GB: 'glo-dg-990', GLO5GB: 'glo-dg-2475', GLO10GB: 'glo-dg-4950',
-    },
-    AIRTEL: {
-      AIRTEL1GB: 'airt-800-7', AIRTEL2GB: 'airt-1500-30', AIRTEL3GB: 'airt-2000', AIRTEL10GB: 'airt-4000',
-    },
-    '9MOBILE': {
-      '9MOBILE2GB': 'eti-1000', '9MOBILE4GB': 'eti-2000',
-      '9MOBILE6GB': 'eti-3000', '9MOBILE11GB': 'eti-5000',
-    },
+    MTN1GB: 'mtn-1gb-600', MTN2GB: 'mtn-xtra-1000', MTN7GB: 'mtn-7gb-1800',
+    MTN14GB: 'mtn-14.5gb-5000', MTN20GB: 'mtn-20gb-7500',
+    GLO1GB: 'glo-dg-495', GLO2GB: 'glo-dg-990', GLO5GB: 'glo-dg-2475', GLO10GB: 'glo-dg-4950',
+    AIRTEL1GB: 'airt-800-7', AIRTEL2GB: 'airt-1500-30', AIRTEL3GB: 'airt-2000', AIRTEL10GB: 'airt-4000',
+    '9MOBILE2GB': 'eti-1000', '9MOBILE4GB': 'eti-2000',
+    '9MOBILE6GB': 'eti-3000', '9MOBILE11GB': 'eti-5000',
   },
   cable: {
-    DSTV: {
-      DSTV_PADI: 'dstv-padi',
-      DSTV_YANGA: 'dstv-yanga',
-      DSTV_CONFAM: 'dstv-confam',
-      DSTV_COMPACT: 'dstv79',
-      DSTV_COMPACTPLUS: 'dstv7',
-      DSTV_PREMIUM: 'dstv3',
-      DSTV_ASIA: 'dstv10',
-    },
-    GOTV: {
-      GOTV_SMALLIE: 'gotv-smallie',
-      GOTV_JINJA: 'gotv-jinja',
-      GOTV_JOLLI: 'gotv-jolli',
-      GOTV_MAX: 'gotv-max',
-      GOTV_SUPA: 'gotv-supa',
-    },
-    STARTIMES: {
-      ST_NOVA: 'nova',
-      ST_BASIC: 'basic',
-      ST_SMART: 'smart',
-      ST_CLASSIC: 'classic',
-      ST_SUPER: 'super',
-    },
+    DSTV_PADI: 'dstv-padi',
+    DSTV_YANGA: 'dstv-yanga',
+    DSTV_CONFAM: 'dstv-confam',
+    DSTV_COMPACT: 'dstv79',
+    DSTV_COMPACTPLUS: 'dstv7',
+    DSTV_PREMIUM: 'dstv3',
+    DSTV_ASIA: 'dstv10',
+    GOTV_SMALLIE: 'gotv-smallie',
+    GOTV_JINJA: 'gotv-jinja',
+    GOTV_JOLLI: 'gotv-jolli',
+    GOTV_MAX: 'gotv-max',
+    GOTV_SUPA: 'gotv-supa',
+    ST_NOVA: 'nova',
+    ST_BASIC: 'basic',
+    ST_SMART: 'smart',
+    ST_CLASSIC: 'classic',
+    ST_SUPER: 'super',
   },
   exam: {
     WAEC: { serviceID: 'waec', variation: 'waecdirect' },
