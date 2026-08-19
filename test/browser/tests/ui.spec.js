@@ -183,11 +183,14 @@ test.describe('logged-in app shell', () => {
     await page.evaluate(() => closeService('airtime'));
   });
 
-  test('disabled products are not presented as active providers', async ({ page, request }) => {
+  test('primary service grid shows only active services', async ({ page, request }) => {
     await login(request, page);
     await page.goto('/');
-    const recharge = page.locator('.service-tile', { hasText: 'Recharge Cards' });
-    await expect(recharge).toBeDisabled();
+    // Inactive products are not presented in the primary grid.
+    await expect(page.locator('.service-tile', { hasText: 'Recharge Cards' })).toHaveCount(0);
+    for (const active of ['Airtime', 'Data', 'Electricity', 'Cable TV', 'Exam PINs']) {
+      await expect(page.locator('.service-tile', { hasText: active })).toHaveCount(1);
+    }
     await page.evaluate(() => openService('electricity'));
     // All 12 DISCOs verified live on the active provider are selectable.
     for (const disco of ['IKEDC', 'EKEDC', 'AEDC', 'PHEDC', 'KEDC', 'IBEDC', 'JED', 'KAEDCO', 'EEDC', 'BEDC', 'APLE', 'YEDC']) {

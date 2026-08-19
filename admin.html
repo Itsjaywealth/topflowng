@@ -872,7 +872,7 @@ async function loadReconciliation() {
     const box = document.getElementById('recon-flagged');
     if (flagged.length) {
       box.style.display = 'block';
-      box.innerHTML = `<h4>⚠ ${flagged.length} account${flagged.length > 1 ? 's' : ''} out of balance</h4>` +
+      box.innerHTML = `<h4><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${flagged.length} account${flagged.length > 1 ? 's' : ''} out of balance</h4>` +
         flagged.map(u => `<div class="flagged-user"><span class="f-email">${esc(u.name || u.email)}</span><span>${u.email}</span><b>wallet ₦${fmt(u.wallet)}</b><span>ledger ₦${fmt(u.txNet)}</span><b>Δ ${u.diff}</b></div>`).join('');
     } else {
       box.style.display = 'none';
@@ -918,7 +918,7 @@ async function loadOps() {
       badge.style.setProperty('--bg', 'var(--amber-soft)'); badge.style.setProperty('--fg', 'var(--amber)');
       const box = document.getElementById('ops-issues');
       box.style.display = 'block';
-      box.innerHTML = '⚠ ' + o.issues.map((i) => esc(i)).join(' · ');
+      box.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' + o.issues.map((i) => esc(i)).join(' · ');
     } else {
       badge.textContent = 'All systems healthy';
       badge.style.setProperty('--bg', 'var(--green-soft)'); badge.style.setProperty('--fg', 'var(--green-strong)');

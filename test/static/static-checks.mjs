@@ -188,7 +188,8 @@ await checkInlineSyntax('bizflow.html');
   const providerTiles = [...app.matchAll(/class="network-chip provider-choice"[\s\S]*?<\/div>/g)].map((m) => m[0]);
   check('active provider tiles contain no emoji', providerTiles.every((tile) => !/\p{Extended_Pictographic}/u.test(tile)));
   check('all 12 verified DISCOs are active customer providers', ['IKEDC','EKEDC','AEDC','PHEDC','KEDC','IBEDC','JED','KAEDCO','EEDC','BEDC','APLE','YEDC'].every((d) => new RegExp(`provider-choice[^>]*>[\\s\\S]{0,500}?${d}`).test(app)));
-  check('recharge-card service tile is disabled', /service-tile" disabled[^>]*>[\s\S]{0,500}?Recharge Cards/.test(app));
+  check('inactive recharge-card service is not shown in the primary grid', !/service-tile[^>]*>\s*<span class="tile-icon tile-recharge"/.test(app));
+  check('active service tiles carry no Available/Coming-soon labels', !/class="availability"/.test(app) && !/class="tile-last"/.test(app));
   for (const [shell, file] of [['topflowng.html', app], ['admin.html', read('admin.html')]]) {
     const pwFields = [...file.matchAll(/<input type="password"[^>]*id="([^"]+)"/g)].map((m) => m[1]).filter((id) => !/pin/i.test(id));
     const wrapped = pwFields.every((id) => new RegExp(`class="pw-field"[\\s\\S]{0,220}?id="${id}"`).test(file));
