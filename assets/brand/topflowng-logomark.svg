@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="mark-title">
+  <title id="mark-title">TopFlowNG</title>
+  <defs>
+    <linearGradient id="g-m" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B7E8E"/>
+      <stop offset="1" stop-color="#0E9BAE"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="13" fill="url(#g-m)"/>
+  <path d="M28 9 16 27h7.5L18.5 39 31 21h-7.5L28 9z" fill="#fff"/>
+</svg>

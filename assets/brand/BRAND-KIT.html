@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TopFlowNG Brand Kit</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,system-ui,sans-serif;background:#F4F6F9;color:#0F1923;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .page{max-width:1100px;margin:0 auto;padding:48px 24px}
+  h1{font-family:'Plus Jakarta Sans',Inter,sans-serif;font-weight:800;font-size:36px;letter-spacing:-0.8px;margin-bottom:8px}
+  .subtitle{color:#637280;font-size:16px;margin-bottom:52px}
+  h2{font-family:'Plus Jakarta Sans',Inter,sans-serif;font-weight:700;font-size:20px;color:#0F1923;margin-bottom:24px;letter-spacing:-0.3px}
+  .section{margin-bottom:56px}
+  .section-head{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #DDE3EA}
+  .section-head h2{margin:0}
+  /* Logo grid */
+  .logo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+  .logo-card{background:#fff;border:1px solid #DDE3EA;border-radius:16px;overflow:hidden}
+  .logo-preview{height:160px;display:flex;align-items:center;justify-content:center;padding:24px}
+  .logo-preview.dark-bg{background:linear-gradient(135deg,#0B7E8E,#064C57)}
+  .logo-preview.mid-bg{background:#F4F6F9}
+  .logo-preview.pure-dark{background:#0C1828}
+  .logo-info{padding:16px;border-top:1px solid #EFF2F5}
+  .logo-info strong{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+  .logo-info span{font-size:12px;color:#637280}
+  .logo-info a{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:#0B7E8E;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none}
+  .logo-info a:hover{background:#096878}
+  /* Colors */
+  .color-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+  .color-swatch{border-radius:14px;overflow:hidden;border:1px solid #DDE3EA;background:#fff}
+  .color-block{height:80px}
+  .color-meta{padding:12px}
+  .color-meta strong{display:block;font-size:13px;font-weight:700;margin-bottom:2px}
+  .color-meta code{font-size:11px;color:#637280;font-family:monospace}
+  /* Typography */
+  .type-sample{background:#fff;border:1px solid #DDE3EA;border-radius:16px;padding:28px;margin-bottom:16px}
+  .type-sample .label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#637280;margin-bottom:12px}
+  /* Social */
+  .social-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  .social-card{background:#fff;border:1px solid #DDE3EA;border-radius:16px;overflow:hidden}
+  .social-preview{background:#EFF2F5;position:relative;overflow:hidden}
+  .social-preview img,.social-preview svg{width:100%;height:auto;display:block}
+  .social-info{padding:16px;border-top:1px solid #EFF2F5}
+  .social-info strong{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+  .social-info .dims{font-size:12px;color:#0B7E8E;font-weight:600;margin-bottom:4px}
+  .social-info span{font-size:12px;color:#637280;display:block}
+  .social-info a{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:#0B7E8E;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none}
+  /* Rules */
+  .rules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+  .rule-card{background:#fff;border:1px solid #DDE3EA;border-radius:14px;padding:20px}
+  .rule-card.good{border-left:3px solid #16803C}
+  .rule-card.bad{border-left:3px solid #E53E3E}
+  .rule-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
+  .rule-label.good-l{color:#16803C}
+  .rule-label.bad-l{color:#E53E3E}
+  .rule-card p{font-size:13px;color:#4A5568;line-height:1.5}
+  .tag{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600}
+  .tag.teal{background:#E0F5F7;color:#0B7E8E}
+  .favicon-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .favicon-item{display:flex;flex-direction:column;align-items:center;gap:8px;background:#fff;border:1px solid #DDE3EA;border-radius:12px;padding:16px 20px}
+  .favicon-item span{font-size:11px;color:#637280;font-weight:500}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+</head>
+<body>
+<div class="page">
+
+  <h1>TopFlowNG Brand Kit</h1>
+  <p class="subtitle">Official brand assets, colors, and usage guidelines — operated by Brandverse Ventures.</p>
+
+  <!-- LOGO VARIANTS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Logo Variants</h2>
+    </div>
+    <div class="logo-grid">
+      <div class="logo-card">
+        <div class="logo-preview mid-bg">
+          <img src="topflowng-logo-primary.svg" alt="TopFlowNG primary logo" style="max-height:48px;width:auto">
+        </div>
+        <div class="logo-info">
+          <strong>Primary Logo</strong>
+          <span>Logomark + Wordmark · Light backgrounds</span>
+          <br>
+          <a href="topflowng-logo-primary.svg" download>Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-preview dark-bg">
+          <img src="topflowng-logo-white.svg" alt="TopFlowNG white logo" style="max-height:48px;width:auto">
+        </div>
+        <div class="logo-info">
+          <strong>White Logo</strong>
+          <span>Logomark + Wordmark · Dark/colored backgrounds</span>
+          <br>
+          <a href="topflowng-logo-white.svg" download>Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-preview mid-bg">
+          <img src="topflowng-logomark.svg" alt="TopFlowNG logomark" style="max-height:64px;width:auto">
+        </div>
+        <div class="logo-info">
+          <strong>Logomark Only</strong>
+          <span>Use for app icons, favicons, profile photos · All backgrounds</span>
+          <br>
+          <a href="topflowng-logomark.svg" download>Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-preview pure-dark">
+          <img src="topflowng-logomark.svg" alt="TopFlowNG logomark on dark" style="max-height:64px;width:auto">
+        </div>
+        <div class="logo-info">
+          <strong>Logomark · Dark Surface</strong>
+          <span>For dark mode, dark headers, and app icon backgrounds</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAVICON / APP ICONS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Favicon &amp; App Icons</h2>
+    </div>
+    <div class="favicon-row">
+      <div class="favicon-item">
+        <img src="topflowng-mark.svg" width="32" height="32" alt="favicon 32">
+        <span>favicon-32.png<br>32×32</span>
+      </div>
+      <div class="favicon-item">
+        <img src="topflowng-mark.svg" width="16" height="16" alt="favicon 16">
+        <span>favicon-16.png<br>16×16</span>
+      </div>
+      <div class="favicon-item">
+        <img src="topflowng-logomark.svg" width="48" height="48" alt="48px">
+        <span>apple-touch-icon<br>180×180</span>
+      </div>
+      <div class="favicon-item">
+        <img src="topflowng-logomark.svg" width="56" height="56" alt="192px icon">
+        <span>icon-192.png<br>PWA 192×192</span>
+      </div>
+      <div class="favicon-item">
+        <img src="topflowng-logomark.svg" width="64" height="64" alt="512px icon">
+        <span>icon-512.png<br>PWA 512×512</span>
+      </div>
+    </div>
+    <p style="margin-top:16px;font-size:13px;color:#637280">
+      PNG icons live in <code>/icons/</code>. They are generated from the SVG logomark above and must match visually. The canonical source is always the SVG.
+    </p>
+  </div>
+
+  <!-- BRAND COLORS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Brand Colors</h2>
+    </div>
+    <div class="color-grid">
+      <div class="color-swatch">
+        <div class="color-block" style="background:#0B7E8E"></div>
+        <div class="color-meta"><strong>Teal Primary</strong><code>#0B7E8E</code><br><code>rgb(11,126,142)</code></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#0E9BAE"></div>
+        <div class="color-meta"><strong>Teal Light</strong><code>#0E9BAE</code></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#096878"></div>
+        <div class="color-meta"><strong>Teal Dark</strong><code>#096878</code></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#1CBFCE"></div>
+        <div class="color-meta"><strong>Teal Dark Mode</strong><code>#1CBFCE</code><br><span style="font-size:11px;color:#637280">Dark surfaces only</span></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#E0F5F7"></div>
+        <div class="color-meta"><strong>Teal Soft</strong><code>#E0F5F7</code><br><span style="font-size:11px;color:#637280">Tinted surfaces, badges</span></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#0F1923"></div>
+        <div class="color-meta"><strong>Ink</strong><code>#0F1923</code><br><span style="font-size:11px;color:#637280">Primary text</span></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#4A5568"></div>
+        <div class="color-meta"><strong>Graphite</strong><code>#4A5568</code><br><span style="font-size:11px;color:#637280">Secondary text</span></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#F4F6F9"></div>
+        <div class="color-meta"><strong>Background</strong><code>#F4F6F9</code></div>
+      </div>
+      <div class="color-swatch">
+        <div class="color-block" style="background:#0C1828"></div>
+        <div class="color-meta"><strong>Dark Background</strong><code>#0C1828</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Typography</h2>
+    </div>
+    <div class="type-sample">
+      <div class="label">Display / Headings — Plus Jakarta Sans 800</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:40px;letter-spacing:-1px;line-height:1.1">Airtime, data &amp; bills.</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:28px;letter-spacing:-0.5px;margin-top:12px">Nigeria's everyday payment platform</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:20px;margin-top:10px">Section heading level 2</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">Body — Inter 400/500/600</div>
+      <div style="font-size:16px;line-height:1.7;color:#4A5568">Body text is set in Inter at 400 weight. It's neutral, readable, and designed for legibility at small sizes. Maximum line length: 65 characters.</div>
+      <div style="font-size:14px;line-height:1.6;color:#637280;margin-top:10px;font-weight:500">Secondary text — 14px / 500 weight</div>
+      <div style="font-size:12px;letter-spacing:0.7px;text-transform:uppercase;font-weight:600;color:#637280;margin-top:8px">LABEL / EYEBROW — 12PX / 600 / UPPERCASE</div>
+    </div>
+  </div>
+
+  <!-- SOCIAL MEDIA ASSETS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Social Media Assets</h2>
+    </div>
+    <div class="social-grid">
+      <div class="social-card">
+        <div class="social-preview" style="aspect-ratio:1/1">
+          <img src="social/topflowng-profile-1080x1080.svg" alt="Profile photo">
+        </div>
+        <div class="social-info">
+          <div class="dims">1080×1080 px</div>
+          <strong>Profile / Display Photo</strong>
+          <span>Instagram, Facebook, WhatsApp Business, LinkedIn, YouTube profile</span>
+          <a href="social/topflowng-profile-1080x1080.svg" download="topflowng-instagram-profile.svg">Download SVG</a>
+        </div>
+      </div>
+      <div class="social-card">
+        <div class="social-preview" style="aspect-ratio:3/1">
+          <img src="social/topflowng-x-header-1500x500.svg" alt="X/Twitter header">
+        </div>
+        <div class="social-info">
+          <div class="dims">1500×500 px</div>
+          <strong>X / Twitter Header</strong>
+          <span>Profile banner for X (formerly Twitter)</span>
+          <a href="social/topflowng-x-header-1500x500.svg" download="topflowng-x-header.svg">Download SVG</a>
+        </div>
+      </div>
+      <div class="social-card">
+        <div class="social-preview" style="aspect-ratio:82/31">
+          <img src="social/topflowng-facebook-cover-1640x624.svg" alt="Facebook cover">
+        </div>
+        <div class="social-info">
+          <div class="dims">1640×624 px</div>
+          <strong>Facebook Cover</strong>
+          <span>Page cover photo for Facebook</span>
+          <a href="social/topflowng-facebook-cover-1640x624.svg" download="topflowng-facebook-cover.svg">Download SVG</a>
+        </div>
+      </div>
+      <div class="social-card">
+        <div class="social-preview" style="aspect-ratio:1128/191">
+          <img src="social/topflowng-linkedin-cover-1128x191.svg" alt="LinkedIn cover">
+        </div>
+        <div class="social-info">
+          <div class="dims">1128×191 px</div>
+          <strong>LinkedIn Company Cover</strong>
+          <span>Banner image for LinkedIn company page</span>
+          <a href="social/topflowng-linkedin-cover-1128x191.svg" download="topflowng-linkedin-cover.svg">Download SVG</a>
+        </div>
+      </div>
+      <div class="social-card">
+        <div class="social-preview" style="aspect-ratio:16/9">
+          <img src="social/topflowng-youtube-banner-2560x1440.svg" alt="YouTube banner">
+        </div>
+        <div class="social-info">
+          <div class="dims">2560×1440 px</div>
+          <strong>YouTube Channel Banner</strong>
+          <span>Safe-area aware · All devices</span>
+          <a href="social/topflowng-youtube-banner-2560x1440.svg" download="topflowng-youtube-banner.svg">Download SVG</a>
+        </div>
+      </div>
+      <div class="social-card">
+        <div class="social-preview" style="background:#0B7E8E;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center">
+          <img src="topflowng-logomark.svg" style="width:60%;height:auto">
+        </div>
+        <div class="social-info">
+          <div class="dims">400×400 px</div>
+          <strong>X Profile / LinkedIn Logo / WhatsApp</strong>
+          <span>Use profile-1080x1080 scaled to required size</span>
+          <a href="topflowng-logomark.svg" download="topflowng-profile-400.svg">Download SVG</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USAGE RULES -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Usage Rules</h2>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-card good">
+        <div class="rule-label good-l">✓ Do</div>
+        <p>Use the primary logo on white and light grey backgrounds.</p>
+      </div>
+      <div class="rule-card good">
+        <div class="rule-label good-l">✓ Do</div>
+        <p>Use the white logo on the brand teal, dark blue, and photographic backgrounds.</p>
+      </div>
+      <div class="rule-card good">
+        <div class="rule-label good-l">✓ Do</div>
+        <p>Maintain clear space equal to the height of the logomark on all sides.</p>
+      </div>
+      <div class="rule-card good">
+        <div class="rule-label good-l">✓ Do</div>
+        <p>Use SVG source files. Scale from vector, never enlarge raster assets.</p>
+      </div>
+      <div class="rule-card bad">
+        <div class="rule-label bad-l">✗ Don't</div>
+        <p>Stretch, skew, rotate, or add drop shadows to the logo.</p>
+      </div>
+      <div class="rule-card bad">
+        <div class="rule-label bad-l">✗ Don't</div>
+        <p>Change the brand colors, add outlines, or place the logo on busy photographic backgrounds without a container.</p>
+      </div>
+      <div class="rule-card bad">
+        <div class="rule-label bad-l">✗ Don't</div>
+        <p>Use the wordmark without the logomark in app headers, favicons, or social profile images.</p>
+      </div>
+      <div class="rule-card bad">
+        <div class="rule-label bad-l">✗ Don't</div>
+        <p>Use "Topflowng", "topflowNG", or other casing variants. The correct name is <strong>TopFlowNG</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIAL ASSET INDEX -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Asset Index</h2>
+    </div>
+    <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #DDE3EA;border-radius:14px;overflow:hidden">
+      <thead>
+        <tr style="background:#F4F6F9">
+          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#637280;text-transform:uppercase;letter-spacing:0.5px">File</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#637280;text-transform:uppercase;letter-spacing:0.5px">Dimensions</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#637280;text-transform:uppercase;letter-spacing:0.5px">Platform</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#637280;text-transform:uppercase;letter-spacing:0.5px">Background</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">topflowng-logo-primary.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">220×48</td><td style="padding:12px 16px;font-size:13px;color:#637280">All digital use</td><td style="padding:12px 16px;font-size:13px;color:#637280">Light</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">topflowng-logo-white.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">220×48</td><td style="padding:12px 16px;font-size:13px;color:#637280">All digital use</td><td style="padding:12px 16px;font-size:13px;color:#637280">Dark / Teal</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">topflowng-logomark.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">48×48</td><td style="padding:12px 16px;font-size:13px;color:#637280">Icons, favicons</td><td style="padding:12px 16px;font-size:13px;color:#637280">Transparent</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">topflowng-mark.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">40×40</td><td style="padding:12px 16px;font-size:13px;color:#637280">Website header</td><td style="padding:12px 16px;font-size:13px;color:#637280">Transparent</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">social/topflowng-profile-1080x1080.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">1080×1080</td><td style="padding:12px 16px;font-size:13px;color:#637280">Instagram, Facebook, WhatsApp, LinkedIn, YouTube profile</td><td style="padding:12px 16px;font-size:13px;color:#637280">Teal gradient</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">social/topflowng-x-header-1500x500.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">1500×500</td><td style="padding:12px 16px;font-size:13px;color:#637280">X / Twitter header</td><td style="padding:12px 16px;font-size:13px;color:#637280">Teal gradient</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">social/topflowng-facebook-cover-1640x624.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">1640×624</td><td style="padding:12px 16px;font-size:13px;color:#637280">Facebook Page cover</td><td style="padding:12px 16px;font-size:13px;color:#637280">Teal gradient</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">social/topflowng-linkedin-cover-1128x191.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">1128×191</td><td style="padding:12px 16px;font-size:13px;color:#637280">LinkedIn Company cover</td><td style="padding:12px 16px;font-size:13px;color:#637280">Teal gradient</td></tr>
+        <tr style="border-top:1px solid #EFF2F5"><td style="padding:12px 16px;font-size:13px;font-weight:500">social/topflowng-youtube-banner-2560x1440.svg</td><td style="padding:12px 16px;font-size:13px;color:#637280">2560×1440</td><td style="padding:12px 16px;font-size:13px;color:#637280">YouTube channel banner</td><td style="padding:12px 16px;font-size:13px;color:#637280">Teal gradient</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer style="margin-top:64px;padding-top:24px;border-top:1px solid #DDE3EA;font-size:12px;color:#8896A4">
+    TopFlowNG Brand Kit · Operated by Brandverse Ventures · hello@topflowng.com
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" role="img" aria-labelledby="logo-title-white">
+  <title id="logo-title-white">TopFlowNG</title>
+  <!-- Logomark (white border on transparent bg) -->
+  <rect x="0" y="4" width="40" height="40" rx="11" fill="rgba(255,255,255,0.18)"/>
+  <path d="M23.5 12 14 26h6.5L16.5 36 26 22h-6.5l4-10z" fill="#fff"/>
+  <!-- Wordmark white -->
+  <text x="52" y="30" font-family="'Plus Jakarta Sans',Inter,system-ui,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">TopFlowNG</text>
+</svg>

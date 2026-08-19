@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 624" role="img" aria-label="TopFlowNG Facebook cover">
+  <defs>
+    <linearGradient id="bg-fb" x1="0" y1="0" x2="1" y2="0.7">
+      <stop offset="0" stop-color="#0A6D7C"/>
+      <stop offset="1" stop-color="#0B7E8E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1640" height="624" fill="url(#bg-fb)"/>
+  <!-- Right accent -->
+  <circle cx="1480" cy="100" r="400" fill="rgba(255,255,255,0.07)"/>
+  <circle cx="1580" cy="580" r="250" fill="rgba(255,255,255,0.05)"/>
+  <!-- Mark -->
+  <rect x="120" y="212" width="160" height="160" rx="36" fill="rgba(255,255,255,0.14)"/>
+  <path d="M224 232 180 300h24l-18 54 44-72h-24l18-50z" fill="#ffffff"/>
+  <!-- Wordmark -->
+  <text x="306" y="302" font-family="'Plus Jakarta Sans',Inter,system-ui,sans-serif" font-weight="800" font-size="76" fill="#ffffff" letter-spacing="-1.5">TopFlowNG</text>
+  <text x="308" y="358" font-family="Inter,system-ui,sans-serif" font-weight="400" font-size="28" fill="rgba(255,255,255,0.72)">Nigeria's everyday payment platform</text>
+  <text x="308" y="396" font-family="Inter,system-ui,sans-serif" font-weight="400" font-size="22" fill="rgba(255,255,255,0.50)">topflowng.com</text>
+</svg>

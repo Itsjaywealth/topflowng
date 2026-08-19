@@ -537,6 +537,18 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
   background:var(--surface);border:1px solid var(--border-subtle);
   border-radius:999px;padding:7px 13px}
 
+/* FAQ */
+.marketing-faq-list{display:flex;flex-direction:column;gap:0;max-width:760px;margin:0 auto;border:1px solid var(--border-subtle);border-radius:18px;overflow:hidden}
+.faq-item{border-bottom:1px solid var(--border-subtle)}
+.faq-item:last-child{border-bottom:none}
+.faq-item summary{padding:20px 24px;font:600 15px/1.4 var(--display);color:var(--text-primary);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;background:var(--surface);transition:background var(--transition)}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:"";display:inline-block;width:18px;height:18px;flex-shrink:0;margin-left:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238896A4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;transition:transform var(--transition)}
+.faq-item[open] summary::after{transform:rotate(180deg)}
+.faq-item summary:hover{background:var(--surface-muted)}
+.faq-item p{padding:0 24px 20px;font:400 14px/1.7 var(--font);color:var(--text-secondary)}
+.faq-item[open] summary{color:var(--brand)}
+
 /* Footer */
 .marketing-footer{background:var(--surface);border-top:1px solid var(--border-subtle);padding:56px 0 28px}
 .marketing-footer-inner{max-width:1200px;margin:0 auto;padding:0 clamp(20px,5vw,48px)}
@@ -1329,10 +1341,10 @@ html.dark .icon-moon{display:none}
       <a href="#services">Services</a>
       <a href="#rates">Rates</a>
       <a href="#how">How it works</a>
-      <button type="button" class="marketing-create" onclick="openAuthFromMarketing('register')">Create free account</button>
+      <a href="#faq">Help</a>
+      <button type="button" class="marketing-create" onclick="openAuthFromMarketing('register')">Get started</button>
     </div>
     <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Sign in</button>
-    <button type="button" class="marketing-quick" onclick="openLauncher()">Quick pay</button>
   </nav>
   <main class="marketing-main">
     <div class="marketing-copy">
@@ -1400,12 +1412,12 @@ html.dark .icon-moon{display:none}
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
         <h2 id="why-heading">Built for repeat purchases, not one-off checkout forms.</h2>
-        <p>Fund once, protect purchases with a transaction PIN, and keep each result in one searchable history.</p>
+        <p>Set up your account, protect every purchase with a transaction PIN, and keep each receipt in one searchable history.</p>
       </div>
       <div class="marketing-why-grid">
         <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.9 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r=".8" fill="currentColor"/></svg></span><strong>Visible pricing</strong><span>See the naira amount before you approve a purchase.</span></div>
         <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg></span><strong>Instant delivery</strong><span>Auto-processed and delivered in seconds.</span></div>
-        <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><path d="M12 14.5v2"/></svg></span><strong>Secure wallet</strong><span>Topped up by Paystack; PIN-protected transactions.</span></div>
+        <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><path d="M12 14.5v2"/></svg></span><strong>PIN-protected</strong><span>Every purchase is confirmed with your transaction PIN. No charge without your approval.</span></div>
         <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="10" r="5"/><circle cx="15.5" cy="13" r="4.5"/><path d="M3 20a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6M15 20a4 4 0 0 1 4-4"/></svg></span><strong>Useful at any size</strong><span>Buy a small top-up or schedule the bills you repeat.</span></div>
         <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><rect x="3.5" y="13" width="4" height="5" rx="1.5"/><rect x="16.5" y="13" width="4" height="5" rx="1.5"/><path d="M20 18h1a1 1 0 0 1 0 2h-1M4 18H3a1 1 0 0 0 0 2h1M12 21v-1"/></svg></span><strong>Support that answers</strong><span>A real team that reads your feedback.</span></div>
         <div class="marketing-why-card"><span class="why-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M4 9h16M9 2.5v5M15 2.5v5"/></svg></span><strong>Easy to use</strong><span>A simple, flexible design you learn in seconds.</span></div>
@@ -1423,7 +1435,52 @@ html.dark .icon-moon{display:none}
     </div>
   </section>
 
-  <section class="marketing-section" id="promos" aria-labelledby="promos-heading">
+  <!-- FAQ -->
+  <section class="marketing-section" id="faq" aria-labelledby="faq-heading">
+    <div class="marketing-section-inner">
+      <div class="marketing-section-head">
+        <h2 id="faq-heading">Common questions.</h2>
+        <p>Still have questions? Email us at <a href="mailto:hello@topflowng.com">hello@topflowng.com</a></p>
+      </div>
+      <div class="marketing-faq-list" role="list">
+        <details class="faq-item" role="listitem">
+          <summary>What services can I pay for on TopFlowNG?</summary>
+          <p>You can buy airtime and data for MTN, Glo, Airtel and T2; pay electricity bills for all major distribution companies (IKEDC, EKEDC, AEDC, PHEDC, KEDC, IBEDC and more); subscribe to DStv, GOtv and StarTimes; and purchase WAEC result checker PINs.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>How does a purchase work?</summary>
+          <p>Create a free account, choose your service, enter the recipient details (phone number, meter number or smartcard), review the amount, confirm with your transaction PIN, and your service is delivered instantly — with a receipt in your history.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>How long does delivery take?</summary>
+          <p>Most purchases are processed and delivered within seconds. If a transaction stays pending for longer, do not repeat the purchase — use the "Check status" option or contact support at hello@topflowng.com.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>What is a transaction PIN?</summary>
+          <p>A transaction PIN is a 4–6 digit code you set up in your account settings. It is required to confirm every purchase and protects your account from unauthorised transactions.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>What happens if a transaction fails or is pending?</summary>
+          <p>A pending transaction means we are still confirming delivery with the provider. Do not buy the same service again while it is pending. If it does not resolve, contact us at hello@topflowng.com with your transaction reference and we will investigate.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>Is my account secure?</summary>
+          <p>Yes. Every purchase requires your transaction PIN. Your password is stored securely and TopFlowNG staff will never ask for your password or PIN. If you ever suspect unauthorised access, change your password immediately and contact support.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>Who operates TopFlowNG?</summary>
+          <p>TopFlowNG is operated by Brandverse Ventures. For any enquiry, email hello@topflowng.com.</p>
+        </details>
+        <details class="faq-item" role="listitem">
+          <summary>How do I contact support?</summary>
+          <p>Use the live chat icon on the site, or email hello@topflowng.com. Support is available during business hours. For urgent transaction issues, include your reference number for faster resolution.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Promos (dynamic, may be empty) -->
+  <section class="marketing-section" id="promos" aria-labelledby="promos-heading" style="display:none" id="promos-section">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
         <h2 id="promos-heading">Deals &amp; specials.</h2>
@@ -1436,19 +1493,19 @@ html.dark .icon-moon{display:none}
   <section class="marketing-cta" aria-labelledby="cta-heading">
     <div>
       <h2 id="cta-heading">Start paying your everyday bills in seconds.</h2>
-      <p>Free to create. Pay for airtime, data, electricity, cable TV and exam PINs — with a receipt and full history of every transaction.</p>
+      <p>Free to create. Pay for airtime, data, electricity, cable TV and exam PINs — with a receipt and full history.</p>
     </div>
-    <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Register now</button>
+    <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Create free account</button>
   </section>
 
   <section class="marketing-trust" aria-label="Payments and services">
-    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> MTN, Glo, Airtel &amp; 9mobile</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> MTN, Glo, Airtel &amp; T2</span>
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> 12 electricity DISCOs</span>
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> DStv, GOtv &amp; StarTimes</span>
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> WAEC exam PINs</span>
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> PIN-protected &amp; auditable</span>
   </section>
-  <footer class="marketing-footer">
+  <footer class="marketing-footer" role="contentinfo">
     <div class="marketing-footer-inner">
       <div class="marketing-footer-cols">
         <div class="marketing-footer-brand">
@@ -1457,21 +1514,27 @@ html.dark .icon-moon{display:none}
             TopFlow<span>NG</span>
           </div>
           <p>Nigeria's everyday payment platform — airtime, data, electricity, cable TV and exam PINs.</p>
+          <p style="margin-top:10px;font-size:12px">Operated by Brandverse Ventures.</p>
         </div>
         <div class="marketing-footer-col">
-          <span class="marketing-footer-head">Quick links</span>
-          <a href="#services">Services</a>
-          <a href="#rates">Rates</a>
+          <span class="marketing-footer-head">Services</span>
+          <a href="#services">Airtime</a>
+          <a href="#services">Data bundles</a>
+          <a href="#services">Electricity</a>
+          <a href="#services">Cable TV</a>
+          <a href="#services">Exam PINs</a>
+        </div>
+        <div class="marketing-footer-col">
+          <span class="marketing-footer-head">Help</span>
+          <a href="#faq">FAQ</a>
           <a href="#how">How it works</a>
+          <button type="button" onclick="toggleSupportLauncher()">Contact support</button>
+          <a href="mailto:hello@topflowng.com">hello@topflowng.com</a>
         </div>
         <div class="marketing-footer-col">
           <span class="marketing-footer-head">Account</span>
           <button type="button" onclick="openAuthFromMarketing('login')">Log in</button>
           <button type="button" onclick="openAuthFromMarketing('register')">Register</button>
-        </div>
-        <div class="marketing-footer-col">
-          <span class="marketing-footer-head">Get in touch</span>
-          <a href="mailto:hello@topflowng.com" class="marketing-footer-email">hello@topflowng.com</a>
         </div>
       </div>
       <div class="marketing-footer-bottom">
@@ -1479,10 +1542,8 @@ html.dark .icon-moon{display:none}
           <a href="/terms">Terms</a>
           <a href="/privacy">Privacy</a>
           <a href="/refund-policy">Refund Policy</a>
-          <a href="/about">About</a>
-          <a href="/contact">Contact</a>
         </span>
-        <span>© 2026 TopFlowNG</span>
+        <span>© 2026 TopFlowNG · Brandverse Ventures</span>
       </div>
     </div>
   </footer>
@@ -1866,40 +1927,7 @@ html.dark .icon-moon{display:none}
         <p style="font:400 12px/1.6 var(--font);color:var(--text-muted);margin-top:10px">TopFlowNG support will never ask for your password or transaction PIN.</p>
       </div>
 
-      <!-- Auto-recharge -->
-      <div class="pin-section" id="auto-recharge-section">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-          <div style="flex:1"><h4 style="margin-bottom:0">Low-balance top-up reminder</h4></div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="ar-toggle" onchange="toggleAutoRecharge()" aria-label="Enable auto-recharge">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <p>When your wallet drops below the threshold, we create a Paystack checkout and notify you. Nothing is charged automatically.</p>
-        <div id="ar-config" style="display:none">
-          <div class="pin-row" style="margin-bottom:8px">
-            <input type="number" id="ar-threshold" class="field-input" placeholder="Threshold (₦)" min="100" style="min-width:0">
-            <input type="number" id="ar-amount" class="field-input" placeholder="Top-up amount (₦)" min="100" max="1000000" style="min-width:0">
-          </div>
-          <button class="btn-confirm" id="btn-save-ar" onclick="saveAutoRecharge()" style="flex:none;min-height:44px;padding:0 18px;font-size:13px;width:100%">Save settings</button>
-          <div id="ar-msg" class="auth-error" style="margin-top:8px;display:none"></div>
-        </div>
-        <div id="ar-pending-banner" style="display:none;margin-top:14px">
-          <div style="background:var(--green-soft);border:1px solid #B7E6D2;border-radius:14px;padding:14px 16px">
-            <div style="display:flex;align-items:center;gap:12px">
-              <span style="width:38px;height:38px;flex:none;border-radius:11px;background:var(--green);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:800 16px/1 var(--display)">₦</span>
-              <div style="flex:1;min-width:0">
-                <div style="font:700 14px/1.3 var(--display);color:var(--ink)">Complete your top-up</div>
-                <div style="font:500 12px/1.5 var(--font);color:var(--graphite);margin-top:3px">A top-up checkout for <b><span id="ar-pending-amount">—</span></b> is ready. Your payment is not automatic.</div>
-              </div>
-              <button id="ar-pending-dismiss" onclick="dismissPendingAutoRecharge()" title="Dismiss"
-                      style="flex:none;width:30px;height:30px;border-radius:9px;border:1px solid #B7E6D2;background:#fff;color:var(--graphite);cursor:pointer;font:700 15px/1 var(--display)">×</button>
-            </div>
-            <a id="ar-pending-link" href="#" target="_blank" rel="noopener"
-               style="display:inline-block;width:100%;margin-top:12px;background:var(--grad);color:#fff;text-decoration:none;text-align:center;font:700 13.5px/1 var(--display);padding:12px 0;border-radius:11px">Pay now</a>
-          </div>
-        </div>
-      </div>
+      <!-- Auto-recharge section removed — Paystack wallet funding no longer available -->
 
       <!-- Scheduled purchases -->
       <div class="pin-section" id="scheduled-section">
@@ -4906,7 +4934,7 @@ init();
     { id: 'repeat',  title: 'Built for repeat buyers', description: 'Save numbers, protect purchases with a PIN and keep one searchable history.', cta: 'Open an account', target: 'register', placement: ['marketing'], active: true, priority: 3 },
     { id: 'pin',     title: 'Secure your wallet', description: 'Set a 4–6 digit transaction PIN and approve every purchase with it.', cta: 'Set up', target: 'account', placement: ['dashboard'], active: true, priority: 1 },
     { id: 'refer',   title: 'Invite friends', description: 'Share your referral link. Reward credits are not currently active.', cta: 'Share link', target: 'referral', placement: ['dashboard'], active: true, priority: 2 },
-    { id: 'autore',  title: 'Low-balance reminder', description: 'Get a Paystack top-up link when your wallet drops below a threshold. Nothing is charged automatically.', cta: 'Configure', target: 'autorecharge', placement: ['dashboard'], active: true, priority: 3 }
+    { id: 'history', title: 'Full transaction history', description: 'Every purchase is logged. Search, filter and download your history from the Transactions tab.', cta: 'View history', target: 'history', placement: ['dashboard'], active: true, priority: 3 }
   ];
 
   function promoTarget(promo) {
@@ -4921,13 +4949,9 @@ init();
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 150);
         break;
-      case 'autorecharge':
+      case 'history':
         if (!isAuthed()) { window.openAuthFromMarketing('login'); break; }
-        window.goTab('account');
-        setTimeout(function () {
-          var el = $('auto-recharge-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 150);
+        window.goTab('history');
         break;
       case 'account':
         if (!isAuthed()) { window.openAuthFromMarketing('login'); break; }

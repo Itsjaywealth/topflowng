@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" role="img" aria-label="TopFlowNG X/Twitter header">
+  <defs>
+    <linearGradient id="bg-x" x1="0" y1="0" x2="1" y2="0.8">
+      <stop offset="0" stop-color="#0B7E8E"/>
+      <stop offset="1" stop-color="#064C57"/>
+    </linearGradient>
+    <linearGradient id="mark-x" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+  </defs>
+  <rect width="1500" height="500" fill="url(#bg-x)"/>
+  <!-- Accent circles -->
+  <circle cx="1300" cy="100" r="350" fill="url(#mark-x)"/>
+  <circle cx="200" cy="480" r="200" fill="url(#mark-x)"/>
+  <!-- Logomark -->
+  <rect x="100" y="160" width="140" height="140" rx="30" fill="rgba(255,255,255,0.14)"/>
+  <path d="M192 178 152 242h22l-16 48 40-66h-22l16-46z" fill="#ffffff"/>
+  <!-- Wordmark -->
+  <text x="260" y="248" font-family="'Plus Jakarta Sans',Inter,system-ui,sans-serif" font-weight="800" font-size="68" fill="#ffffff" letter-spacing="-1">TopFlowNG</text>
+  <text x="262" y="300" font-family="Inter,system-ui,sans-serif" font-weight="400" font-size="26" fill="rgba(255,255,255,0.72)" letter-spacing="0">Airtime · Data · Electricity · Cable TV · Exam PINs</text>
+</svg>

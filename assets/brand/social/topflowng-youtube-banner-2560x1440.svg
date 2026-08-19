@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2560 1440" role="img" aria-label="TopFlowNG YouTube banner">
+  <defs>
+    <linearGradient id="bg-yt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B7E8E"/>
+      <stop offset="0.6" stop-color="#096878"/>
+      <stop offset="1" stop-color="#064C57"/>
+    </linearGradient>
+  </defs>
+  <rect width="2560" height="1440" fill="url(#bg-yt)"/>
+  <!-- Accent circles -->
+  <circle cx="2200" cy="300" r="700" fill="rgba(255,255,255,0.05)"/>
+  <circle cx="400" cy="1200" r="500" fill="rgba(255,255,255,0.04)"/>
+  <circle cx="1280" cy="1440" r="800" fill="rgba(255,255,255,0.03)"/>
+  <!-- Safe zone indicator area: 1546x423 centered -->
+  <!-- Logomark (safe area: x=507–2053) -->
+  <rect x="880" y="480" width="280" height="280" rx="64" fill="rgba(255,255,255,0.13)"/>
+  <path d="M1030 500 960 620h40l-28 80 72-120h-40l26-80z" fill="#ffffff"/>
+  <!-- Wordmark -->
+  <text x="1280" y="640" text-anchor="middle" font-family="'Plus Jakarta Sans',Inter,system-ui,sans-serif" font-weight="800" font-size="120" fill="#ffffff" letter-spacing="-2">TopFlowNG</text>
+  <text x="1280" y="730" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-weight="400" font-size="48" fill="rgba(255,255,255,0.70)">Nigeria's everyday payment platform</text>
+  <text x="1280" y="800" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-weight="500" font-size="34" fill="rgba(255,255,255,0.50)">topflowng.com</text>
+</svg>
