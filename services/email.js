@@ -26,7 +26,7 @@ function detectProvider(apiKey) {
   return 'resend';
 }
 
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, replyTo }) {
   const apiKey = config.resend.apiKey;
   if (!apiKey) throw new Error('Email delivery is not configured');
 
@@ -34,12 +34,14 @@ async function sendEmail({ to, subject, html }) {
   const from = config.resend.from;
 
   if (provider === 'brevo') {
-    const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+    const payload = {
       sender: { name: from.replace(/<.*>/, '').trim(), email: from.match(/<([^>]+)>/)?.[1] || from },
       to: [{ email: to }],
       subject,
       htmlContent: html,
-    }, {
+    };
+    if (replyTo) payload.replyTo = replyTo;
+    const response = await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
       headers: {
         'api-key': apiKey,
         'Content-Type': 'application/json',
@@ -55,6 +57,7 @@ async function sendEmail({ to, subject, html }) {
     to: [to],
     subject,
     html,
+    ...(replyTo ? { reply_to: replyTo } : {}),
   }, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -79,6 +82,7 @@ function sendOrderStatusEmail(userEmail, userName, { service, description, amoun
   sendEmail({
     to: userEmail,
     subject,
+    replyTo: config.supportEmail,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
         <h2 style="color:#0E2235">${isSuccess ? 'Payment confirmed ✓' : 'Order update'}</h2>
@@ -89,7 +93,7 @@ function sendOrderStatusEmail(userEmail, userName, { service, description, amoun
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right">${formatted}</td></tr>
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right">${escapeHtml(requestId)}</td></tr>
         </table>
-        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at support@topflowng.com</p>
+        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at ${config.supportEmail}</p>
         <p style="font-size:12px;color:#9CA3AF">— TopFlowNG</p>
       </div>
     `,
@@ -102,6 +106,7 @@ function sendPurchaseEmail(userEmail, userName, { service, description, amount, 
   sendEmail({
     to: userEmail,
     subject: `TopFlowNG — ${service} purchase confirmed`,
+    replyTo: config.supportEmail,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
         <h2 style="color:#0E2235">Payment confirmed ✓</h2>
@@ -113,7 +118,7 @@ function sendPurchaseEmail(userEmail, userName, { service, description, amount, 
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right">${escapeHtml(reference)}</td></tr>
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">New balance</td><td style="padding:8px 0;font-size:13px;color:#1A7A4A;font-weight:600;text-align:right">${bal}</td></tr>
         </table>
-        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at support@topflowng.com</p>
+        <p style="font-size:12px;color:#9CA3AF">If you didn't make this purchase, contact us immediately at ${config.supportEmail}</p>
         <p style="font-size:12px;color:#9CA3AF">— TopFlowNG</p>
       </div>
     `,
@@ -133,6 +138,7 @@ function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompan
   sendEmail({
     to: clientEmail,
     subject: `Invoice #${invoice.id} from ${ownerCompany || 'Your business'} — ${fmt(invoice.total)}`,
+    replyTo: config.supportEmail,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
         <h2 style="color:#0E2235;margin:0 0 4px">Invoice #${escapeHtml(invoice.id)}</h2>
@@ -176,6 +182,7 @@ function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authori
   sendEmail({
     to: userEmail,
     subject: `TopFlowNG — Top up ${formatted} to keep your account running`,
+    replyTo: config.supportEmail,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
         <h2 style="color:#0E2235">Your balance dropped below ${thresh}</h2>

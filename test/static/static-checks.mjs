@@ -258,7 +258,9 @@ await checkInlineSyntax('bizflow.html');
   check('support FAQ items exist', /class="faq-item"/.test(app));
   check('support reachable from account', /onclick="openSupport\(\)"/.test(app));
   check('failed-transaction help pre-fills reference', /support-ref/.test(app));
-  check('support email surface exists', /support@topflowng\.com/.test(app));
+  check('support email surface exists', /hello@topflowng\.com/.test(app));
+  check('legacy support email removed from customer UI', !/support@topflowng\.com/.test(app));
+  check('support email is a clickable mailto link', /mailto:hello@topflowng\.com/.test(app));
 }
 
 // ── Summary ────────────────────────────────────────────────────────────────

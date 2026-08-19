@@ -344,6 +344,7 @@ app.post('/api/auth/forgot-password', authLimiter, validate(forgotPasswordSchema
     await sendEmail({
       to: user.email,
       subject: 'Reset your TopFlowNG password',
+      replyTo: config.supportEmail,
       html: `
         <p>Hi ${user.full_name},</p>
         <p>Click below to reset your password. This link expires in 1 hour.</p>
