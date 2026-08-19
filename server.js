@@ -908,6 +908,26 @@ app.get('/api/admin/vtu-orders/:requestId', adminMiddleware, async (req, res) =>
   }
 });
 
+// ── Internal API key middleware (for n8n / automation tools) ─────────────────
+function internalKeyMiddleware(req, res, next) {
+  const key = req.headers['x-internal-key'] || '';
+  if (!config.internalApiKey || key !== config.internalApiKey) {
+    return sendError(res, 401, 'Invalid internal API key');
+  }
+  next();
+}
+
+// Daily ops summary for n8n automation — returns stats + recent failed orders
+app.get('/api/internal/ops-summary', internalKeyMiddleware, async (req, res) => {
+  try {
+    const stats = await db.getAdminStats();
+    res.json({ ok: true, stats, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to fetch ops summary');
+  }
+});
+
 // ── Admin Routes ─────────────────────────────────────────────────────────────
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   try {

@@ -41,6 +41,7 @@ const config = {
   appUrl: str(process.env.APP_URL, 'https://topflowng.com'),
   corsOrigin: str(process.env.APP_URL, '*'),
   supportEmail: str(process.env.SUPPORT_EMAIL, 'hello@topflowng.com'),
+  internalApiKey: str(process.env.INTERNAL_API_KEY, ''),
   trustProxy: str(process.env.TRUST_PROXY, '1') === '1',
   bodyLimit: str(process.env.BODY_LIMIT, '10kb'),
 
