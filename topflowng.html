@@ -1368,12 +1368,7 @@ html.dark .icon-moon{display:none}
         <h2 id="rates-heading">Sample rates you'll pay today.</h2>
         <p>Examples from the same server-side catalogue used at checkout.</p>
       </div>
-      <div class="marketing-rate-table" aria-label="Sample network rates">
-        <div class="marketing-rate-card"><div class="rate-network">MTN</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦350</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦600</strong></div></div></div>
-        <div class="marketing-rate-card"><div class="rate-network">Glo</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦400</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦650</strong></div></div></div>
-        <div class="marketing-rate-card"><div class="rate-network">Airtel</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦350</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦600</strong></div></div></div>
-        <div class="marketing-rate-card"><div class="rate-network">T2</div><div class="rate-list"><div class="rate-row"><span>1GB · 30 days</span><strong>₦400</strong></div><div class="rate-row"><span>2GB · 30 days</span><strong>₦700</strong></div></div></div>
-      </div>
+      <div class="marketing-rate-table" id="marketing-rate-table" aria-label="Sample network rates"></div>
     </div>
   </section>
 
@@ -4813,6 +4808,26 @@ init();
     }
   }
 
+  /* ── Marketing rates (live server catalogue) ───────────────────── */
+  function renderMarketingRates() {
+    var table = $('marketing-rate-table');
+    if (!table) return;
+    var nets = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'];
+    var cards = [];
+    nets.forEach(function (k) {
+      var key = NET_KEY[k] || k;
+      var plans = (DATA_PLANS[key] || []).filter(function (p) { return p.price > 0; });
+      if (!plans.length) return;
+      var rows = plans.slice(0, 2).map(function (p) {
+        return '<div class="rate-row"><span>' + esc(p.name) + '</span><strong>' + fmt(p.price) + '</strong></div>';
+      }).join('');
+      cards.push('<div class="marketing-rate-card"><div class="rate-network">' + esc(key) + '</div><div class="rate-list">' + rows + '</div></div>');
+    });
+    table.innerHTML = cards.length
+      ? cards.join('')
+      : '<p style="color:var(--text-secondary)">Live rates are unavailable right now — check back shortly.</p>';
+  }
+
   function renderPromos() {
     var marketing = $('marketing-promos');
     if (marketing) {
@@ -4966,6 +4981,7 @@ init();
     bootOutage();
     wireReceiptCopy();
     wireLauncherBackdrop();
+    loadPlans().then(function () { renderMarketingRates(); });
   }
 
   function seedBrands() {

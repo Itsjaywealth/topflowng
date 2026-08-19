@@ -56,6 +56,24 @@ test.describe('landing page', () => {
     });
     expect(empties).toEqual([]);
   });
+
+  test('marketing rates render from the live server catalogue', async ({ page, request }) => {
+    const cat = await (await request.get('/api/vtu/plans')).json();
+    const mtn = (cat.data && cat.data.MTN || []).filter((p) => p.price > 0);
+    expect(mtn.length).toBeGreaterThan(0);
+
+    await page.goto('/');
+    const table = page.locator('#marketing-rate-table');
+    await expect(table).toBeVisible();
+
+    const firstPrice = await table.locator('.rate-row strong').first().textContent();
+    const expected = `₦${Number(mtn[0].price).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    expect(firstPrice.replace(/,/g, '')).toBe(expected.replace(/,/g, ''));
+
+    const renderedNetworks = await table.locator('.rate-network').allTextContents();
+    expect(renderedNetworks).toContain('MTN');
+    expect(renderedNetworks.length).toBeGreaterThanOrEqual(4);
+  });
 });
 
 test.describe('auth screen', () => {

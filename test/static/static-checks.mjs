@@ -263,6 +263,25 @@ await checkInlineSyntax('bizflow.html');
   check('support email is a clickable mailto link', /mailto:hello@topflowng\.com/.test(app));
 }
 
+// ── 14. Marketing rates come from the server catalogue ─────────────────────
+{
+  const app = read('topflowng.html');
+  check('marketing rates table is catalogue-driven container', /id="marketing-rate-table"/.test(app));
+  check('marketing rates rendered from loaded catalogue', /renderMarketingRates\(\)/.test(app) && /loadPlans\(\)\.then\(function\s*\(\s*\)\s*\{\s*renderMarketingRates\(\)/.test(app));
+  check('no hardcoded marketing data prices remain', !/1GB\s*·\s*30 days/.test(app) && !/class="rate-row"><span>1GB/.test(app));
+  check('marketing rates section no longer hardcodes Naira amounts',
+    !/<div class="rate-row"><span>1GB · 30 days<\/span><strong>₦/.test(app));
+  check('renderMarketingRates reads from live DATA_PLANS', /DATA_PLANS\[key\]/.test(app));
+}
+
+// ── 15. No hardcoded fallback secrets in app code ──────────────────────────
+{
+  const jsFiles = ['server.js', 'config.js', 'middleware/auth.js'].map((f) => read(f));
+  const all = jsFiles.join('\n');
+  check('no unguarded hardcoded JWT secret in app code', !/change_this_in_production/.test(all));
+  check('no legacy dead auth.js module remains', !fs.existsSync(path.join(ROOT, 'auth.js')));
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log(`\nFrontend/static checks: ${results.length} total, ${failures} failed.`);
 for (const r of results) {
