@@ -1,14 +1,21 @@
 /**
- * TopFlowNG — Email service (Resend + Brevo).
+ * TopFlowNG — Email service.
  *
- * Auto-detects provider from the API key prefix:
- *   re_        → Resend (https://api.resend.com/emails)
- *   xkeysib-   → Brevo  (https://api.brevo.com/v3/smtp/email)
+ * Delivery providers, in priority order:
+ *   1. SMTP (e.g. Hostinger mailbox hello@topflowng.com) when SMTP_HOST and
+ *      SMTP_USER/SMTP_PASSWORD are configured.
+ *   2. Resend / Brevo (auto-detected from the API key prefix):
+ *        re_        → Resend (https://api.resend.com/emails)
+ *        xkeysib-   → Brevo  (https://api.brevo.com/v3/smtp/email)
+ *
+ * Reply-To is always set to the official support address so customer replies
+ * land in the real mailbox even when delivery goes through an API provider.
  */
 
 'use strict';
 
 const axios = require('axios');
+const nodemailer = require('nodemailer');
 
 const config = require('../config');
 const logger = require('../lib/logger');
@@ -26,7 +33,36 @@ function detectProvider(apiKey) {
   return 'resend';
 }
 
+function isSmtpConfigured() {
+  return Boolean(config.smtp.host && config.smtp.user && config.smtp.password);
+}
+
+async function sendViaSmtp({ to, subject, html, replyTo }) {
+  const transporter = nodemailer.createTransport({
+    host: config.smtp.host,
+    port: config.smtp.port,
+    secure: config.smtp.secure,
+    auth: { user: config.smtp.user, pass: config.smtp.password },
+    connectionTimeout: config.smtp.timeoutMs,
+    greetingTimeout: config.smtp.timeoutMs,
+    socketTimeout: config.smtp.timeoutMs,
+  });
+  const info = await transporter.sendMail({
+    from: config.smtp.from,
+    to,
+    subject,
+    html,
+    ...(replyTo ? { replyTo } : {}),
+  });
+  logger.info('Email accepted by SMTP', { id: info.messageId || 'unknown id' });
+}
+
 async function sendEmail({ to, subject, html, replyTo }) {
+  if (isSmtpConfigured()) {
+    await sendViaSmtp({ to, subject, html, replyTo });
+    return;
+  }
+
   const apiKey = config.resend.apiKey;
   if (!apiKey) throw new Error('Email delivery is not configured');
 
@@ -206,4 +242,4 @@ function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authori
   }).catch(e => logger.error('Auto-recharge email error', { message: e.message }));
 }
 
-module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail };
+module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail, isSmtpConfigured };

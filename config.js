@@ -77,6 +77,20 @@ const config = {
     timeoutMs: num(process.env.RESEND_TIMEOUT_MS, 15_000),
   },
 
+  // Optional SMTP delivery. The hello@topflowng.com mailbox is hosted on Titan
+  // Email (MX mx1/mx2.titan.email; SMTP smtp.titan.email). When fully
+  // configured, SMTP is preferred for transactional email; the Resend/Brevo
+  // path above remains the automatic fallback.
+  smtp: {
+    host: str(process.env.SMTP_HOST, 'smtp.titan.email'),
+    port: num(process.env.SMTP_PORT, 465),
+    secure: str(process.env.SMTP_SECURE, '1') === '1',
+    user: str(process.env.SMTP_USER, null),
+    password: str(process.env.SMTP_PASSWORD, null),
+    from: str(process.env.SMTP_FROM, 'TopFlowNG <hello@topflowng.com>'),
+    timeoutMs: num(process.env.SMTP_TIMEOUT_MS, 15_000),
+  },
+
   paystack: {
     secretKey: str(process.env.PAYSTACK_SECRET_KEY, null),
     webhookSecret: str(process.env.PAYSTACK_WEBHOOK_SECRET, null),
