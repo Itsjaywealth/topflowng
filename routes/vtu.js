@@ -51,6 +51,16 @@ function withTracing(name, handler) {
   };
 }
 
+// Global purchase kill switch (server-controlled, admin-intent). Gates the
+// creation of NEW purchases only; existing orders, history, receipts, wallet
+// balances and support stay fully available. The provider is never called.
+function purchasesGuard(req, res, next) {
+  if (!config.safety.purchasesEnabled) {
+    return sendError(res, 503, 'Purchases are temporarily unavailable. Please try again later.');
+  }
+  next();
+}
+
 // Exam bodies and prices come from the single pricing registry
 // (services/pricing.js). Disabled bodies (NECO, NABTEB — not offered by the
 // active provider) are absent from ENABLED_EXAM_BODIES, so they can never be
@@ -110,7 +120,7 @@ router.get('/plans', (_req, res) => {
 });
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────
-router.post('/airtime', authMiddleware, apiLimiter, validate(airtimeSchema), withTracing('vtu.airtime', async (req, res) => {
+router.post('/airtime', authMiddleware, apiLimiter, purchasesGuard, validate(airtimeSchema), withTracing('vtu.airtime', async (req, res) => {
   try {
     const { network, phone, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
@@ -161,7 +171,7 @@ router.post('/airtime', authMiddleware, apiLimiter, validate(airtimeSchema), wit
 }));
 
 // ── VTU — Data Bundle ────────────────────────────────────────────────────────
-router.post('/data', authMiddleware, apiLimiter, validate(dataSchema), withTracing('vtu.data', async (req, res) => {
+router.post('/data', authMiddleware, apiLimiter, purchasesGuard, validate(dataSchema), withTracing('vtu.data', async (req, res) => {
   try {
     const { network, phone, planCode, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
@@ -219,7 +229,7 @@ router.post('/data', authMiddleware, apiLimiter, validate(dataSchema), withTraci
 }));
 
 // ── VTU — Cable TV ───────────────────────────────────────────────────────────
-router.post('/cable', authMiddleware, apiLimiter, validate(cableSchema), withTracing('vtu.cable', async (req, res) => {
+router.post('/cable', authMiddleware, apiLimiter, purchasesGuard, validate(cableSchema), withTracing('vtu.cable', async (req, res) => {
   try {
     const { provider, smartCardNumber, planCode, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
@@ -284,7 +294,7 @@ router.post('/cable', authMiddleware, apiLimiter, validate(cableSchema), withTra
 }));
 
 // ── VTU — Electricity ────────────────────────────────────────────────────────
-router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySchema), withTracing('vtu.electricity', async (req, res) => {
+router.post('/electricity', authMiddleware, apiLimiter, purchasesGuard, validate(electricitySchema), withTracing('vtu.electricity', async (req, res) => {
   try {
     const { disco, meterNumber, meterType, amount, pin } = req.validated;
     const cost = parseValidatedAmount(amount);
@@ -346,7 +356,7 @@ router.post('/electricity', authMiddleware, apiLimiter, validate(electricitySche
 }));
 
 // ── Exam PIN ──────────────────────────────────────────────────────────────────
-router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), withTracing('vtu.exam-pin', async (req, res) => {
+router.post('/exam-pin', authMiddleware, apiLimiter, purchasesGuard, validate(examPinSchema), withTracing('vtu.exam-pin', async (req, res) => {
   try {
     const { examBody, examVariation, quantity, pin } = req.validated;
     const ckBody = String(examBody || '').toUpperCase();
@@ -411,7 +421,7 @@ router.post('/exam-pin', authMiddleware, apiLimiter, validate(examPinSchema), wi
 }));
 
 // ── Recharge Card PIN ─────────────────────────────────────────────────────────
-router.post('/recharge-pin', authMiddleware, apiLimiter, validate(rechargePinSchema), withTracing('vtu.recharge-pin', async (req, res) => {
+router.post('/recharge-pin', authMiddleware, apiLimiter, purchasesGuard, validate(rechargePinSchema), withTracing('vtu.recharge-pin', async (req, res) => {
   try {
     const { network, amount, quantity, pin } = req.validated;
     await checkTransactionPin(req.user.id, pin);

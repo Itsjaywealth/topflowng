@@ -122,6 +122,69 @@ test('logger: sensitive values are redacted, safe values preserved', () => {
   assert.strictEqual(got.nested.label, 'keep me');
 });
 
+// ── Purchase / funding kill switches ─────────────────────────────────────────
+test('kill switch: purchases disabled returns 503 on every purchase route', async () => {
+  h.mockDb.__reset();
+  const user = await h.createUserViaDb({ fullName: 'Ada', email: 'kill@example.com', phone: '08011111111', password: 'secret123' });
+  const loginRes = await h.login('kill@example.com', 'secret123');
+  const token = loginRes.data.token;
+
+  const config = require('../config');
+  const orig = config.safety.purchasesEnabled;
+  try {
+    config.safety.purchasesEnabled = false;
+    for (const path of ['/api/vtu/airtime', '/api/vtu/data', '/api/vtu/cable', '/api/vtu/electricity', '/api/vtu/exam-pin', '/api/vtu/recharge-pin']) {
+      const r = await h.api('POST', path, {
+        token,
+        body: { network: 'MTN', phone: '08011111111', amount: 100, pin: '1234', serviceID: 'mtn', variation_code: 'mtn1' },
+      });
+      assert.strictEqual(r.status, 503, `${path} should be gated`);
+      assert.ok(/temporarily unavailable/i.test(r.data.error));
+    }
+  } finally {
+    config.safety.purchasesEnabled = orig;
+  }
+});
+
+test('kill switch: purchases enabled allows requests through (no false 503)', async () => {
+  h.mockDb.__reset();
+  const user = await h.createUserViaDb({ fullName: 'Ada', email: 'kill2@example.com', phone: '08022222222', password: 'secret123' });
+  const loginRes = await h.login('kill2@example.com', 'secret123');
+  const config = require('../config');
+  const orig = config.safety.purchasesEnabled;
+  try {
+    config.safety.purchasesEnabled = true;
+    // With purchases enabled the request passes the guard and proceeds; without
+    // a configured PIN it should reach the PIN check (not the 503 gate).
+    const r = await h.api('POST', '/api/vtu/airtime', {
+      token: loginRes.data.token,
+      body: { network: 'MTN', phone: '08022222222', amount: 100, pin: null },
+    });
+    assert.notStrictEqual(r.status, 503);
+  } finally {
+    config.safety.purchasesEnabled = orig;
+  }
+});
+
+test('kill switch: funding disabled returns 503 on paystack initialize', async () => {
+  h.mockDb.__reset();
+  await h.createUserViaDb({ fullName: 'Ada', email: 'kill3@example.com', phone: '08033333333', password: 'secret123' });
+  const loginRes = await h.login('kill3@example.com', 'secret123');
+  const config = require('../config');
+  const orig = config.safety.fundingEnabled;
+  try {
+    config.safety.fundingEnabled = false;
+    const r = await h.api('POST', '/api/paystack/initialize', {
+      token: loginRes.data.token,
+      body: { amount: 1000 },
+    });
+    assert.strictEqual(r.status, 503);
+    assert.ok(/temporarily unavailable/i.test(r.data.error));
+  } finally {
+    config.safety.fundingEnabled = orig;
+  }
+});
+
 // ── Production startup validation ────────────────────────────────────────────
 test('startup: production fails fast when a required secret is missing', async () => {
   const res = await run(

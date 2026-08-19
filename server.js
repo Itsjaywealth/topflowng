@@ -484,6 +484,13 @@ app.get('/api/wallet/transactions', authMiddleware, apiLimiter, async (req, res)
 // ── Paystack ─────────────────────────────────────────────────────────────────
 app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paystackInitSchema), async (req, res) => {
   try {
+    // Global funding kill switch (server-controlled, admin-intent). Gates the
+    // creation of NEW top-up sessions only; existing wallets, history,
+    // receipts and support stay available.
+    if (!config.safety.fundingEnabled) {
+      return sendError(res, 503, 'Wallet funding is temporarily unavailable. Please try again later.');
+    }
+
     const { amount } = req.validated;
 
     const user       = await db.findUserById(req.user.id);
