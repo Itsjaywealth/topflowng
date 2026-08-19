@@ -867,56 +867,119 @@ html.dark .marketing-nav{
 .filter-chip--status.active{color:var(--brand)}
 .filter-chip--date.active{color:var(--brand)}
 
-/* Support overlay */
-.support-card{max-width:440px;width:100%;display:flex;flex-direction:column;max-height:88vh}
-.support-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
-.support-card-head .receipt-brand{justify-content:flex-start;margin:0}
-.support-close{flex:none;width:40px;height:40px;border:0;border-radius:12px;background:var(--surface-muted);
-  color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:background var(--transition),color var(--transition)}
-.support-close:hover{background:var(--brand-soft);color:var(--brand)}
-.support-close svg{width:20px;height:20px}
-.support-title{font:800 22px/1.2 var(--display);text-align:center;letter-spacing:-.3px;margin-top:6px}
-.support-sub{font:500 13.5px/1.4 var(--font);color:var(--text-muted);text-align:center;margin:4px 0 16px}
-.support-search{position:relative;margin-bottom:12px}
-.support-search input{width:100%;padding:11px 14px 11px 38px;border:1px solid var(--border-subtle);border-radius:12px;
-  background:var(--surface);font:500 13.5px/1.4 var(--font);color:var(--text-primary);outline:none}
-.support-search input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--focus-ring)}
-.support-search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none}
-.support-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.support-actions button{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 12px;border-radius:12px;
-  border:1px solid var(--border-strong);background:var(--surface);font:700 13px/1 var(--display);color:var(--text-primary);
-  cursor:pointer;transition:border-color .15s,color .15s}
-.support-actions button:hover{border-color:var(--brand);color:var(--brand)}
-.support-actions .chat-action{background:var(--brand);border-color:var(--brand);color:#fff}
-.support-actions .chat-action:hover{background:var(--brand-hover);color:#fff}
-.support-quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.support-quick button{display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:12px;text-align:left;
-  border:1px solid var(--border-subtle);background:var(--surface);font:600 12.5px/1.3 var(--font);color:var(--text-secondary);
-  cursor:pointer;transition:border-color .15s,color .15s,background .15s}
-.support-quick button svg{width:16px;height:16px;color:var(--brand);flex:none}
-.support-quick button:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
-.support-faq{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:46vh;overflow-y:auto}
-.support-faq-cat{font:800 10.5px/1 var(--display);color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;
-  margin:14px 0 4px}
-.support-faq-cat:first-child{margin-top:0}
-
-/* Floating support launcher — opens the premium support panel. One launcher
-   only, placed clear of the mobile bottom navigation and transaction controls. */
-.support-fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));
-  z-index:480;display:flex;align-items:center;gap:10px;padding:0;border:0;cursor:pointer;
-  background:var(--brand);color:#fff;border-radius:999px;box-shadow:0 10px 28px rgba(0,0,0,.22);
-  transition:transform var(--transition),background var(--transition);font-family:var(--font)}
-.support-fab:hover{background:var(--brand-hover);transform:translateY(-2px)}
-.support-fab .support-fab-bubble{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
-.support-fab .support-fab-bubble svg{width:24px;height:24px}
-.support-fab .support-fab-label{font:700 13px/1 var(--display);padding-right:18px;white-space:nowrap}
+/* ══ CHAT SUPPORT WIDGET ══════════════════════════════════════════════════ */
+/* Floating launcher */
+.support-fab{position:fixed;right:20px;bottom:calc(22px + env(safe-area-inset-bottom));
+  z-index:480;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--brand);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 28px color-mix(in srgb,var(--brand) 45%,rgba(0,0,0,.3));
+  transition:background .18s,transform .16s,box-shadow .18s}
+.support-fab:hover{background:var(--brand-hover);transform:translateY(-3px);
+  box-shadow:0 12px 36px color-mix(in srgb,var(--brand) 50%,rgba(0,0,0,.28))}
+.support-fab svg{width:26px;height:26px;transition:transform .22s}
 .support-fab[aria-expanded="true"]{background:var(--brand-hover)}
-/* On mobile, hide the text label and keep a compact bubble above the bottom nav. */
-@media (max-width:480px){
-  .support-fab{right:14px;bottom:calc(84px + env(safe-area-inset-bottom))}
-  .support-fab .support-fab-label{display:none}
-}
+.support-fab[aria-expanded="true"] .fab-icon-chat{display:none}
+.support-fab[aria-expanded="true"] .fab-icon-close{display:block}
+.fab-icon-close{display:none}
+@media(max-width:480px){
+  .support-fab{right:14px;bottom:calc(88px + env(safe-area-inset-bottom))}}
+
+/* Chat panel */
+.chat-panel{position:fixed;right:20px;bottom:calc(94px + env(safe-area-inset-bottom));
+  width:370px;height:530px;border-radius:22px;
+  background:var(--bg);border:1px solid var(--border-subtle);
+  box-shadow:0 24px 64px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.08);
+  display:flex;flex-direction:column;overflow:hidden;
+  z-index:479;
+  transform:scale(.92) translateY(16px);opacity:0;pointer-events:none;
+  transform-origin:bottom right;
+  transition:transform .24s cubic-bezier(.34,1.4,.64,1),opacity .2s}
+.chat-panel.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
+@media(max-width:480px){
+  .chat-panel{right:0;bottom:0;width:100%;height:90dvh;border-radius:24px 24px 0 0;
+    transform-origin:bottom center;bottom:calc(72px + env(safe-area-inset-bottom))}}
+
+/* Panel header */
+.chat-head{background:var(--brand);padding:14px 16px;
+  display:flex;align-items:center;gap:12px;flex-shrink:0}
+.chat-head-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.18);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;flex-shrink:0}
+.chat-head-btn:hover{background:rgba(255,255,255,.3)}
+.chat-head-btn svg{width:17px;height:17px}
+.chat-agent-avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:center;
+  font:800 15px/1 var(--display);color:#fff}
+.chat-agent-info{flex:1;min-width:0}
+.chat-agent-name{font:700 14.5px/1 var(--display);color:#fff}
+.chat-agent-status{font:500 11.5px/1 var(--font);color:rgba(255,255,255,.78);
+  margin-top:4px;display:flex;align-items:center;gap:5px}
+.chat-agent-status::before{content:"";width:7px;height:7px;border-radius:50%;
+  background:#4ade80;flex-shrink:0;
+  box-shadow:0 0 0 2px rgba(74,222,128,.3)}
+
+/* Messages area */
+.chat-body{flex:1;overflow-y:auto;padding:18px 16px;
+  display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.chat-bubble-wrap{display:flex;align-items:flex-end;gap:8px}
+.chat-bubble-wrap.user{flex-direction:row-reverse}
+.bubble-avatar-sm{width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  background:color-mix(in srgb,var(--brand) 15%,var(--surface));
+  color:var(--brand);font:800 11px/1 var(--display);
+  display:flex;align-items:center;justify-content:center}
+.chat-bubble{padding:11px 15px;border-radius:18px;
+  font:500 13.5px/1.55 var(--font);max-width:260px;word-break:break-word}
+.chat-bubble.agent{background:var(--brand);color:#fff;border-radius:18px 18px 18px 5px}
+.chat-bubble.user{background:var(--surface-muted);color:var(--text-primary);
+  border-radius:18px 18px 5px 18px;border:1px solid var(--border-subtle)}
+
+/* Quick replies */
+.chat-quick-wrap{display:flex;flex-wrap:wrap;gap:8px;padding-left:38px}
+.chat-qr{padding:8px 14px;border-radius:999px;
+  border:1.5px solid color-mix(in srgb,var(--brand) 35%,transparent);
+  background:var(--brand-soft);color:var(--brand);
+  font:600 12px/1 var(--font);cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s,transform .12s}
+.chat-qr:hover{background:var(--brand);color:#fff;border-color:var(--brand);transform:translateY(-1px)}
+
+/* Typing indicator */
+.chat-typing{display:flex;align-items:center;gap:8px}
+.typing-dots{display:flex;gap:4px;padding:12px 16px;background:var(--brand);
+  border-radius:18px 18px 18px 5px}
+.typing-dots span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.7);
+  animation:dot-bounce .9s infinite}
+.typing-dots span:nth-child(2){animation-delay:.18s}
+.typing-dots span:nth-child(3){animation-delay:.36s}
+@keyframes dot-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+/* Input row */
+.chat-input-row{border-top:1px solid var(--border-subtle);padding:12px 14px;
+  display:flex;align-items:flex-end;gap:10px;background:var(--surface);flex-shrink:0}
+.chat-textarea{flex:1;border:1.5px solid var(--border-subtle);border-radius:22px;
+  padding:10px 14px;font:500 13px/1.4 var(--font);color:var(--text-primary);
+  background:var(--bg);resize:none;outline:none;
+  max-height:100px;min-height:40px;overflow-y:auto;
+  transition:border-color .18s}
+.chat-textarea:focus{border-color:var(--brand)}
+.chat-textarea::placeholder{color:var(--text-muted)}
+.chat-send{width:42px;height:42px;border-radius:50%;background:var(--brand);
+  color:#fff;border:none;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px color-mix(in srgb,var(--brand) 32%,transparent);
+  transition:background .15s,transform .12s}
+.chat-send:hover{background:var(--brand-hover);transform:scale(1.07)}
+.chat-send svg{width:18px;height:18px}
+
+/* Footer */
+.chat-foot{text-align:center;padding:7px 10px;
+  font:500 10.5px/1 var(--font);color:var(--text-muted);
+  background:var(--surface);border-top:1px solid var(--border-subtle);flex-shrink:0}
+.chat-foot a{color:var(--brand);text-decoration:none}
+
+/* Legacy FAQ (keep for account screen support link) */
 .faq-item{background:var(--surface);border:1px solid var(--border-subtle);border-radius:12px;padding:0 14px}
 .faq-item summary{cursor:pointer;padding:13px 0;font:600 13.5px/1.4 var(--font);color:var(--text-primary);
   list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -938,30 +1001,47 @@ html.dark .icon-moon{display:none}
   font:700 13px/1 var(--display);
   display:flex;align-items:center;justify-content:center}
 
-/* Balance panel */
-.balance-panel{padding:22px 20px 16px;overflow:hidden;position:relative;
-  background:var(--grad)}
-.balance-panel::before{content:"";position:absolute;right:-50px;top:-70px;width:220px;height:220px;
-  border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
-.balance-panel::after{content:"";position:absolute;left:20px;bottom:-70px;width:160px;height:160px;
-  border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none}
+/* Balance panel — premium */
+.balance-panel{
+  padding:28px 22px 20px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,var(--brand) 0%,color-mix(in srgb,var(--brand) 75%,#0ff) 100%)}
+.balance-panel::before{
+  content:"";position:absolute;right:-60px;top:-80px;width:260px;height:260px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%);
+  pointer-events:none}
+.balance-panel::after{
+  content:"";position:absolute;left:-30px;bottom:-80px;width:200px;height:200px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.09),transparent 70%);
+  pointer-events:none}
 .hero-slide{display:none}
 .hero-slide.active{display:block}
-.balance-label{font:500 11px/1 var(--font);color:rgba(255,255,255,.75);
-  text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
-.balance-amount{font:800 32px/1 var(--display);color:#fff;margin-bottom:18px;letter-spacing:-.6px}
+.balance-label{
+  font:600 10.5px/1 var(--font);color:rgba(255,255,255,.72);
+  text-transform:uppercase;letter-spacing:.9px;margin-bottom:10px;position:relative}
+.balance-amount{
+  font:800 40px/1 var(--display);color:#fff;margin-bottom:20px;
+  letter-spacing:-1.2px;position:relative;
+  text-shadow:0 2px 12px rgba(0,0,0,.18)}
 .header-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;position:relative}
-/* .btn-fund removed — wallet funding no longer customer-facing */
-.btn-history-quick{padding:10px 20px;border:1.5px solid rgba(255,255,255,.40);
+.btn-history-quick{
+  padding:10px 20px;
+  border:1.5px solid rgba(255,255,255,.35);
   border-radius:999px;font:600 13px/1 var(--font);
-  color:#fff;cursor:pointer;background:rgba(255,255,255,.15);
-  backdrop-filter:blur(4px);
-  transition:background .18s,border-color .18s}
-.btn-history-quick:hover{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.7)}
-.hero-dots{display:flex;gap:6px;padding:0 20px 14px;justify-content:center;position:relative}
-.hero-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);
-  cursor:pointer;transition:background .2s,width .2s}
-.hero-dot.active{width:20px;border-radius:3px;background:#fff}
+  color:#fff;cursor:pointer;
+  background:rgba(255,255,255,.18);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:background .18s,border-color .18s,transform .14s}
+.btn-history-quick:hover{
+  background:rgba(255,255,255,.3);border-color:rgba(255,255,255,.65);
+  transform:translateY(-1px)}
+.hero-dots{display:flex;gap:6px;padding:0 22px 16px;justify-content:center;position:relative}
+.hero-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:rgba(255,255,255,.32);cursor:pointer;
+  transition:background .22s,width .22s}
+.hero-dot.active{width:22px;border-radius:3px;background:#fff}
 
 /* App main */
 .app-landmark{flex:1;overflow-y:auto;padding-bottom:80px}
@@ -992,23 +1072,36 @@ html.dark .icon-moon{display:none}
 @media(min-width:768px){.service-grid{grid-template-columns:repeat(6,1fr)}}
 
 .service-tile{display:flex;flex-direction:column;align-items:center;gap:8px;
-  padding:20px 8px 17px;border-radius:18px;
+  padding:22px 8px 18px;border-radius:22px;
   background:var(--surface);border:1.5px solid var(--border-subtle);
-  cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .14s;
-  text-align:center}
-.service-tile:hover{border-color:color-mix(in srgb,var(--brand) 45%,transparent);
-  box-shadow:0 4px 20px rgba(11,126,142,.13);transform:translateY(-3px)}
+  cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .16s,background .2s;
+  text-align:center;position:relative;overflow:hidden}
+.service-tile::before{content:"";position:absolute;inset:0;opacity:0;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--brand) 5%,transparent),transparent);
+  transition:opacity .2s;pointer-events:none}
+.service-tile:hover{border-color:color-mix(in srgb,var(--brand) 50%,transparent);
+  box-shadow:0 8px 28px rgba(11,126,142,.17),0 2px 8px rgba(11,126,142,.08);
+  transform:translateY(-4px)}
+.service-tile:hover::before{opacity:1}
 .service-tile:active{transform:translateY(-1px)}
 .service-tile:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none}
 .tile-icon{display:flex;align-items:center;justify-content:center;
-  width:48px;height:48px;border-radius:15px;margin-bottom:2px}
-.tile-airtime{background:var(--brand-soft);color:var(--brand)}
-.tile-data   {background:color-mix(in srgb,var(--brand) 15%,var(--surface));color:var(--brand)}
-.tile-elec   {background:#FFF6E5;color:#B7791F}
-.tile-cable  {background:#F0EEFF;color:#6B46C1}
-.tile-exam   {background:#E7F7EE;color:#16803C}
-.tile-recharge{background:var(--surface-muted);color:var(--text-muted)}
-.tile-icon svg{width:23px;height:23px;stroke-width:1.8}
+  width:54px;height:54px;border-radius:17px;margin-bottom:2px;
+  transition:transform .2s,box-shadow .2s}
+.service-tile:hover .tile-icon{transform:scale(1.08)}
+.tile-airtime{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 18%,#fff),color-mix(in srgb,var(--brand) 10%,#fff));
+  color:var(--brand);box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 22%,transparent)}
+.tile-data   {background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 22%,#fff),color-mix(in srgb,var(--brand) 12%,#fff));
+  color:var(--brand);box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 18%,transparent)}
+.tile-elec   {background:linear-gradient(135deg,#FFFBE8,#FFF1C2);color:#B7791F;
+  box-shadow:0 4px 12px rgba(183,121,31,.18)}
+.tile-cable  {background:linear-gradient(135deg,#F3F0FF,#E9E4FD);color:#6B46C1;
+  box-shadow:0 4px 12px rgba(107,70,193,.14)}
+.tile-exam   {background:linear-gradient(135deg,#E8F9EF,#D1F0DF);color:#16803C;
+  box-shadow:0 4px 12px rgba(22,128,60,.14)}
+.tile-recharge{background:linear-gradient(135deg,var(--surface-muted),var(--surface));
+  color:var(--text-muted)}
+.tile-icon svg{width:25px;height:25px;stroke-width:1.8}
 .tile-label{font:700 13px/1 var(--display);color:var(--text-primary)}
 .tile-provider-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;margin-top:3px}
 .provider-logo-frame{width:20px;height:20px;border-radius:6px;
@@ -1057,31 +1150,40 @@ html.dark .icon-moon{display:none}
 .history-search:focus{border-color:var(--brand);box-shadow:var(--focus-ring)}
 .history-search::placeholder{color:var(--text-muted)}
 
-.txn-list{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--border-subtle);background:var(--surface)}
+.txn-list{display:flex;flex-direction:column;gap:0;border-radius:18px;overflow:hidden;
+  border:1px solid var(--border-subtle);background:var(--surface);
+  box-shadow:0 2px 12px rgba(0,0,0,.04)}
 .txn-empty{font:400 13px/1.6 var(--font);color:var(--text-muted);
-  padding:36px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
-.txn-empty::before{content:"";display:block;width:36px;height:36px;border-radius:50%;background:var(--surface-muted);margin-bottom:4px}
+  padding:40px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.txn-empty::before{content:"";display:block;width:40px;height:40px;border-radius:50%;
+  background:var(--surface-muted);margin-bottom:4px}
 
-.txn-item{display:flex;align-items:center;gap:12px;padding:14px 16px;
+.txn-item{display:flex;align-items:center;gap:14px;padding:15px 18px;
   border-bottom:1px solid var(--border-subtle);cursor:pointer;
   transition:background var(--transition)}
 .txn-item:last-child{border-bottom:none}
-.txn-item:hover{background:var(--surface-muted)}
-.txn-icon{width:44px;height:44px;border-radius:14px;flex-shrink:0;
+.txn-item:hover{background:color-mix(in srgb,var(--brand) 3.5%,var(--surface))}
+.txn-icon{width:46px;height:46px;border-radius:15px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
   font:700 13px/1 var(--display)}
-.txn-icon.credit{background:var(--brand-soft);color:var(--brand)}
-.txn-icon.debit {background:var(--surface-muted);color:var(--text-secondary)}
-.txn-icon svg{width:19px;height:19px}
+.txn-icon.credit{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 20%,#fff),color-mix(in srgb,var(--brand) 10%,#fff));
+  color:var(--brand);box-shadow:0 3px 10px color-mix(in srgb,var(--brand) 20%,transparent)}
+.txn-icon.debit {background:linear-gradient(135deg,var(--surface-muted),color-mix(in srgb,var(--border-subtle) 80%,var(--surface)));
+  color:var(--text-secondary)}
+.txn-icon svg{width:20px;height:20px}
 .txn-info{flex:1;min-width:0}
 .txn-title{font:600 13.5px/1 var(--display);color:var(--text-primary);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .txn-sub{font:400 12px/1.3 var(--font);color:var(--text-muted);margin-top:3px}
-.txn-status{display:inline-block;padding:2px 8px;border-radius:999px;
-  font:600 10px/1.4 var(--font);margin-top:4px}
-.txn-status.success{background:color-mix(in srgb,var(--success) 14%,var(--surface));color:var(--success)}
-.txn-status.pending{background:color-mix(in srgb,var(--warning) 16%,var(--surface));color:var(--warning)}
-.txn-status.failed {background:color-mix(in srgb,var(--danger) 12%,var(--surface));color:var(--danger)}
+.txn-status{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;
+  font:600 10px/1.4 var(--font);margin-top:5px}
+.txn-status::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.txn-status.success{background:color-mix(in srgb,var(--success) 12%,var(--surface));color:var(--success);
+  border:1px solid color-mix(in srgb,var(--success) 22%,transparent)}
+.txn-status.pending{background:color-mix(in srgb,var(--warning) 12%,var(--surface));color:var(--warning);
+  border:1px solid color-mix(in srgb,var(--warning) 22%,transparent)}
+.txn-status.failed {background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:var(--danger);
+  border:1px solid color-mix(in srgb,var(--danger) 20%,transparent)}
 .txn-amount{font:700 14px/1 var(--display);color:var(--text-primary);white-space:nowrap}
 .txn-amount.credit{color:var(--success)}
 .load-more-btn{display:block;width:100%;padding:13px;margin-top:8px;
@@ -1114,27 +1216,33 @@ html.dark .icon-moon{display:none}
 
 /* At a glance sidebar */
 .at-a-glance{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:20px;padding:24px;height:fit-content;
-  display:none;position:sticky;top:80px}
+  border-radius:24px;padding:26px;height:fit-content;
+  display:none;position:sticky;top:80px;
+  box-shadow:0 4px 24px rgba(0,0,0,.06)}
 @media(min-width:900px){.at-a-glance{display:block}}
-.at-a-glance-title{font:700 11px/1 var(--display);color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:.8px;margin-bottom:20px}
+.at-a-glance-title{font:700 10.5px/1 var(--display);color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.9px;margin-bottom:22px}
 .glance-block{margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border-subtle)}
 .glance-block:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
-.glance-label{font:500 11px/1 var(--font);color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:block}
-.glance-balance{font:800 28px/1 var(--display);color:var(--text-primary);display:block;margin-bottom:18px;letter-spacing:-.6px}
+.glance-label{font:600 10.5px/1 var(--font);color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:block}
+.glance-balance{font:800 32px/1 var(--display);color:var(--text-primary);display:block;
+  margin-bottom:18px;letter-spacing:-.8px;
+  background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 60%,var(--text-primary)));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 /* .glance-fund removed — wallet funding no longer customer-facing */
 .glance-fund-DISABLED{padding:10px 20px;background:var(--brand);color:#fff;
   border-radius:999px;font:700 12px/1 var(--display);
   border:none;cursor:pointer;transition:background var(--transition)}
 /* .glance-fund:hover removed */
 .glance-shortcut{display:flex;justify-content:space-between;align-items:center;
-  width:100%;padding:11px 15px;border-radius:12px;
+  width:100%;padding:12px 15px;border-radius:14px;
   border:1.5px solid var(--border-subtle);background:var(--surface);
   font:600 13px/1 var(--font);color:var(--text-secondary);cursor:pointer;
-  margin-bottom:8px;transition:border-color .18s,color .18s,background .18s}
-.glance-shortcut:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+  margin-bottom:8px;transition:border-color .18s,color .18s,background .18s,box-shadow .18s}
+.glance-shortcut:hover{border-color:color-mix(in srgb,var(--brand) 55%,transparent);
+  color:var(--brand);background:var(--brand-soft);
+  box-shadow:0 4px 14px color-mix(in srgb,var(--brand) 12%,transparent)}
 .glance-pending{background:color-mix(in srgb,var(--warning) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--warning) 28%,transparent);
   border-radius:12px;padding:14px;margin-top:12px}
 .glance-pending .glance-label{color:var(--warning)}
@@ -1267,22 +1375,26 @@ html.dark .icon-moon{display:none}
 
 /* Bottom nav */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;
-  display:none;background:color-mix(in srgb,var(--surface) 92%,transparent);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:none;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-top:1px solid var(--border-subtle);
-  padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px)}
+  padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);
+  box-shadow:0 -4px 20px rgba(0,0,0,.06)}
 #main-app.active-screen ~ .bottom-nav,
 #main-app.active-screen + .bottom-nav,
 .bottom-nav.visible{display:grid}
 .bottom-nav{grid-template-columns:repeat(6,1fr)}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:8px 4px;font:600 10px/1 var(--font);color:var(--text-muted);
-  transition:color var(--transition);cursor:pointer;border:none;background:none}
+  transition:color var(--transition);cursor:pointer;border:none;background:none;position:relative}
 .nav-item.active{color:var(--brand)}
+.nav-item.active::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
 .nav-icon{display:flex;align-items:center;justify-content:center;
-  width:26px;height:26px}
+  width:30px;height:30px;border-radius:10px;transition:background .18s}
+.nav-item.active .nav-icon{background:color-mix(in srgb,var(--brand) 12%,var(--surface))}
 .nav-icon svg{width:22px;height:22px;stroke-width:1.8}
-.nav-item.active .nav-icon svg{stroke-width:2.2}
+.nav-item.active .nav-icon svg{stroke-width:2.3}
 
 /* ══════════════════════════════════════════════════════════════
    SERVICE SCREENS (slide-in panels)
@@ -2480,13 +2592,58 @@ html.dark .icon-moon{display:none}
 </div>
 
 <!-- ══════════════ FLOATING SUPPORT LAUNCHER ══════════════ -->
-<button type="button" class="support-fab" id="support-fab" aria-label="Customer support" aria-expanded="false" aria-haspopup="dialog" onclick="toggleSupportLauncher()">
-  <span class="support-fab-bubble"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2 1-4A8 8 0 1 1 21 12Z"/><path d="M9 11a3 3 0 0 1 6 0c0 1.3-1.3 2-2.5 2.5"/><circle cx="12" cy="16.5" r=".6" fill="currentColor" stroke="none"/></svg></span>
-  <span class="support-fab-label">Help</span>
+<button type="button" class="support-fab" id="support-fab" aria-label="Customer support" aria-expanded="false" onclick="toggleSupportLauncher()">
+  <svg class="fab-icon-chat" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2 1-4A8 8 0 1 1 21 12Z"/></svg>
+  <svg class="fab-icon-close" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10M17 7 7 17"/></svg>
 </button>
 
-<!-- ══════════════ SUPPORT OVERLAY ══════════════ -->
- <div class="receipt-overlay" id="support-overlay" role="dialog" aria-modal="true" aria-labelledby="support-title">
+<!-- ══════════════ CHAT SUPPORT WIDGET ══════════════ -->
+<div class="chat-panel" id="support-overlay" role="dialog" aria-modal="true" aria-label="TopFlowNG Support">
+
+  <!-- Header -->
+  <div class="chat-head">
+    <button type="button" class="chat-head-btn" onclick="closeSupport()" aria-label="Close support">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <div class="chat-agent-avatar">TF</div>
+    <div class="chat-agent-info">
+      <div class="chat-agent-name">TopFlowNG Support</div>
+      <div class="chat-agent-status">Online · replies in minutes</div>
+    </div>
+    <button type="button" class="chat-head-btn" aria-label="Options" onclick="chatShowFAQ()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.8.3-1.4 1-1.4 1.9V14"/><path d="M12 17.5h.01"/></svg>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-body" id="chat-body">
+    <div class="chat-bubble-wrap">
+      <div class="bubble-avatar-sm">TF</div>
+      <div class="chat-bubble agent">👋 Hi! How can we help you today?</div>
+    </div>
+    <div class="chat-quick-wrap" id="chat-quick">
+      <button class="chat-qr" onclick="chatPick('Transaction pending or failed')">Transaction issue</button>
+      <button class="chat-qr" onclick="chatPick('Airtime & Data')">Airtime &amp; Data</button>
+      <button class="chat-qr" onclick="chatPick('Electricity token')">Electricity token</button>
+      <button class="chat-qr" onclick="chatPick('Cable TV subscription')">Cable TV</button>
+      <button class="chat-qr" onclick="chatPick('Account or security issue')">Account &amp; Security</button>
+      <button class="chat-qr" onclick="chatPick('Something else')">Other</button>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="chat-input-row">
+    <textarea class="chat-textarea" id="chat-input" placeholder="Type a message…" rows="1"
+      onkeydown="chatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+    <button class="chat-send" onclick="chatSend()" aria-label="Send message">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-11 11M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
+    </button>
+  </div>
+  <div class="chat-foot">Powered by <a href="mailto:hello@topflowng.com">TopFlowNG</a> · <a href="mailto:hello@topflowng.com">hello@topflowng.com</a></div>
+</div>
+
+<!-- legacy support overlay removed — chat widget handles all support -->
+ <div class="receipt-overlay" id="support-overlay-legacy" role="dialog" aria-modal="true" aria-labelledby="support-title" hidden style="display:none!important">
    <div class="receipt-card support-card">
      <div class="support-card-head">
        <div class="receipt-brand"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"><span>TopFlowNG</span></div>
@@ -3860,111 +4017,144 @@ function openSupportFromTxn() {
   openSupport(detailTxn);
 }
 
-// ── SUPPORT ───────────────────────────────────────────────────────────────
+// ── CHAT SUPPORT WIDGET ────────────────────────────────────────────────────
+var _chatReady = false; // whether the greeting has already been rendered
+
+var _chatResponses = {
+  'Transaction pending or failed': 'If a transaction shows "Pending", please wait — it resolves automatically and your wallet is only debited after the provider confirms. If it shows "Failed", you were not charged. Check your transaction history for details, or email <strong>hello@topflowng.com</strong> with the reference number.',
+  'Airtime & Data': 'Airtime and data are delivered instantly after a successful payment. Make sure the recipient number is active and correct. If delivery is delayed beyond a few minutes, email <strong>hello@topflowng.com</strong> with the reference and we will investigate.',
+  'Electricity token': 'Your electricity token is shown immediately after a successful purchase — you can find it by tapping the transaction in your History. Tokens are also included in your downloadable receipt.',
+  'Cable TV subscription': 'Cable TV renewals are processed within seconds. Ensure your IUC/smart card number is entered correctly. For issues, email <strong>hello@topflowng.com</strong> with your IUC and the transaction reference.',
+  'Account or security issue': 'For password resets, go to the login screen and tap "Forgot password". For PIN setup, visit Account → Security. If you suspect unauthorised access, change your password immediately and email <strong>hello@topflowng.com</strong>.',
+  'Something else': 'No problem — please describe your issue below and we will get back to you as soon as possible. You can also reach us directly at <strong>hello@topflowng.com</strong>.'
+};
+
+function _chatEsc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function _chatAppend(role, html, isHtml) {
+  var body = document.getElementById('chat-body');
+  if (!body) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'chat-bubble-wrap' + (role === 'user' ? ' user' : '');
+  var content = isHtml ? html : _chatEsc(html);
+  if (role === 'agent') {
+    wrap.innerHTML = '<div class="bubble-avatar-sm">TF</div><div class="chat-bubble agent">' + content + '</div>';
+  } else {
+    wrap.innerHTML = '<div class="chat-bubble user">' + content + '</div>';
+  }
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+}
+
+function _chatTyping() {
+  var body = document.getElementById('chat-body');
+  if (!body) return null;
+  var wrap = document.createElement('div');
+  wrap.className = 'chat-bubble-wrap chat-typing-wrap';
+  wrap.innerHTML = '<div class="bubble-avatar-sm">TF</div><div class="chat-typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+  return wrap;
+}
+
+function chatPick(topic) {
+  // Remove quick reply chips
+  var qr = document.getElementById('chat-quick');
+  if (qr) qr.remove();
+  // Show user bubble
+  _chatAppend('user', topic, false);
+  // Show typing then response
+  var typer = _chatTyping();
+  setTimeout(function () {
+    if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
+    var resp = _chatResponses[topic] || 'We are here to help! Please describe your issue and our team will respond shortly. Email <strong>hello@topflowng.com</strong> for urgent matters.';
+    _chatAppend('agent', resp, true);
+    // Follow-up
+    setTimeout(function () {
+      _chatAppend('agent', 'Is there anything else I can help you with? Type your message below or email <strong>hello@topflowng.com</strong>.', true);
+      var body = document.getElementById('chat-body');
+      if (body) body.scrollTop = body.scrollHeight;
+      // Focus input
+      var inp = document.getElementById('chat-input');
+      if (inp) { try { inp.focus(); } catch (e) {} }
+    }, 600);
+  }, 900);
+}
+
+function chatSend() {
+  var inp = document.getElementById('chat-input');
+  if (!inp) return;
+  var msg = (inp.value || '').trim();
+  if (!msg) return;
+  inp.value = '';
+  inp.style.height = 'auto';
+  _chatAppend('user', msg, false);
+  var typer = _chatTyping();
+  setTimeout(function () {
+    if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
+    _chatAppend('agent', 'Thanks for your message! Our team will get back to you shortly. For the fastest response, you can also email us at <strong>hello@topflowng.com</strong>.', true);
+    var body = document.getElementById('chat-body');
+    if (body) body.scrollTop = body.scrollHeight;
+  }, 1000);
+}
+
+function chatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend(); }
+}
+
+function chatShowFAQ() {
+  // Navigate to the in-app support section (account → support)
+  openSupport();
+}
+
 function setSupportLauncherState(open) {
-  const fab = document.getElementById('support-fab');
+  var fab = document.getElementById('support-fab');
   if (fab) fab.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function toggleSupportLauncher() {
-  const overlay = document.getElementById('support-overlay');
-  const isOpen = overlay.classList.contains('open');
+  var panel = document.getElementById('support-overlay');
+  if (!panel) return;
+  var isOpen = panel.classList.contains('open');
   if (isOpen) closeSupport(); else openSupport();
 }
 
 function openSupport(txn) {
-  const block = document.getElementById('support-help-block');
-  if (txn) {
-    block.hidden = false;
-    document.getElementById('support-ref').value = txn.reference || txn.provider_order_id || '';
-    document.getElementById('support-service').value = txn.description || '';
-    document.getElementById('support-status').value = txn.status || 'completed';
-    document.getElementById('support-title').textContent = 'Transaction help';
-    document.getElementById('support-sub').textContent = 'We are here to help';
-  } else {
-    block.hidden = true;
-    document.getElementById('support-title').textContent = 'Customer Support';
-    document.getElementById('support-sub').textContent = 'Hi 👋 How can we help you today?';
+  var panel = document.getElementById('support-overlay');
+  if (!panel) return;
+  // If called from a txn, pre-inject a context message
+  if (txn && !_chatReady) {
+    var qr = document.getElementById('chat-quick');
+    if (qr) qr.remove();
+    var ref = txn.reference || txn.provider_order_id || 'N/A';
+    var desc = txn.description || 'Unknown';
+    var status = txn.status || 'unknown';
+    _chatAppend('agent', 'It looks like you need help with a transaction. Here are the details I can see:', false);
+    _chatAppend('agent', '<strong>Service:</strong> ' + _chatEsc(desc) + '<br><strong>Reference:</strong> ' + _chatEsc(ref) + '<br><strong>Status:</strong> ' + _chatEsc(status), true);
+    _chatAppend('agent', 'Please describe what happened and email <strong>hello@topflowng.com</strong> with this reference if you need further help.', true);
+    _chatReady = true;
   }
-  document.getElementById('support-overlay').classList.add('open');
-  // Lock body scroll while support is open so the underlying page does not
-  // scroll behind the overlay; restored on close.
-  document.body.style.overflow = 'hidden';
+  panel.classList.add('open');
   setSupportLauncherState(true);
-  const search = document.getElementById('support-search');
-  if (search) search.value = '';
-  filterSupportFAQ('');
-  // Focus the close control (or the search field) so keyboard users can
-  // immediately close or navigate the panel.
-  const closeBtn = document.getElementById('support-close');
-  if (closeBtn) { try { closeBtn.focus(); } catch (e) {} }
-  const input = document.getElementById('support-search');
-  if (input) { try { input.focus(); } catch (e) {} }
+  var inp = document.getElementById('chat-input');
+  if (inp) { try { inp.focus(); } catch (e) {} }
 }
 
 function closeSupport() {
-  document.getElementById('support-overlay').classList.remove('open');
-  // Restore body scroll always — never leave the page trapped.
-  document.body.style.overflow = '';
+  var panel = document.getElementById('support-overlay');
+  if (panel) panel.classList.remove('open');
   setSupportLauncherState(false);
-  // Restore focus to the launcher so keyboard navigation continues naturally.
-  const fab = document.getElementById('support-fab');
+  var fab = document.getElementById('support-fab');
   if (fab) { try { fab.focus(); } catch (e) {} }
 }
 
-function copySupportRef() {
-  const ref = document.getElementById('support-ref').value;
-  navigator.clipboard.writeText(ref).then(() => {
-    const btn = document.querySelector('#support-help-block .btn-copy-ref');
-    const orig = btn.textContent; btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = orig, 1800);
-  }).catch(() => {});
-}
-
-// Searchable FAQ: filter items by text and hide empty category headers.
-function filterSupportFAQ(query) {
-  const q = (query || '').trim().toLowerCase();
-  const items = document.querySelectorAll('#support-faq .faq-item');
-  const cats = document.querySelectorAll('#support-faq .support-faq-cat');
-  const empty = document.getElementById('faq-empty');
-  let visible = 0;
-  items.forEach((item) => {
-    const text = (item.textContent || '').toLowerCase();
-    const match = !q || text.includes(q);
-    item.hidden = !match;
-    if (match) visible++;
-  });
-  cats.forEach((cat) => {
-    let hasVisible = false;
-    let node = cat.nextElementSibling;
-    while (node && !node.classList.contains('support-faq-cat')) {
-      if (node.classList.contains('faq-item') && !node.hidden) hasVisible = true;
-      node = node.nextElementSibling;
-    }
-    cat.hidden = !hasVisible;
-  });
-  if (empty) empty.style.display = visible ? 'none' : 'block';
-}
-
-// Quick-help chip → filter the FAQ to matching topics and focus search.
-function quickHelp(q) {
-  const search = document.getElementById('support-search');
-  if (search) { search.value = q; filterSupportFAQ(q); try { search.focus(); } catch (e) {} }
-  // Scroll the FAQ area into view within the panel.
-  const faq = document.getElementById('support-faq');
-  if (faq) { try { faq.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
-}
-
-// Open the tawk.to chat window directly; email is the fallback if tawk is down.
-function openTawkChat() {
-  try {
-    if (typeof Tawk_API !== 'undefined' && Tawk_API.maximize) {
-      Tawk_API.maximize();
-      return;
-    }
-  } catch (e) {}
-  window.open('https://tawk.to/chat/6a85673ae687441d49b902c2/1k0chmfq6?layout=modern', '_blank', 'noopener');
-}
+// Legacy no-ops (still referenced by old inline handlers)
+function filterSupportFAQ() {}
+function quickHelp() {}
+function openTawkChat() { openSupport(); }
+function copySupportRef() {}
 
 // ── FUND WALLET ───────────────────────────────────────────────────────────
 // ── FUND WALLET (disabled — wallet funding removed from customer experience) ──
@@ -4950,15 +5140,30 @@ init();
 .promo-banner-body p{font:500 12.5px/1.5 var(--font);color:var(--text-secondary);margin:6px 0 0}
 .promo-banner-cta{align-self:flex-start;border:0;border-radius:10px;background:var(--brand);color:#fff;font:700 12.5px/1 var(--font);padding:10px 16px;cursor:pointer;transition:background var(--transition)}
 .promo-banner-cta:hover{background:var(--brand-hover)}
-.promo-card-head{margin-bottom:12px}
-.promo-card-head h3{font:800 15px/1 var(--display);letter-spacing:-.02em;margin:0;color:var(--text-primary)}
-.promo-row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border-subtle)}
-.promo-row:last-child{border-bottom:0}
+.promo-card-head{margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.promo-card-head h3{font:800 16px/1 var(--display);letter-spacing:-.03em;margin:0;color:var(--text-primary)}
+.promo-row{display:flex;align-items:center;gap:14px;padding:14px;
+  border-radius:14px;background:var(--surface);border:1.5px solid var(--border-subtle);
+  margin-bottom:10px;transition:border-color .18s,box-shadow .18s,background .18s}
+.promo-row:last-child{margin-bottom:0}
+.promo-row:hover{border-color:color-mix(in srgb,var(--brand) 35%,transparent);
+  box-shadow:0 4px 16px color-mix(in srgb,var(--brand) 8%,transparent);
+  background:color-mix(in srgb,var(--brand) 2%,var(--surface))}
+.promo-row-icon{width:40px;height:40px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 16%,#fff),color-mix(in srgb,var(--brand) 8%,#fff));
+  color:var(--brand);font:700 18px/1 var(--display)}
 .promo-row-body{flex:1;min-width:0}
 .promo-row-body strong{font:700 13.5px/1.3 var(--display);color:var(--text-primary)}
 .promo-row-body p{font:500 12px/1.45 var(--font);color:var(--text-secondary);margin:4px 0 0}
-.promo-row-cta{flex:none;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text-primary);font:700 12px/1 var(--font);padding:9px 13px;border-radius:9px;cursor:pointer;transition:border-color var(--transition),color var(--transition)}
-.promo-row-cta:hover{border-color:var(--brand);color:var(--brand)}
+.promo-row-cta{flex:none;
+  background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 80%,#0ff));
+  color:#fff;font:700 12px/1 var(--font);padding:9px 14px;
+  border-radius:999px;border:none;cursor:pointer;
+  box-shadow:0 3px 10px color-mix(in srgb,var(--brand) 28%,transparent);
+  transition:opacity .18s,transform .14s,box-shadow .18s}
+.promo-row-cta:hover{opacity:.9;transform:translateY(-1px);
+  box-shadow:0 5px 14px color-mix(in srgb,var(--brand) 36%,transparent)}
 
 .sys-banner svg{flex:none;width:16px;height:16px;margin-top:1px}
 .sys-banner-text{flex:1;min-width:0}
@@ -5389,68 +5594,7 @@ init();
   </div>
 </div>
 
-<!-- ══════════════ TAWK.TO LIVE CHAT (non-critical) ══════════════ -->
-<script>
-// tawk.to live chat. Deliberately non-critical: if the script fails to load
-// or the domain is unreachable, nothing else on the page depends on it. The
-// widget loads async and only ever receives authenticated visitor identity
-// (name/email) when the server has produced a Secure Mode HMAC hash — which
-// requires TAWK_API_KEY to be configured. Otherwise it runs anonymously.
-(function () {
-  try {
-    var token = null;
-    try { token = localStorage.getItem('tf_token'); } catch (e) {}
-
-    // Standard tawk.to Secure Mode: set Tawk_API.visitor BEFORE the widget
-    // script loads. The `hash` is the HMAC-SHA256(email, apiKey) produced by
-    // /api/support/tawk-hash on the server; the key never reaches the browser.
-    var Tawk_API = window.Tawk_API || {};
-    if (token) {
-      try {
-        fetch('/api/support/tawk-hash', {
-          method: 'GET',
-          headers: { 'Authorization': 'Bearer ' + token }
-        }).then(function (r) {
-          if (!r.ok) return; // secure mode off → stay anonymous
-          return r.json();
-        }).then(function (data) {
-          if (!data || !data.hash || !window.Tawk_API) return;
-          try {
-            window.Tawk_API.visitor = {
-              hash: data.hash,
-              name: data.name,
-              email: data.email
-            };
-          } catch (e) {}
-        }).catch(function () {});
-      } catch (e) {}
-    }
-    // Hide the default tawk.to bubble immediately on load — before the widget
-    // renders — so the ONLY visible launcher is our own support button/FAB.
-    // Setting onLoad before the script injection ensures no flash of the widget.
-    Tawk_API.onLoad = function () {
-      try {
-        if (typeof window.Tawk_API.hideWidget === 'function') {
-          window.Tawk_API.hideWidget();
-        }
-      } catch (e) {}
-    };
-    window.Tawk_API = Tawk_API;
-
-    var Tawk_LoadStart = new Date();
-    (function () {
-      var s1 = document.createElement('script');
-      var s0 = document.getElementsByTagName('script')[0];
-      s1.async = true;
-      s1.src = 'https://embed.tawk.to/6a85673ae687441d49b902c2/1k0chmfq6';
-      s1.charset = 'UTF-8';
-      s1.setAttribute('crossorigin', '*');
-      s1.onerror = function () { /* tawk.to unreachable — silently degrade */ };
-      s0.parentNode.insertBefore(s1, s0);
-    })();
-  } catch (e) { /* never let the widget break the app */ }
-})();
-</script>
+<!-- tawk.to removed — custom chat widget built in -->
 
 </body>
 </html>
