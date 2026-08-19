@@ -149,6 +149,9 @@ await checkInlineSyntax('bizflow.html');
   for (const p of ['/icons/icon-192.png', '/icons/icon-512.png']) {
     check(`manifest icon exists ${p}`, fs.existsSync(path.join(ROOT, p.slice(1))));
   }
+  const iconUrls = manifest.icons.map((i) => i.src);
+  check('manifest icons are cache-versioned to defeat stale edge cache',
+    iconUrls.every((u) => /^\/icons\/[a-z0-9.-]+\.png\?v=\d+$/.test(u)));
 }
 
 // ── 7. sw.js cache policy ───────────────────────────────────────────────────
@@ -233,7 +236,7 @@ await checkInlineSyntax('bizflow.html');
   for (const p of ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png', '/icons/favicon-16.png']) {
     check(`brand icon file exists ${p}`, fs.existsSync(path.join(ROOT, p.slice(1))));
   }
-  check('service worker precaches branded icons', ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'favicon-16.png'].every((p) => read('sw.js').includes(p)));
+  check('service worker precaches branded icons', ['icon-192.png?v=2', 'icon-512.png?v=2', 'apple-touch-icon.png', 'favicon-32.png', 'favicon-16.png'].every((p) => read('sw.js').includes(p)));
 }
 
 // ── 10. Dual-palette + theme persistence ────────────────────────────────────

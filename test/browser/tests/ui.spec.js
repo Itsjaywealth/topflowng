@@ -102,6 +102,8 @@ test.describe('static/PWA assets', () => {
     '/sitemap.xml',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
+    '/icons/icon-192.png?v=2',
+    '/icons/icon-512.png?v=2',
     '/assets/brand/topflowng-mark.svg',
     '/assets/provider-logos.js',
     '/assets/providers/mtn.svg',

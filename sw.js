@@ -1,13 +1,13 @@
-// TopFlowNG Service Worker v7
+// TopFlowNG Service Worker v8
 // Network-first for every /api/ request (never cached — tokens and private
 // responses are never stored). Navigations are network-only so a previously
 // cached app shell can never hide a deployment.
 // Cache-first for immutable static assets only. skipWaiting + clients.claim
 // mean a new version takes over on the next load — no stale-asset trap.
-const CACHE = 'topflowng-v8';
+const CACHE = 'topflowng-v9';
 const STATIC = [
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/icons/icon-192.png?v=2',
+  '/icons/icon-512.png?v=2',
   '/icons/apple-touch-icon.png',
   '/icons/favicon-32.png',
   '/icons/favicon-16.png',
