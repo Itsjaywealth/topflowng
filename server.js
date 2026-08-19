@@ -50,6 +50,7 @@ const {
   autoRechargeSchema, scheduledPurchaseSchema,
 } = require('./lib/schemas');
 const { validatePlanAmount, validateCablePlanAmount } = require('./services/pricing');
+const { getPaymentProvider, PaymentError } = require('./payment');
 
 const DUMMY_BCRYPT_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEeO7BmW2g8K7P3XyZGkN6QqKxE6y1yJ2eC';
 
@@ -494,46 +495,34 @@ app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paysta
     const { amount } = req.validated;
 
     const user       = await db.findUserById(req.user.id);
-    const amountKobo = Math.round(parseFloat(amount) * 100);
     const reference  = `TF-${Date.now()}-${req.user.id}`;
 
-    const response = await axios.post(`${config.paystack.apiBaseUrl}/transaction/initialize`, {
+    const provider = getPaymentProvider();
+    const result = await provider.initializePayment({
       email: user.email,
-      amount: amountKobo,
+      amount,
       reference,
-      callback_url: `${config.appUrl}/?verified=${reference}`,
       metadata: { user_id: req.user.id, user_email: user.email },
-    }, {
-      headers: { Authorization: `Bearer ${config.paystack.secretKey}` },
-      timeout: config.paystack.timeoutMs,
+      callbackUrl: `${config.appUrl}/?verified=${reference}`,
     });
 
-    res.json({ authorization_url: response.data.data.authorization_url, reference });
+    res.json({ authorization_url: result.authorizationUrl, reference });
   } catch (err) {
-    logger.error('Paystack init error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
+    logger.error('Payment init error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Payment initialization failed');
   }
 });
 
-async function getVerifiedPaystackPayment(reference) {
-  const response = await axios.get(`${config.paystack.apiBaseUrl}/transaction/verify/${reference}`, {
-    headers: { Authorization: `Bearer ${config.paystack.secretKey}` },
-    timeout: config.paystack.timeoutMs,
-  });
-  const payment = response.data.data;
-  if (payment.status !== 'success' || payment.reference !== reference) {
-    const error = new Error('Paystack payment is not a verified successful charge');
+async function getVerifiedPayment(reference) {
+  const provider = getPaymentProvider();
+  const payment = await provider.verifyPayment(reference);
+  if (payment.status !== 'success') {
+    const error = new Error('Payment is not a verified successful charge');
     error.code = 'PAYMENT_NOT_SUCCESSFUL';
     throw error;
   }
-  const userId = payment.metadata?.user_id;
-  if (!userId) {
-    const error = new Error(`Verified Paystack payment ${reference} has no user_id metadata`);
-    error.code = 'PAYMENT_USER_MISSING';
-    throw error;
-  }
-  return { userId: Number(userId), amount: payment.amount / 100 };
+  return { userId: payment.userId, amount: payment.amount, reference: payment.reference };
 }
 
 function monitorUncreditedPaystackPayment(reference) {
@@ -549,7 +538,7 @@ function monitorUncreditedPaystackPayment(reference) {
 }
 
 async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) {
-  const payment = await getVerifiedPaystackPayment(reference);
+  const payment = await getVerifiedPayment(reference);
   if (expectedUserId && payment.userId !== Number(expectedUserId)) {
     const error = new Error('Payment does not belong to the authenticated user');
     error.code = 'PAYMENT_USER_MISMATCH';
@@ -583,37 +572,24 @@ app.get('/api/paystack/verify/:reference', authMiddleware, async (req, res) => {
   }
 });
 
-// Constant-time signature comparison for the Paystack webhook. The expected
-// digest is always a 64-byte hex string (HMAC-SHA512), so a valid header must
-// be exactly that length. Missing, malformed (non-hex), or wrong-length
-// signatures short-circuit to false without ever reaching timingSafeEqual
-// (which requires equal-length buffers and would throw otherwise).
-function paystackSignatureMatches(expectedHex, signatureHex) {
-  const CH = /^[0-9a-fA-F]{128}$/;
-  if (typeof signatureHex !== 'string' || !CH.test(signatureHex)) return false;
-  const expected = Buffer.from(expectedHex, 'hex');
-  const presented = Buffer.from(signatureHex, 'hex');
-  return crypto.timingSafeEqual(expected, presented);
-};
-
 // In-memory webhook retry queue with exponential backoff.
 const webhookRetries = new Map(); // reference -> { attempts, nextRetryAt }
 
 app.post('/api/paystack/webhook', async (req, res) => {
   try {
-    const secret    = config.paystack.webhookSecret || config.paystack.secretKey;
+    const provider  = getPaymentProvider();
     const signature = req.headers['x-paystack-signature'];
-    const hash      = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
 
-    if (!paystackSignatureMatches(hash, signature)) {
+    if (!provider.verifyWebhookSignature({ rawBody: req.body, signature })) {
       logger.warn('Invalid Paystack webhook signature');
       return sendError(res, 400, 'Invalid signature');
     }
 
-    const event = JSON.parse(req.body.toString());
+    const body = JSON.parse(req.body.toString());
+    const { event, reference } = provider.webhookEvent(body);
 
-    if (event.event === 'charge.success') {
-      await verifyAndCreditPaystackPayment(event.data.reference);
+    if (event === 'charge.success' && reference) {
+      await verifyAndCreditPaystackPayment(reference);
     }
 
     res.sendStatus(200);
@@ -621,9 +597,10 @@ app.post('/api/paystack/webhook', async (req, res) => {
     logger.error('Webhook error', { message: err.message });
     // Queue for retry with exponential backoff: 30s, 2min, 8min, 32min
     try {
-      const event = JSON.parse(req.body.toString());
-      if (event.event === 'charge.success' && event.data?.reference) {
-        const ref = event.data.reference;
+      const body = JSON.parse(req.body.toString());
+      const { event, reference } = getPaymentProvider().webhookEvent(body);
+      if (event === 'charge.success' && reference) {
+        const ref = reference;
         const existing = webhookRetries.get(ref);
         const attempts = (existing?.attempts || 0) + 1;
         const delayMs = Math.min(30000 * Math.pow(4, attempts - 1), 30 * 60 * 1000);

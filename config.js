@@ -98,6 +98,24 @@ const config = {
     timeoutMs: num(process.env.PAYSTACK_TIMEOUT_MS, 30_000),
   },
 
+  // ── Payment provider selection ─────────────────────────────────────────────
+  // TopFlowNG collects payment through a provider abstraction so it is not
+  // permanently coupled to Paystack. `PAYMENT_PROVIDER` selects the active
+  // adapter: 'paystack' (the currently configured provider) or 'monnify' (a
+  // prepared adapter that stays DISABLED/BLOCKED_EXTERNAL until business
+  // approval and credentials are supplied). This is a payment-collection
+  // abstraction only — it has NO effect on VTPass fulfilment, which is a
+  // separate fulfilment provider. Production stays on 'paystack' until an
+  // explicit cutover is authorized.
+  paymentProvider: str(process.env.PAYMENT_PROVIDER, 'paystack'),
+  monnify: {
+    enabled: str(process.env.MONNIFY_ENABLED, 'false') === 'true',
+    baseUrl: str(process.env.MONNIFY_BASE_URL, 'https://api.monnify.com'),
+    secretKey: str(process.env.MONNIFY_SECRET_KEY, null),
+    apiKey: str(process.env.MONNIFY_API_KEY, null),
+    contractCode: str(process.env.MONNIFY_CONTRACT_CODE, null),
+  },
+
   // tawk.to live chat. Secure Mode hashes the visitor's email/name on the
   // server (HMAC-SHA256 with the API key) so identifiable data is only ever
   // sent to tawk.to when the key is configured; otherwise the widget loads
