@@ -350,6 +350,16 @@ tbody tr:hover td{background:var(--mist)}
   .main{margin-left:0;padding:24px 16px}
   .page-title{font-size:25px}
 }
+
+/* ── Charts ────────────────────────────────────────────────────────────────── */
+.chart-bar-group{display:grid;grid-template-columns:100px 1fr 120px;align-items:center;gap:12px;margin-bottom:6px}
+.chart-bar-group:last-child{margin-bottom:0}
+.chart-bar-label{font:500 12px/1 var(--font);color:var(--text-2)}
+.chart-bar-track{height:20px;background:var(--surface-muted);border-radius:6px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:6px;transition:width .4s ease;min-width:4px}
+.chart-bar-value{font:600 13px/1 var(--font);color:var(--text);text-align:right}
+@media(max-width:640px){.chart-bar-group{grid-template-columns:80px 1fr 80px;gap:8px}}
+</style>
 </style>
 </head>
 <body>
@@ -523,6 +533,24 @@ tbody tr:hover td{background:var(--mist)}
           <div class="stat-value" id="lh-avg">—</div>
           <div class="stat-sub">Per completed debit</div>
         </div>
+      </div>
+
+      <!-- Revenue chart -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Revenue overview</div>
+          <div class="section-meta">All-time credited vs debited</div>
+        </div>
+        <div class="chart-container" id="chart-revenue" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+
+      <!-- Growth chart -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Growth</div>
+          <div class="section-meta">Users, orders &amp; today's activity</div>
+        </div>
+        <div class="chart-container" id="chart-growth" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px"></div>
       </div>
 
       <!-- Financial reconciliation -->
@@ -855,7 +883,60 @@ async function loadOverview() {
     el('lh-rate').textContent = stats.success_rate_today == null ? '—' : stats.success_rate_today + '%';
     el('lh-users-today').textContent = num(stats.new_users_today || 0);
     el('lh-avg').textContent = stats.avg_transaction_amount_today == null ? '—' : '₦' + fmt(stats.avg_transaction_amount_today);
+
+    // Render charts
+    renderRevenueChart(stats);
+    renderGrowthChart(stats);
   } catch(e) { console.error('Stats error:', e.message); }
+}
+
+function renderRevenueChart(stats) {
+  const credited = parseFloat(stats.total_credited || 0);
+  const debited = parseFloat(stats.total_debited || 0);
+  const maxVal = Math.max(credited, debited, 1);
+  const chart = document.getElementById('chart-revenue');
+  if (!chart) return;
+  chart.innerHTML = `
+    <div class="chart-bar-group">
+      <div class="chart-bar-label">Credited</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(credited/maxVal*100).toFixed(1)}%;background:var(--green-strong)"></div></div>
+      <div class="chart-bar-value">₦${fmt(credited)}</div>
+    </div>
+    <div class="chart-bar-group">
+      <div class="chart-bar-label">Debited</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(debited/maxVal*100).toFixed(1)}%;background:var(--green-2)"></div></div>
+      <div class="chart-bar-value">₦${fmt(debited)}</div>
+    </div>
+    <div class="chart-bar-group">
+      <div class="chart-bar-label">Revenue</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(Math.max(credited-debited,0)/maxVal*100).toFixed(1)}%;background:var(--amber)"></div></div>
+      <div class="chart-bar-value">₦${fmt(Math.max(credited-debited,0))}</div>
+    </div>`;
+}
+
+function renderGrowthChart(stats) {
+  const chart = document.getElementById('chart-growth');
+  if (!chart) return;
+  const today = parseFloat(stats.transactions_today || 0);
+  const users = parseFloat(stats.total_users || 0);
+  const orders = parseFloat(stats.vtu_orders_total || 0);
+  const maxVal = Math.max(today, users/10, orders/10, 1);
+  chart.innerHTML = `
+    <div class="chart-bar-group">
+      <div class="chart-bar-label">Users</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.min(users/maxVal*100, 100).toFixed(1)}%;background:var(--green-strong)"></div></div>
+      <div class="chart-bar-value">${num(users)}</div>
+    </div>
+    <div class="chart-bar-group">
+      <div class="chart-bar-label">Orders</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.min(orders/maxVal*100, 100).toFixed(1)}%;background:var(--green-2)"></div></div>
+      <div class="chart-bar-value">${num(orders)}</div>
+    </div>
+    <div class="chart-bar-group">
+      <div class="chart-bar-label">Today</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(today/maxVal*100).toFixed(1)}%;background:var(--amber)"></div></div>
+      <div class="chart-bar-value">${num(today)}</div>
+    </div>`;
 }
 
 async function loadReconciliation() {

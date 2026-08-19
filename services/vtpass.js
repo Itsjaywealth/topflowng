@@ -34,6 +34,7 @@ const config = require('../config');
 const db = require('../database');
 const logger = require('../lib/logger');
 const { ApiError } = require('../lib/errors');
+const cache = require('../lib/cache');
 const {
   DATA_PLANS, CABLE_PLANS, ELECTRICITY_DISCOS, EXAM_PRODUCTS, NETWORKS,
 } = require('./pricing');
@@ -453,8 +454,10 @@ const variationCache = new Map();
 const VARIATION_CACHE_TTL_MS = 10 * 60 * 1000;
 
 async function fetchVariations(serviceID) {
-  const cached = variationCache.get(serviceID);
-  if (cached && Date.now() - cached.at < VARIATION_CACHE_TTL_MS) return cached.variations;
+  const cacheKey = `vtpass:variations:${serviceID}`;
+  const cached = await cache.get(cacheKey);
+  if (cached) return cached;
+
   if (!config.vtpass.apiKey || !config.vtpass.publicKey) {
     const error = new ApiError(503, 'VTPass variation catalog is not configured');
     error.code = 'VTPASS_PUBLIC_KEY_MISSING';
@@ -467,7 +470,7 @@ async function fetchVariations(serviceID) {
   });
   const content = response.data && response.data.content;
   const variations = (content && content.variations) || (content && content.varations) || [];
-  variationCache.set(serviceID, { at: Date.now(), variations });
+  await cache.set(cacheKey, variations, 10 * 60 * 1000);
   return variations;
 }
 

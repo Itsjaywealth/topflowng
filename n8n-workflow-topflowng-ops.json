@@ -1,0 +1,88 @@
+{
+  "name": "TopFlowNG Daily Ops Summary",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-schedule",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": null
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.TOPFLOWNG_API_URL }}/api/internal/ops-summary",
+        "options": {
+          "headers": {
+            "x-internal-key": "={{ $env.TOPFLOWNG_INTERNAL_KEY }}"
+          }
+        }
+      },
+      "id": "http-ops",
+      "name": "Fetch Ops Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.stats.stale_pending }}",
+              "operation": "larger",
+              "value2": "0"
+            }
+          ]
+        }
+      },
+      "id": "if-stale",
+      "name": "Has Stale Orders?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "message": {
+          "subject": "TopFlowNG Ops Summary — {{ $json.stats.transactions_today }} transactions today",
+          "text": "Daily Operations Summary\n\nTransactions today: {{ $json.stats.transactions_today }}\nCompleted today: {{ $json.stats.completed_today }}\nFailed today: {{ $json.stats.failed_today }}\nSuccess rate: {{ $json.stats.success_rate_today }}%\nPending orders: {{ $json.stats.pending_orders }}\nStale pending: {{ $json.stats.stale_pending }}\nNew users today: {{ $json.stats.new_users_today }}\nTotal users: {{ $json.stats.total_users }}\nTotal transactions: {{ $json.stats.total_transactions }}\nTotal credited: ₦{{ $json.stats.total_credited }}\nTotal debited: ₦{{ $json.stats.total_debited }}\n\n⚠️ ALERT: {{ $json.stats.stale_pending }} stale pending order(s) need review"
+        },
+        "options": {}
+      },
+      "id": "email-alert",
+      "name": "Alert Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "message": {
+          "subject": "TopFlowNG Ops Summary — All clear",
+          "text": "All systems operational.\n\nTransactions today: {{ $json.stats.transactions_today }}\nCompleted today: {{ $json.stats.completed_today }}\nSuccess rate: {{ $json.stats.success_rate_today }}%\nNew users today: {{ $json.stats.new_users_today }}\nTotal users: {{ $json.stats.total_users }}\n\nNo stale orders. No issues."
+        }
+      },
+      "id": "email-ok",
+      "name": "All Clear Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1000, 400]
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [[{ "node": "Fetch Ops Summary", "type": "main", "index": 0 }]]
+    },
+    "Fetch Ops Summary": {
+      "main": [[{ "node": "Has Stale Orders?", "type": "main", "index": 0 }]]
+    },
+    "Has Stale Orders?": {
+      "main": [
+        [{ "node": "Alert Email", "type": "main", "index": 0 }],
+        [{ "node": "All Clear Email", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
