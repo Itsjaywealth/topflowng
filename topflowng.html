@@ -698,6 +698,23 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
 .support-faq-cat{font:800 10.5px/1 var(--display);color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;
   margin:14px 0 4px}
 .support-faq-cat:first-child{margin-top:0}
+
+/* Floating support launcher — opens the premium support panel. One launcher
+   only, placed clear of the mobile bottom navigation and transaction controls. */
+.support-fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));
+  z-index:480;display:flex;align-items:center;gap:10px;padding:0;border:0;cursor:pointer;
+  background:var(--brand);color:#fff;border-radius:999px;box-shadow:0 10px 28px rgba(0,0,0,.22);
+  transition:transform var(--transition),background var(--transition);font-family:var(--font)}
+.support-fab:hover{background:var(--brand-hover);transform:translateY(-2px)}
+.support-fab .support-fab-bubble{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.support-fab .support-fab-bubble svg{width:24px;height:24px}
+.support-fab .support-fab-label{font:700 13px/1 var(--display);padding-right:18px;white-space:nowrap}
+.support-fab[aria-expanded="true"]{background:var(--brand-hover)}
+/* On mobile, hide the text label and keep a compact bubble above the bottom nav. */
+@media (max-width:480px){
+  .support-fab{right:14px;bottom:calc(84px + env(safe-area-inset-bottom))}
+  .support-fab .support-fab-label{display:none}
+}
 .faq-item{background:var(--surface);border:1px solid var(--border-subtle);border-radius:12px;padding:0 14px}
 .faq-item summary{cursor:pointer;padding:13px 0;font:600 13.5px/1.4 var(--font);color:var(--text-primary);
   list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -2230,6 +2247,12 @@ html.dark .icon-moon{display:none}
   </div>
 </div>
 
+<!-- ══════════════ FLOATING SUPPORT LAUNCHER ══════════════ -->
+<button type="button" class="support-fab" id="support-fab" aria-label="Customer support" aria-expanded="false" aria-haspopup="dialog" onclick="toggleSupportLauncher()">
+  <span class="support-fab-bubble"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2 1-4A8 8 0 1 1 21 12Z"/><path d="M9 11a3 3 0 0 1 6 0c0 1.3-1.3 2-2.5 2.5"/><circle cx="12" cy="16.5" r=".6" fill="currentColor" stroke="none"/></svg></span>
+  <span class="support-fab-label">Help</span>
+</button>
+
 <!-- ══════════════ SUPPORT OVERLAY ══════════════ -->
 <div class="receipt-overlay" id="support-overlay" role="dialog" aria-modal="true" aria-labelledby="support-title">
   <div class="receipt-card support-card">
@@ -3606,6 +3629,17 @@ function openSupportFromTxn() {
 }
 
 // ── SUPPORT ───────────────────────────────────────────────────────────────
+function setSupportLauncherState(open) {
+  const fab = document.getElementById('support-fab');
+  if (fab) fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function toggleSupportLauncher() {
+  const overlay = document.getElementById('support-overlay');
+  const isOpen = overlay.classList.contains('open');
+  if (isOpen) closeSupport(); else openSupport();
+}
+
 function openSupport(txn) {
   const block = document.getElementById('support-help-block');
   if (txn) {
@@ -3621,10 +3655,17 @@ function openSupport(txn) {
     document.getElementById('support-sub').textContent = 'How can we help?';
   }
   document.getElementById('support-overlay').classList.add('open');
+  setSupportLauncherState(true);
+  const search = document.getElementById('support-search');
+  if (search) search.value = '';
+  filterSupportFAQ('');
+  const input = document.getElementById('support-search');
+  if (input) { try { input.focus(); } catch (e) {} }
 }
 
 function closeSupport() {
   document.getElementById('support-overlay').classList.remove('open');
+  setSupportLauncherState(false);
 }
 
 function copySupportRef() {
@@ -4417,6 +4458,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const openServiceScreen = document.querySelector('.service-screen.open');
     if (openServiceScreen) closeService(openServiceScreen.id.replace('svc-', ''));
+    const supportOverlay = document.getElementById('support-overlay');
+    if (supportOverlay && supportOverlay.classList.contains('open')) closeSupport();
   }
 }, true);
 
@@ -5182,6 +5225,16 @@ init();
       s1.charset = 'UTF-8';
       s1.setAttribute('crossorigin', '*');
       s1.onerror = function () { /* tawk.to unreachable — silently degrade */ };
+      // Hide the default tawk.to bubble so the ONLY visible launcher is the
+      // TopFlowNG support FAB. Chat is still opened on demand via openTawkChat()
+      // (Tawk_API.maximize), which never shows a second floating launcher.
+      s1.onload = function () {
+        try {
+          if (window.Tawk_API && typeof window.Tawk_API.hideWidget === 'function') {
+            window.Tawk_API.hideWidget();
+          }
+        } catch (e) { /* ignore */ }
+      };
       s0.parentNode.insertBefore(s1, s0);
     })();
   } catch (e) { /* never let the widget break the app */ }

@@ -291,6 +291,9 @@ await checkInlineSyntax('bizflow.html');
   check('support FAQ is searchable', /filterSupportFAQ/.test(app) && /id="support-search"/.test(app));
   check('support FAQ is categorized', /support-faq-cat/.test(app));
   check('support chat action present', /openTawkChat/.test(app) && /Chat with us/.test(app));
+  check('single floating support launcher', (app.match(/class="support-fab"/g) || []).length === 1);
+  check('launcher toggles the support overlay', /toggleSupportLauncher/.test(app));
+  check('tawk default bubble hidden to avoid duplicate launcher', /hideWidget/.test(app));
 }
 
 // ── 14. Marketing rates come from the server catalogue ─────────────────────

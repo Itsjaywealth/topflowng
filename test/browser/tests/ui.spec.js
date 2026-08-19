@@ -331,6 +331,17 @@ test.describe('logged-in app shell', () => {
     await expect(page.locator('#support-faq .faq-item:visible')).toHaveCount(16);
     await page.evaluate(() => closeSupport());
     await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
+    // launcher opens the overlay and toggles aria-expanded
+    const fab = page.locator('#support-fab');
+    await expect(fab).toBeVisible();
+    await expect(fab).toHaveAttribute('aria-expanded', 'false');
+    await fab.click();
+    await expect(page.locator('#support-overlay')).toHaveClass(/open/);
+    await expect(fab).toHaveAttribute('aria-expanded', 'true');
+    // Escape closes the support overlay
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
+    await expect(fab).toHaveAttribute('aria-expanded', 'false');
   });
 });
 
