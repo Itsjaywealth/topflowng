@@ -151,12 +151,14 @@ test('migration 001 applies successfully', async () => {
   assert.match(out, /applied 008_scheduled_execution_claims\.sql/);
   assert.match(out, /applied 007_bizflow_data\.sql/);
   assert.match(out, /applied 009_notifications\.sql/);
+  assert.match(out, /applied 010_direct_pay_orders\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
   assert.deepStrictEqual(rows.map((r) => r.version), [
     '001_vtu_idempotency', '002_vtu_reconcile_attempts', '003_search_indexes',
     '004_auto_recharge', '005_scheduled_purchases', '006_auto_recharge_sessions',
     '007_bizflow_data', '008_scheduled_execution_claims', '009_notifications',
+    '010_direct_pay_orders',
   ]);
 
   const cols = await q(
@@ -166,6 +168,13 @@ test('migration 001 applies successfully', async () => {
         'idempotency_key_created_at','idempotency_key_last_used_at')`
   );
   assert.strictEqual(cols.length, 5, 'all idempotency columns must exist');
+
+  const directCols = await q(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_name = 'vtu_orders' AND column_name IN
+       ('payment_reference','payment_status','paid_at')`
+  );
+  assert.strictEqual(directCols.length, 3, 'direct-pay payment columns must exist');
 });
 
 test('migration 002 adds reconciliation attempt tracking columns', async () => {

@@ -377,6 +377,70 @@ async function createVtuAttempt({ requestId, userId, serviceType, amount, descri
   return rows[0];
 }
 
+// Create an order for the DIRECT payment mode: payment is collected via the
+// payment provider (Paystack) for THIS specific order before fulfilment, so the
+// order starts as payment_status='pending' with a payment reference attached.
+// No stored customer wallet is involved in direct mode.
+async function createDirectOrder({ requestId, userId, serviceType, amount, description, paymentReference }) {
+  const { rows } = await pool.query(
+    `INSERT INTO vtu_orders
+       (request_id, user_id, service_type, amount, description, payment_reference, payment_status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+     ON CONFLICT (request_id)
+       DO UPDATE SET updated_at = NOW(),
+                     payment_reference = COALESCE(vtu_orders.payment_reference, EXCLUDED.payment_reference),
+                     payment_status = COALESCE(vtu_orders.payment_status, EXCLUDED.payment_status)
+     RETURNING *`,
+    [requestId, userId, serviceType, amount, description, paymentReference]
+  );
+  return rows[0];
+}
+
+// Look up a direct order by its payment-provider reference. Used by the
+// payment-verification bridge to correlate a verified Paystack payment with the
+// exact TopFlowNG order it was created for (one payment → at most one order).
+async function findOrderByPaymentReference(paymentReference) {
+  const { rows } = await pool.query(
+    'SELECT * FROM vtu_orders WHERE payment_reference = $1 ORDER BY id DESC LIMIT 1',
+    [paymentReference]
+  );
+  return rows[0] || null;
+}
+
+// Mark a direct order's payment as confirmed (paid) after the payment provider
+// authoritatively verifies it. Idempotent: setting paid when already paid is a
+// no-op. Never changes users.wallet.
+async function markOrderPaid(requestId, paymentReference) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
+    );
+    const order = result.rows[0];
+    if (!order) throw new Error(`VTU order ${requestId} not found`);
+    if (order.payment_status === 'paid') {
+      await client.query('COMMIT');
+      return order;
+    }
+    await client.query(
+      `UPDATE vtu_orders
+       SET payment_status = 'paid', paid_at = NOW(), payment_reference = COALESCE($2, payment_reference),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [order.id, paymentReference]
+    );
+    await client.query('COMMIT');
+    const fresh = await client.query('SELECT * FROM vtu_orders WHERE id = $1', [order.id]);
+    return fresh.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 async function acquireVtuIdempotency({ requestId, userId, serviceType, amount, description, idempotencyKey, requestFingerprint }) {
   // Reserve an idempotency slot on vtu_orders. The same logical slot is
   // covered by TWO unique constraints — request_id AND the partial unique
@@ -613,6 +677,62 @@ async function markVtuOrderFailed(requestId, { allowPending = false, failureSuff
     );
     await client.query('COMMIT');
     return order;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Complete a vtu_orders row as paid-and-fulfilled WITHOUT debiting the stored
+// customer wallet. Used by the DIRECT payment mode, where the customer already
+// paid the payment provider (Paystack) for this specific order before VTPass
+// fulfilment. A transaction is still recorded for accounting, but `users.wallet`
+// is left untouched — the customer has no stored-value balance in direct mode.
+async function completeDirectOrder(requestId, { paymentReference = null } = {}) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE', [requestId]
+    );
+    const order = result.rows[0];
+    if (!order) throw new Error(`VTU order ${requestId} not found`);
+    if (order.status === 'completed') {
+      await client.query('COMMIT');
+      return { alreadyCompleted: true, order };
+    }
+    assertCanTransition(order.status, 'completed');
+
+    let transactionId = order.transaction_id;
+    if (transactionId) {
+      await client.query(
+        `UPDATE transactions
+         SET status = 'completed',
+             description = regexp_replace(description, ' — pending provider confirmation$', ''),
+             provider_order_id = COALESCE($2, provider_order_id)
+         WHERE id = $1`,
+        [transactionId, order.provider_order_id]
+      );
+    } else {
+      const txn = await client.query(
+        `INSERT INTO transactions (user_id, type, amount, description, reference, status, provider_order_id)
+         VALUES ($1, 'debit', $2, $3, $4, 'completed', $5)
+         RETURNING id`,
+        [order.user_id, order.amount, order.description, order.request_id, order.provider_order_id]
+      );
+      transactionId = txn.rows[0].id;
+    }
+    await client.query(
+      `UPDATE vtu_orders
+       SET status = 'completed', transaction_id = $2, updated_at = NOW(),
+           payment_status = COALESCE($3, payment_status)
+       WHERE id = $1`,
+      [order.id, transactionId, paymentReference ? 'paid' : null]
+    );
+    await client.query('COMMIT');
+    return { alreadyCompleted: false, order };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
@@ -1501,11 +1621,15 @@ module.exports = {
   getTransactions,
   logFailedTransaction,
   createVtuAttempt,
+  createDirectOrder,
+  findOrderByPaymentReference,
+  markOrderPaid,
   acquireVtuIdempotency,
   recordVtuIdempotencyResult,
   recordVtuProviderResponse,
   recordReconciliationAttempt,
   completeVtuOrder,
+  completeDirectOrder,
   markVtuOrderPending,
   markVtuOrderFailed,
   promoteToAdmin,

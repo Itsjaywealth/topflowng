@@ -620,6 +620,78 @@ async function processVtpassPurchase({ userId, requestId, serviceType, amount, d
   };
 }
 
+// ── Direct-pay purchase (PAYMENT_MODE=direct) ────────────────────────────────
+// Same provider request/response handling as processVtpassPurchase, but the
+// customer already paid the payment provider for THIS order. On confirmed
+// delivery the order is completed WITHOUT debiting the stored customer wallet
+// (completeDirectOrder). Payment must already be verified before calling this.
+async function processDirectPurchase({ userId, requestId, serviceType, amount, description, product, paymentReference = null }) {
+  await db.createVtuAttempt({ requestId, userId, serviceType, amount, description });
+
+  let providerRaw;
+  try {
+    const body = {
+      request_id: requestId,
+      serviceID: product.serviceID,
+    };
+    if (product.variation_code !== undefined) body.variation_code = product.variation_code;
+    if (product.billersCode !== undefined) body.billersCode = product.billersCode;
+    if (product.amount !== undefined) body.amount = product.amount;
+    if (product.phone !== undefined) body.phone = product.phone;
+    if (product.subscription_type !== undefined) body.subscription_type = product.subscription_type;
+    if (product.quantity !== undefined) body.quantity = product.quantity;
+
+    const response = await axios.post(`${config.vtpass.baseUrl}/pay`, body, {
+      ...authConfig('post'),
+      timeout: config.vtpass.timeoutMs,
+    });
+    providerRaw = response.data;
+  } catch (err) {
+    providerRaw = err.response?.data;
+    if (!providerRaw) {
+      // Provider may still have accepted the request despite our timeout.
+      await db.recordVtuProviderResponse(requestId, {
+        statusCode: null, status: 'UNKNOWN',
+        remark: 'Provider connection unresolved', description: err.message,
+        orderId: null, token: '', purchasedCode: '',
+        raw: { error: err.message },
+      });
+      await db.markVtuOrderPending(requestId);
+      logger.warn(`VTPass direct purchase pending reconciliation: ${requestId}`, { reason: err.message });
+      return { outcome: 'pending', message: 'Your order is pending provider confirmation.', requestId, orderId: null };
+    }
+  }
+
+  const provider = normalizeVtpassResponse(providerRaw);
+  await db.recordVtuProviderResponse(requestId, provider);
+
+  if (provider.outcome === 'success') {
+    try {
+      const result = await db.completeDirectOrder(requestId, { paymentReference });
+      logger.info('VTPass direct purchase completed', { requestId, orderId: provider.orderId || 'no provider order id' });
+      await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'success' });
+      return { outcome: 'success', requestId, orderId: provider.orderId, provider };
+    } catch (err) {
+      logger.error('VTPass confirmed delivery but direct completion failed; holding for reconciliation', { requestId, message: err.message });
+      await db.markVtuOrderPending(requestId).catch(() => {});
+      await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'pending' });
+      return { outcome: 'pending', message: 'Delivery confirmed but completion is pending reconciliation.', requestId, orderId: provider.orderId, provider };
+    }
+  }
+
+  if (provider.outcome === 'failed') {
+    await db.markVtuOrderFailed(requestId);
+    logger.warn('VTPass direct purchase failed', { requestId, statusCode: provider.statusCode || 'unknown', code: provider.status });
+    await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'failed' });
+    return { outcome: 'failed', message: provider.description || provider.remark || 'The provider declined this purchase.', requestId, orderId: provider.orderId, provider };
+  }
+
+  await db.markVtuOrderPending(requestId);
+  logger.warn('VTPass direct purchase pending reconciliation', { requestId });
+  await notifyPurchase({ userId, requestId, serviceType, amount, description, outcome: 'pending' });
+  return { outcome: 'pending', message: 'Your order is pending provider confirmation.', requestId, orderId: provider.orderId, provider };
+}
+
 module.exports = {
   MAX_PURCHASE_AMOUNT,
   parseValidatedAmount,
@@ -639,6 +711,7 @@ module.exports = {
   normalizeVtpassResponse,
   queryVtpassOrder,
   processVtpassPurchase,
+  processDirectPurchase,
   authConfig,
   assertConfigured,
 };

@@ -223,6 +223,18 @@ const config = {
     fundingEnabled: str(process.env.FUNDING_ENABLED, 'true') === 'true',
   },
 
+  // ── Customer payment mode ──────────────────────────────────────────────────
+  // 'wallet' = current/legacy model: customer funds a stored wallet balance,
+  //            then purchases debit that balance (FUNDING_ENABLED gates top-up).
+  // 'direct' = per-order payment: customer pays for each specific order via the
+  //            payment provider (Paystack), then VTPass fulfils that order. No
+  //            customer stored-value wallet. Wallet funding UI/CTA are hidden.
+  //
+  // PRODUCTION MUST REMAIN ON 'wallet' UNTIL AN EXPLICIT CUTOVER IS AUTHORIZED.
+  // Switching to 'direct' is a production financial change — it removes the
+  // customer wallet and changes the purchase/payment pipeline.
+  paymentMode: str(process.env.PAYMENT_MODE, 'wallet'),
+
   // Build/version metadata — non-secret operator visibility into which Git
   // commit is running. Railway injects RAILWAY_GIT_COMMIT_SHA by default;
   // APP_COMMIT / GIT_SHA are accepted as alternatives. Falls back to a
