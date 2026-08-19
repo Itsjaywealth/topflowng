@@ -231,6 +231,7 @@ await checkInlineSyntax('bizflow.html');
   check('favicon uses TopFlowNG brand SVG', /rel="icon" href="\/assets\/brand\/topflowng-mark\.svg"/.test(app));
   check('favicon PNG fallbacks present', /favicon-32\.png/.test(app) && /favicon-16\.png/.test(app));
   check('apple-touch icon points to branded icon', /rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png"/.test(app));
+  check('favicon.ico exists (legacy browsers)', fs.existsSync(path.join(ROOT, 'icons', 'favicon.ico')));
   check('brand mark uses teal gradient', /stop-color="#0B7E8E"/.test(read('assets/brand/topflowng-mark.svg'))
     && /stop-color="#0E9BAE"/.test(read('assets/brand/topflowng-mark.svg')));
   for (const p of ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png', '/icons/favicon-16.png']) {

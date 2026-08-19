@@ -156,6 +156,16 @@ app.use('/icons/:file', (req, res) => {
   });
 });
 
+// Real favicon.ico (the canonical TopFlowNG brand mark) for legacy browsers
+// that request /favicon.ico by default, instead of falling back to the HTML
+// shell. Cache long — the brand icon is effectively immutable.
+app.get('/favicon.ico', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(path.join(__dirname, 'icons', 'favicon.ico'), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
 // Public brand assets — only the dedicated provider/brand folders and the
 // shared logo registry are exposed. Source notes and every other repository
 // file remain private.
