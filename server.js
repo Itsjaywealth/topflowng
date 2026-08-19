@@ -270,7 +270,15 @@ app.get('/api/providers/health', async (_req, res) => {
     const { healthCheck } = require('./providers/vtpass');
     const health = await healthCheck();
     const code = health.status === 'UNAVAILABLE' ? 503 : 200;
-    return res.status(code).json({ provider: 'vtpass', ...health });
+    // Per-provider status list — VTPass is live-checked; unapproved future
+    // providers report their configured status (NOT_CONFIGURED/BLOCKED_EXTERNAL)
+    // so operators never see a fabricated green status.
+    const providerStatuses = Object.entries(config.providers || {}).map(([key, p]) => ({
+      provider: key,
+      name: p.name,
+      status: key === 'vtpass' ? health.status : p.status,
+    }));
+    return res.status(code).json({ provider: 'vtpass', ...health, providers: providerStatuses });
   } catch {
     return res.status(503).json({ provider: 'vtpass', status: 'UNAVAILABLE', reason: 'error' });
   }

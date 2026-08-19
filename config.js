@@ -147,6 +147,48 @@ const config = {
     reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
   },
 
+  // ── Provider capability registry & feature flags ──────────────────────────
+  // Server-controlled model for multi-provider readiness. Each provider is
+  // described by its status and the capabilities it offers. Unfinished
+  // providers (Bitrefill/DT One) are NOT_CONFIGURED and their customer-facing
+  // categories are locked OFF by default. Nothing here enables a purchase or
+  // exposes a product — these are architectural readiness flags only.
+  providers: {
+    vtpass: {
+      name: 'VTPass',
+      status: 'INTEGRATED', // INTEGRATED | NOT_CONFIGURED | BLOCKED_EXTERNAL
+      capabilities: ['AIRTIME_NG', 'DATA_NG', 'ELECTRICITY_NG', 'CABLE_NG', 'EDUCATION_NG'],
+    },
+    bitrefill: {
+      name: 'Bitrefill',
+      status: str(process.env.BITREFILL_STATUS, 'BLOCKED_EXTERNAL'), // awaiting approval/credentials
+      capabilities: ['GIFT_CARDS', 'ESIMS', 'INTERNATIONAL_REFILLS'],
+    },
+    dtone: {
+      name: 'DT One',
+      status: str(process.env.DTONE_STATUS, 'BLOCKED_EXTERNAL'), // awaiting onboarding/credentials
+      capabilities: ['INTERNATIONAL_AIRTIME', 'INTERNATIONAL_DATA', 'ESIMS', 'GIFT_CARDS', 'DIGITAL_VOUCHERS'],
+    },
+  },
+
+  // Customer-facing category flags — ALL OFF until a provider is legitimately
+  // approved, credentialed, sandbox-certified and production-certified.
+  features: {
+    giftCards: str(process.env.GIFT_CARDS_ENABLED, 'false') === 'true',
+    esims: str(process.env.ESIMS_ENABLED, 'false') === 'true',
+    internationalAirtime: str(process.env.INTERNATIONAL_AIRTIME_ENABLED, 'false') === 'true',
+    internationalData: str(process.env.INTERNATIONAL_DATA_ENABLED, 'false') === 'true',
+    digitalVouchers: str(process.env.DIGITAL_VOUCHERS_ENABLED, 'false') === 'true',
+  },
+
+  // Global / category purchase safety switches (server-controlled, admin-only
+  // intent). All default to allowing purchases. A kill switch here does NOT
+  // auto-fund, refund, or retry — it only gates new purchase initiation.
+  safety: {
+    purchasesEnabled: str(process.env.PURCHASES_ENABLED, 'true') === 'true',
+    fundingEnabled: str(process.env.FUNDING_ENABLED, 'true') === 'true',
+  },
+
   // Build/version metadata — non-secret operator visibility into which Git
   // commit is running. Railway injects RAILWAY_GIT_COMMIT_SHA by default;
   // APP_COMMIT / GIT_SHA are accepted as alternatives. Falls back to a
