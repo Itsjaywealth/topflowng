@@ -77,6 +77,19 @@ test('health/readiness: responses never leak connection strings or secrets', asy
   }
 });
 
+// ── Version / commit visibility ──────────────────────────────────────────────
+test('version: /api/version returns commit and version without secrets', async () => {
+  const res = await fetch(h.BASE_URL + '/api/version');
+  assert.strictEqual(res.status, 200);
+  const data = await res.json();
+  assert.strictEqual(data.status, 'ok');
+  assert.ok(typeof data.commit === 'string' && data.commit.length > 0);
+  assert.ok(typeof data.version === 'string' && data.version.length > 0);
+  const needles = ['postgres://', 'sk_live', 'sk_test', 'secret', 'Bearer', 'DATABASE_URL'];
+  const text = JSON.stringify(data).toLowerCase();
+  for (const n of needles) assert.ok(!text.includes(n), `/api/version leaked ${n}`);
+});
+
 // ── Redaction ────────────────────────────────────────────────────────────────
 test('logger: sensitive values are redacted, safe values preserved', () => {
   const got = logger.redact(

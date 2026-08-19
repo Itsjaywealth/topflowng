@@ -225,6 +225,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
 });
 
+// ── Version / build metadata (read-only) ─────────────────────────────────────
+// Exposes which Git commit is running so operators can confirm commit parity
+// without guessing. Contains no secrets — only the commit SHA, app version and
+// Node runtime. This is the safe "production commit visibility" field.
+app.get('/api/version', (_req, res) => {
+  res.json({
+    status: 'ok',
+    commit: config.build.commit,
+    version: config.build.version,
+    node: config.build.node,
+    ts: new Date().toISOString(),
+  });
+});
+
 // ── Readiness ────────────────────────────────────────────────────────────────
 // Liveness plus dependency checks: reports ready only when the database is
 // reachable. Distinguishes "process alive" (/api/health) from "able to serve
@@ -241,7 +255,7 @@ app.get('/api/ready', async (_req, res) => {
     return res.status(503).json({ status: 'unready', component: 'database' });
   }
   if (probe && probe.ok) {
-    return res.json({ status: 'ready', component: 'database', ts: new Date().toISOString() });
+    return res.json({ status: 'ready', component: 'database', commit: config.build.commit, ts: new Date().toISOString() });
   }
   return res.status(503).json({ status: 'unready', component: 'database' });
 });

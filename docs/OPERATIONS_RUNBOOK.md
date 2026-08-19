@@ -39,6 +39,7 @@ Expected: `health` 200, `ready` 200, provider `OPERATIONAL`, root/www 200.
 
 ### 9. Deployment health
 - Confirm `DEPLOYED COMMIT == GITHUB MAIN` on Railway.
+- `curl -sS https://topflowng.com/api/version` → returns `commit`, `version`, `node`. The `commit` here must equal `git rev-parse HEAD` on the GitHub `main` branch. `/api/ready` also reports `commit`.
 - Confirm GitHub Actions are green on `main`.
 
 ### 10. Background jobs

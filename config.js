@@ -146,6 +146,19 @@ const config = {
     reconcileMaxAttempts: num(process.env.PENDING_ORDER_RECONCILE_MAX_ATTEMPTS, 30),
     reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
   },
+
+  // Build/version metadata — non-secret operator visibility into which Git
+  // commit is running. Railway injects RAILWAY_GIT_COMMIT_SHA by default;
+  // APP_COMMIT / GIT_SHA are accepted as alternatives. Falls back to a
+  // harmless unknown marker so local/test boots stay clean. Never secrets.
+  build: {
+    commit: str(
+      process.env.RAILWAY_GIT_COMMIT_SHA || process.env.APP_COMMIT || process.env.GIT_SHA,
+      'unknown'
+    ),
+    version: str(process.env.APP_VERSION, require('./package.json').version),
+    node: process.version,
+  },
 };
 
 // ── Production startup validation ───────────────────────────────────────────
