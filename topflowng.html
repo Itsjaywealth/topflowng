@@ -4465,10 +4465,6 @@ document.addEventListener('keydown', e => {
 
 
 // ── BENEFICIARIES ─────────────────────────────────────────────────────────────
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
 const BFR_CONFIG = {
   airtime:     { listId:'bfr-airtime',     checkId:'save-bfr-airtime',     fieldId:'airtime-phone', netSel:'#svc-airtime .network-chips',     reloadFn:null },
   data:        { listId:'bfr-data',        checkId:'save-bfr-data',        fieldId:'data-phone',    netSel:'#svc-data .network-chips',        reloadFn:'data' },
