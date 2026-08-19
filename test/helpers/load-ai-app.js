@@ -18,7 +18,6 @@ const pgHelper = require('./pg');
 const ROOT = path.resolve(__dirname, '..', '..');
 
 const DB_PREFIX = 'topflowng_ai';
-const TEST_PORT = String((Number(process.pid) % 40000) + 20000);
 
 // Create the throwaway DB synchronously BEFORE server.js is required.
 const DATABASE_URL = pgHelper.createDatabaseSync(DB_PREFIX);
@@ -29,7 +28,7 @@ const FALLBACK_MODEL = 'hermes-model';
 
 // ── Environment (set before config.js / database.js / server.js are loaded) ─
 process.env.NODE_ENV = 'test';
-process.env.PORT = TEST_PORT;
+process.env.PORT = '0';
 process.env.TRUST_PROXY = '0';
 process.env.JWT_SECRET = 'test-jwt-secret-do-not-use-in-prod';
 process.env.AUTH_RATE_MAX = '100000';
@@ -144,15 +143,29 @@ http.createServer = function (...args) {
 
 require(path.join(ROOT, 'server.js'));
 
-const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
+function resolvedPort() {
+  if (capturedServer && capturedServer.address) {
+    const a = capturedServer.address();
+    if (a && typeof a === 'object') return a.port;
+  }
+  return null;
+}
 
-async function waitForServer(timeoutMs = 15000) {
+function baseUrl() {
+  const port = resolvedPort();
+  return port ? `http://127.0.0.1:${port}` : null;
+}
+
+async function waitForServer(timeoutMs = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/health`);
-      if (res.ok) return;
-    } catch { /* not up yet */ }
+    const url = baseUrl();
+    if (url) {
+      try {
+        const res = await fetch(`${url}/api/health`);
+        if (res.ok) return;
+      } catch { /* not up yet */ }
+    }
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error('Server did not become healthy in time');
@@ -168,7 +181,7 @@ function applyMigrations() {
 async function api(method, pathname, { body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(BASE_URL + pathname, {
+  const res = await fetch(baseUrl() + pathname, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -192,7 +205,9 @@ async function cleanup() {
 
 module.exports = {
   DATABASE_URL,
-  BASE_URL,
+  get BASE_URL() {
+    return baseUrl() || `http://127.0.0.1:0`;
+  },
   PRIMARY_MODEL,
   FALLBACK_MODEL,
   waitForServer,

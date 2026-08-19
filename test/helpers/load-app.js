@@ -15,7 +15,13 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
-const TEST_PORT = String(Number(process.pid) % 60000 + 3000);
+// Bind an OS-assigned ephemeral port (0) instead of deriving one from the
+// process PID. Parallel `node --test --experimental-test-coverage` runs spawn
+// one process per file; PID-derived ports (pid % N + offset) collided across
+// harnesses (load-app / load-ai-app / load-idempotency-app use overlapping
+// ranges), which intermittently produced EADDRINUSE and the CI flake
+// "Server did not become healthy in time". The real bound port is read back
+// from the captured server after it starts listening.
 
 // Capture the http.Server instance that express's app.listen creates so the
 // test runner can shut it down and exit cleanly.
@@ -30,7 +36,7 @@ http.createServer = function (...args) {
 
 // ── Environment (must be set before config.js is required) ──────────────────
 process.env.NODE_ENV = 'test';
-process.env.PORT = TEST_PORT;
+process.env.PORT = '0';
 process.env.TRUST_PROXY = '0';
 process.env.JWT_SECRET = 'test-jwt-secret-do-not-use-in-prod';
 process.env.AUTH_RATE_MAX = '100000';
@@ -275,15 +281,31 @@ installMock('services/vtpass.js', {
 // ── Boot the real app ────────────────────────────────────────────────────────
 require(path.join(ROOT, 'server.js'));
 
-const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
+function resolvedPort() {
+  if (capturedServer && capturedServer.address) {
+    const a = capturedServer.address();
+    if (a && typeof a === 'object') return a.port;
+  }
+  return null;
+}
+
+function baseUrl() {
+  const port = resolvedPort();
+  return port ? `http://127.0.0.1:${port}` : null;
+}
 
 async function waitForServer(timeoutMs = 30000) {
   const start = Date.now();
+  // First wait for the captured server to actually be listening (port 0 is
+  // resolved asynchronously by the kernel), then poll health on that port.
   while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/health`);
-      if (res.ok) return;
-    } catch { /* not up yet */ }
+    const url = baseUrl();
+    if (url) {
+      try {
+        const res = await fetch(`${url}/api/health`);
+        if (res.ok) return url;
+      } catch { /* not up yet */ }
+    }
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error('Server did not become healthy in time');
@@ -292,7 +314,7 @@ async function waitForServer(timeoutMs = 30000) {
 async function api(method, pathname, { body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(BASE_URL + pathname, {
+  const res = await fetch(baseUrl() + pathname, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -317,7 +339,9 @@ async function createUserViaDb({ fullName, email, phone, password }) {
 }
 
 module.exports = {
-  BASE_URL,
+  get BASE_URL() {
+    return baseUrl() || `http://127.0.0.1:0`;
+  },
   waitForServer,
   api,
   register,
