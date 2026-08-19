@@ -66,20 +66,22 @@ app.use(helmet({
       // event handlers are unavoidable and must be allowed. Paystack's
       // inline.js is the only third-party script. Google Fonts CSS is inlined
       // by the stylesheet link; the font files come from gstatic.
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.paystack.co'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.paystack.co', 'https://embed.tawk.to'],
       // The SPA uses inline event handlers (onclick etc.); helmet's default
       // `script-src-attr 'none'` would block every one of them, so inline is
       // allowed for handler attributes specifically.
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://paystack.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-      imgSrc: ["'self'", 'data:', 'https:'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://paystack.com', 'https://*.tawk.to'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:', 'https://*.tawk.to'],
+      imgSrc: ["'self'", 'data:', 'https:', 'https://*.tawk.to'],
       // API calls are same-origin; Paystack inline.js may open its own
       // connections and render the checkout in an iframe for popup flows even
-      // though the app normally redirects to authorization_url.
-      connectSrc: ["'self'", 'https://js.paystack.co', 'https://api.paystack.co'],
-      frameSrc: ["'self'", 'https://checkout.paystack.com'],
-      workerSrc: ["'self'"],
+      // though the app normally redirects to authorization_url. tawk.to loads
+      // its runtime (and video/voice transports) over its own subdomains.
+      connectSrc: ["'self'", 'https://js.paystack.co', 'https://api.paystack.co', 'https://*.tawk.to'],
+      frameSrc: ["'self'", 'https://checkout.paystack.com', 'https://*.tawk.to'],
+      mediaSrc: ["'self'", 'https://*.tawk.to'],
+      workerSrc: ["'self'", 'blob:', 'https://*.tawk.to'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -429,6 +431,25 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch profile');
+  }
+});
+
+// tawk.to Secure Mode: server-side HMAC-SHA256 hash of the authenticated
+// visitor's email (the "visitor id" tawk.to uses). The API key never leaves
+// the server, and the endpoint 404s when the key is not configured so the
+// frontend knows to load the widget anonymously.
+app.get('/api/support/tawk-hash', authMiddleware, async (req, res) => {
+  try {
+    if (!config.tawk.secureMode || !config.tawk.apiKey) {
+      return sendError(res, 404, 'tawk.to secure mode not configured');
+    }
+    const user = await db.findUserById(req.user.id);
+    if (!user) return sendError(res, 404, 'User not found');
+    const hash = crypto.createHmac('sha256', config.tawk.apiKey).update(user.email).digest('hex');
+    res.json({ hash, email: user.email, name: user.full_name });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to generate tawk.to hash');
   }
 });
 

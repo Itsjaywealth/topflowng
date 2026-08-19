@@ -5029,8 +5029,58 @@ init();
   </div>
 </div>
 
-</div>
+<!-- ══════════════ TAWK.TO LIVE CHAT (non-critical) ══════════════ -->
+<script>
+// tawk.to live chat. Deliberately non-critical: if the script fails to load
+// or the domain is unreachable, nothing else on the page depends on it. The
+// widget loads async and only ever receives authenticated visitor identity
+// (name/email) when the server has produced a Secure Mode HMAC hash — which
+// requires TAWK_API_KEY to be configured. Otherwise it runs anonymously.
+(function () {
+  try {
+    var token = null;
+    try { token = localStorage.getItem('tf_token'); } catch (e) {}
 
+    // Standard tawk.to Secure Mode: set Tawk_API.visitor BEFORE the widget
+    // script loads. The `hash` is the HMAC-SHA256(email, apiKey) produced by
+    // /api/support/tawk-hash on the server; the key never reaches the browser.
+    var Tawk_API = window.Tawk_API || {};
+    if (token) {
+      try {
+        fetch('/api/support/tawk-hash', {
+          method: 'GET',
+          headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (r) {
+          if (!r.ok) return; // secure mode off → stay anonymous
+          return r.json();
+        }).then(function (data) {
+          if (!data || !data.hash || !window.Tawk_API) return;
+          try {
+            window.Tawk_API.visitor = {
+              hash: data.hash,
+              name: data.name,
+              email: data.email
+            };
+          } catch (e) {}
+        }).catch(function () {});
+      } catch (e) {}
+    }
+    window.Tawk_API = Tawk_API;
+
+    var Tawk_LoadStart = new Date();
+    (function () {
+      var s1 = document.createElement('script');
+      var s0 = document.getElementsByTagName('script')[0];
+      s1.async = true;
+      s1.src = 'https://embed.tawk.to/6a85673ae687441d49b902c2/1k0chmfq6';
+      s1.charset = 'UTF-8';
+      s1.setAttribute('crossorigin', '*');
+      s1.onerror = function () { /* tawk.to unreachable — silently degrade */ };
+      s0.parentNode.insertBefore(s1, s0);
+    })();
+  } catch (e) { /* never let the widget break the app */ }
+})();
+</script>
 
 </body>
 </html>

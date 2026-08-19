@@ -98,6 +98,22 @@ const config = {
     timeoutMs: num(process.env.PAYSTACK_TIMEOUT_MS, 30_000),
   },
 
+  // tawk.to live chat. Secure Mode hashes the visitor's email/name on the
+  // server (HMAC-SHA256 with the API key) so identifiable data is only ever
+  // sent to tawk.to when the key is configured; otherwise the widget loads
+  // anonymously. The widget is non-critical: if tawk.to is down or the domain
+  // is unreachable, login, wallet, checkout, history and all transaction flows
+  // must keep working — the client-side loader treats it as best-effort.
+  tawk: {
+    propertyId: str(process.env.TAWK_PROPERTY_ID, '6a85673ae687441d49b902c2'),
+    widgetId: str(process.env.TAWK_WIDGET_ID, '1k0chmfq6'),
+    apiKey: str(process.env.TAWK_API_KEY, null),
+    // When true, the loader passes authenticated visitor name/email into the
+    // widget only if a hash could be produced server-side. Set false to run
+    // fully anonymous.
+    secureMode: str(process.env.TAWK_SECURE_MODE, '1') === '1',
+  },
+
   // Secure, read-only AI assistant (OpenRouter). Model IDs come from the
   // environment, never hardcoded below the defaults; the allow-list is derived
   // from these variables so operators control which models are reachable.

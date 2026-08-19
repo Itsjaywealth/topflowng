@@ -343,3 +343,42 @@ test('rate limit: auth endpoints reject floods after limit', async () => {
   const r = await h.api('POST', '/api/auth/login', { body: { email: 'flood@example.com', password: 'x' } });
   assert.ok(r.status === 401 || r.status === 429);
 });
+
+// ── tawk.to Secure Mode hash ─────────────────────────────────────────────────
+test('tawk-hash: returns 404 when secure mode key is not configured', async () => {
+  mockDb.__reset();
+  await h.createUserViaDb({ fullName: 'Ada', email: 'tawk@example.com', phone: '08044444444', password: 'secret123' });
+  const loginRes = await h.login('tawk@example.com', 'secret123');
+  const r = await h.api('GET', '/api/support/tawk-hash', { token: loginRes.data.token });
+  // In the test environment TAWK_API_KEY is not set, so secure mode is off.
+  assert.strictEqual(r.status, 404);
+});
+
+test('tawk-hash: requires authentication (401 without token)', async () => {
+  const r = await h.api('GET', '/api/support/tawk-hash');
+  assert.strictEqual(r.status, 401);
+});
+
+test('tawk-hash: produces a deterministic HMAC-SHA256 hash when configured', async () => {
+  mockDb.__reset();
+  // Re-read config and override in-process so the endpoint sees the key.
+  const config = require('../config');
+  const originalKey = config.tawk.apiKey;
+  const originalMode = config.tawk.secureMode;
+  try {
+    config.tawk.apiKey = 'test-api-key';
+    config.tawk.secureMode = true;
+    const user = await h.createUserViaDb({ fullName: 'Ada', email: 'tawk2@example.com', phone: '08055555555', password: 'secret123' });
+    const loginRes = await h.login('tawk2@example.com', 'secret123');
+    const r = await h.api('GET', '/api/support/tawk-hash', { token: loginRes.data.token });
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.data.email, 'tawk2@example.com');
+    assert.strictEqual(r.data.name, 'Ada');
+    const crypto = require('crypto');
+    const expected = crypto.createHmac('sha256', 'test-api-key').update('tawk2@example.com').digest('hex');
+    assert.strictEqual(r.data.hash, expected);
+  } finally {
+    config.tawk.apiKey = originalKey;
+    config.tawk.secureMode = originalMode;
+  }
+});
