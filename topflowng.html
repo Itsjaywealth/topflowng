@@ -5240,6 +5240,16 @@ init();
         }).catch(function () {});
       } catch (e) {}
     }
+    // Hide the default tawk.to bubble immediately on load — before the widget
+    // renders — so the ONLY visible launcher is our own support button/FAB.
+    // Setting onLoad before the script injection ensures no flash of the widget.
+    Tawk_API.onLoad = function () {
+      try {
+        if (typeof window.Tawk_API.hideWidget === 'function') {
+          window.Tawk_API.hideWidget();
+        }
+      } catch (e) {}
+    };
     window.Tawk_API = Tawk_API;
 
     var Tawk_LoadStart = new Date();
@@ -5251,16 +5261,6 @@ init();
       s1.charset = 'UTF-8';
       s1.setAttribute('crossorigin', '*');
       s1.onerror = function () { /* tawk.to unreachable — silently degrade */ };
-      // Hide the default tawk.to bubble so the ONLY visible launcher is the
-      // TopFlowNG support FAB. Chat is still opened on demand via openTawkChat()
-      // (Tawk_API.maximize), which never shows a second floating launcher.
-      s1.onload = function () {
-        try {
-          if (window.Tawk_API && typeof window.Tawk_API.hideWidget === 'function') {
-            window.Tawk_API.hideWidget();
-          }
-        } catch (e) { /* ignore */ }
-      };
       s0.parentNode.insertBefore(s1, s0);
     })();
   } catch (e) { /* never let the widget break the app */ }
