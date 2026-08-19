@@ -381,17 +381,17 @@ async function createVtuAttempt({ requestId, userId, serviceType, amount, descri
 // payment provider (Paystack) for THIS specific order before fulfilment, so the
 // order starts as payment_status='pending' with a payment reference attached.
 // No stored customer wallet is involved in direct mode.
-async function createDirectOrder({ requestId, userId, serviceType, amount, description, paymentReference }) {
+async function createDirectOrder({ requestId, userId, serviceType, amount, description, paymentReference, requestPayload = null }) {
   const { rows } = await pool.query(
     `INSERT INTO vtu_orders
-       (request_id, user_id, service_type, amount, description, payment_reference, payment_status)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+       (request_id, user_id, service_type, amount, description, payment_reference, payment_status, request_payload)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
      ON CONFLICT (request_id)
        DO UPDATE SET updated_at = NOW(),
                      payment_reference = COALESCE(vtu_orders.payment_reference, EXCLUDED.payment_reference),
                      payment_status = COALESCE(vtu_orders.payment_status, EXCLUDED.payment_status)
      RETURNING *`,
-    [requestId, userId, serviceType, amount, description, paymentReference]
+    [requestId, userId, serviceType, amount, description, paymentReference, requestPayload ? JSON.stringify(requestPayload) : null]
   );
   return rows[0];
 }

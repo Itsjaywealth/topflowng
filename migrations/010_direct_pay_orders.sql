@@ -15,7 +15,8 @@
 ALTER TABLE vtu_orders
   ADD COLUMN IF NOT EXISTS payment_reference TEXT,
   ADD COLUMN IF NOT EXISTS payment_status   TEXT,
-  ADD COLUMN IF NOT EXISTS paid_at          TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS paid_at          TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS request_payload  JSONB;
 
 -- Backfill: historical orders that were settled from the wallet have no
 -- payment reference, so payment_status stays NULL (unknown/not-applicable).

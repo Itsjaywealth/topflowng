@@ -37,8 +37,9 @@ const security = require('./services/security');
 const { authMiddleware, adminMiddleware, checkTransactionPin } = require('./middleware/auth');
 const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-limit');
 const vtuRouter = require('./routes/vtu');
+const directRouter = require('./routes/direct');
 const aiRouter = require('./routes/ai').router;
-const { queryVtpassOrder, processVtpassPurchase } = require('./services/vtpass');
+const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productFor, buildRequestId } = require('./services/vtpass');
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
@@ -537,12 +538,49 @@ function monitorUncreditedPaystackPayment(reference) {
   }, 60_000).unref();
 }
 
+// ── Direct-order payment bridge (PAYMENT_MODE=direct) ──────────────────────
+// When a Paystack payment is verified, check whether its reference belongs to a
+// direct (pay-per-order) TopFlowNG order. If so, mark the order paid and fulfil
+// it via VTPass WITHOUT debiting a stored wallet. Returns { direct: true } when
+// handled, { direct: false } when this is a normal wallet-funding payment.
+async function fulfilVerifiedDirectOrder(reference, payment) {
+  if (config.paymentMode !== 'direct') return { direct: false };
+  const order = await db.findOrderByPaymentReference(reference);
+  if (!order) return { direct: false };
+
+  // Idempotent: never fulfil the same order twice from a replayed webhook/verify.
+  if (order.payment_status === 'paid' && order.status === 'completed') {
+    return { direct: true, alreadyCompleted: true, order };
+  }
+
+  const payload = order.request_payload || {};
+  const product = payload.product || {};
+  const result = await processDirectPurchase({
+    userId: order.user_id,
+    requestId: order.request_id,
+    serviceType: order.service_type,
+    amount: parseFloat(order.amount),
+    description: order.description,
+    product,
+    paymentReference: reference,
+  });
+
+  await db.markOrderPaid(order.request_id, reference);
+  logger.info('Direct order fulfilled after verified payment', { requestId: order.request_id, reference, outcome: result.outcome });
+  return { direct: true, result, order };
+}
+
 async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) {
   const payment = await getVerifiedPayment(reference);
   if (expectedUserId && payment.userId !== Number(expectedUserId)) {
     const error = new Error('Payment does not belong to the authenticated user');
     error.code = 'PAYMENT_USER_MISMATCH';
     throw error;
+  }
+  // Route verified payments to direct orders first (direct mode only).
+  const direct = await fulfilVerifiedDirectOrder(reference, payment);
+  if (direct.direct) {
+    return { direct: true, userId: payment.userId, ...direct.result };
   }
   monitorUncreditedPaystackPayment(reference);
   const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
@@ -697,6 +735,7 @@ app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
 // Purchase rate limiter (per-user, default 10 req/min) applies to all VTU
 // purchase endpoints — airtime, data, cable, electricity, exam, recharge pins.
 app.use('/api/vtu', purchaseLimiter, vtuRouter);
+app.use('/api/direct', directRouter);
 
 // ── Notification Centre (mounted /api/notifications/*) ─────────────────────
 // Customer-facing read/acknowledge surface only. Events are created by the

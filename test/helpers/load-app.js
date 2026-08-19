@@ -61,6 +61,8 @@ let nextUserId = 1;
 const users = [];
 const resets = [];
 const transactions = [];
+const directOrders = [];
+let nextOrderId = 1;
 
 const mockDb = {
   async initDB() {},
@@ -152,6 +154,23 @@ const mockDb = {
     const user = users.find((u) => u.id === Number(userId));
     return user ? user.wallet : 0;
   },
+
+  // ── Direct-pay order mock (PAYMENT_MODE=direct) ──────────────────────────
+  async createDirectOrder({ requestId, userId, serviceType, amount, description, paymentReference, requestPayload = null }) {
+    const order = { request_id: requestId, user_id: Number(userId), service_type: serviceType, amount, description, payment_reference: paymentReference, payment_status: 'pending', status: 'submitted', request_payload: requestPayload, id: nextOrderId++ };
+    directOrders.push(order);
+    return order;
+  },
+  async findOrderByPaymentReference(paymentReference) {
+    return directOrders.find((o) => o.payment_reference === paymentReference) || null;
+  },
+  async markOrderPaid(requestId, paymentReference) {
+    const order = directOrders.find((o) => o.request_id === requestId);
+    if (order) { order.payment_status = 'paid'; order.paid_at = new Date().toISOString(); if (paymentReference) order.payment_reference = paymentReference; }
+    return order;
+  },
+  async __resetDirectOrders() { directOrders.length = 0; },
+  __getDirectOrders() { return directOrders; },
 
   async getTransactions(userId, { limit = 20, offset = 0, q = null, category = null, status = null, from = null, to = null } = {}) {
     let list = transactions.filter((t) => t.user_id === userId);
