@@ -60,6 +60,67 @@ test('static: admin page is served', async () => {
   assert.ok(html.includes('TopFlowNG Admin'));
 });
 
+test('legal: terms page is served with official email', async () => {
+  const res = await fetch(h.BASE_URL + '/terms');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('Terms of Service'));
+  assert.ok(html.includes('hello@topflowng.com'));
+  assert.ok(!html.includes('support@topflowng.com'));
+});
+
+test('legal: privacy page is served with official email', async () => {
+  const res = await fetch(h.BASE_URL + '/privacy');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('Privacy Policy'));
+  assert.ok(html.includes('hello@topflowng.com'));
+});
+
+test('legal: refund policy page is served with official email', async () => {
+  const res = await fetch(h.BASE_URL + '/refund-policy');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('Refund'));
+  assert.ok(html.includes('hello@topflowng.com'));
+});
+
+test('legal: contact page is served with official email', async () => {
+  const res = await fetch(h.BASE_URL + '/contact');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('Contact'));
+  assert.ok(html.includes('hello@topflowng.com'));
+  assert.ok(!/WhatsApp|24\/7|Live chat|office hours/.test(html));
+});
+
+test('legal: about page is served', async () => {
+  const res = await fetch(h.BASE_URL + '/about');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('About TopFlowNG'));
+});
+
+test('legal: homepage footer links to legal pages', async () => {
+  const res = await fetch(h.BASE_URL + '/');
+  const html = await res.text();
+  for (const path of ['/terms', '/privacy', '/refund-policy', '/about', '/contact']) {
+    assert.ok(html.includes(`href="${path}"`), `missing footer link ${path}`);
+  }
+});
+
+test('legal: security notice present in SPA', async () => {
+  const res = await fetch(h.BASE_URL + '/topflowng.html');
+  const html = await res.text();
+  assert.ok(html.includes('TopFlowNG support will never ask for your password or transaction PIN.'));
+});
+
+test('legal: no unsupported regulatory claims in public pages', async () => {
+  const res = await fetch(h.BASE_URL + '/topflowng.html');
+  const html = await res.text();
+  assert.ok(!/CBN licensed|CBN approved|CAC registered|PCI certified|Trusted by \d+|#1 in Nigeria/.test(html));
+});
+
 test('static: server.js source is not exposed', async () => {
   const res = await fetch(h.BASE_URL + '/server.js');
   assert.strictEqual(res.status, 404);

@@ -1214,6 +1214,21 @@ app.patch('/api/scheduled-purchases/:id/status', authMiddleware, apiLimiter, asy
 app.all('/api/*', (req, res) => sendError(res, 404, 'API route not found'));
 
 // ── SPA Fallback ─────────────────────────────────────────────────────────────
+const LEGAL_PAGES = new Map([
+  ['/terms', 'legal/terms.html'],
+  ['/privacy', 'legal/privacy.html'],
+  ['/refund-policy', 'legal/refund-policy.html'],
+  ['/contact', 'legal/contact.html'],
+  ['/about', 'legal/about.html'],
+]);
+
+app.get(['/terms', '/privacy', '/refund-policy', '/contact', '/about'], (req, res) => {
+  const file = LEGAL_PAGES.get(req.path);
+  res.sendFile(path.join(__dirname, file), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'topflowng.html'));
 });

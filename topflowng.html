@@ -48,6 +48,12 @@
       "url": "https://topflowng.com/",
       "logo": "https://topflowng.com/icons/icon-512.png",
       "email": "hello@topflowng.com",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "hello@topflowng.com",
+        "availableLanguage": "English"
+      },
       "description": "A Nigerian platform for airtime, data, electricity and cable TV payments."
     },
     {
@@ -537,9 +543,12 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
 .marketing-footer-col a,.marketing-footer-col button,.marketing-footer-col span{
   font:500 13px/1 var(--font);color:var(--text-secondary);cursor:pointer;text-align:left;padding:0}
 .marketing-footer-col a:hover,.marketing-footer-col button:hover{color:var(--brand)}
-.marketing-footer-bottom{display:flex;justify-content:space-between;align-items:center;
+.marketing-footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
   margin-top:44px;padding-top:22px;border-top:1px solid var(--border-subtle);
   font:400 12px/1 var(--font);color:var(--text-muted)}
+.marketing-footer-legal{display:flex;flex-wrap:wrap;gap:6px 18px}
+.marketing-footer-legal a{font:400 12px/1 var(--font);color:var(--text-muted);text-decoration:none}
+.marketing-footer-legal a:hover{color:var(--brand);text-decoration:underline}
 
 /* ══════════════════════════════════════════════════════════════
    AUTH SCREEN
@@ -1415,7 +1424,16 @@ html.dark .icon-moon{display:none}
           <a href="mailto:hello@topflowng.com" class="marketing-footer-email">hello@topflowng.com</a>
         </div>
       </div>
-      <div class="marketing-footer-bottom"><span>© 2026 TopFlowNG</span><span>Wallet payments in Naira</span></div>
+      <div class="marketing-footer-bottom">
+        <span class="marketing-footer-legal">
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/refund-policy">Refund Policy</a>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+        </span>
+        <span>© 2026 TopFlowNG</span>
+      </div>
     </div>
   </footer>
 </section>
@@ -1805,6 +1823,7 @@ html.dark .icon-moon{display:none}
           <button class="btn-confirm" id="btn-set-pin" onclick="setTransactionPin()" style="flex:none;min-height:48px;padding:0 18px;font-size:13px;width:auto">Set PIN</button>
         </div>
         <div id="pin-msg" class="auth-error" style="margin-top:8px"></div>
+        <p style="font:400 12px/1.6 var(--font);color:var(--text-muted);margin-top:10px">TopFlowNG support will never ask for your password or transaction PIN.</p>
       </div>
 
       <!-- Auto-recharge -->
