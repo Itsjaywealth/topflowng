@@ -493,6 +493,61 @@ app.get('/api/wallet/transactions', authMiddleware, apiLimiter, async (req, res)
   }
 });
 
+// ── Email receipt ─────────────────────────────────────────────────────────────
+app.post('/api/wallet/transactions/email-receipt', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const reference = (req.body.reference || '').toString().trim().slice(0, 200);
+    if (!reference) return sendError(res, 400, 'reference is required');
+
+    // Look up the transaction scoped to the authenticated user
+    const { transactions } = await db.getTransactions(req.user.id, { limit: 1, q: reference });
+    const txn = transactions.find(t => t.reference === reference);
+    if (!txn) return sendError(res, 404, 'Transaction not found');
+
+    const user = await db.findUserById(req.user.id);
+    if (!user) return sendError(res, 404, 'User not found');
+
+    const fmt = (n) => `₦${parseFloat(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const isCredit = txn.type === 'credit';
+    const statusLabel = txn.status === 'completed' ? 'Completed' : txn.status === 'failed' ? 'Failed' : txn.status || 'Completed';
+    const statusColor = txn.status === 'failed' ? '#DC2626' : '#1A7A4A';
+    const typeLabel = isCredit ? 'Wallet Credit' : 'Purchase';
+    const dateStr = new Date(txn.created_at).toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#0E2235;margin:0 0 4px">Transaction Receipt</h2>
+        <p style="color:#6B7280;font-size:13px;margin:0 0 20px">TopFlowNG</p>
+        <p>Hi ${user.full_name || user.email},</p>
+        <p>Here is your receipt for the transaction below.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px;border-bottom:1px solid #EEF2F6">Type</td><td style="padding:8px 0;font-size:13px;text-align:right;border-bottom:1px solid #EEF2F6">${typeLabel}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px;border-bottom:1px solid #EEF2F6">Description</td><td style="padding:8px 0;font-size:13px;text-align:right;border-bottom:1px solid #EEF2F6">${user.full_name ? txn.description.replace(/</g,'&lt;').replace(/>/g,'&gt;') : txn.description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px;border-bottom:1px solid #EEF2F6">Amount</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #EEF2F6">${fmt(txn.amount)}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px;border-bottom:1px solid #EEF2F6">Status</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right;color:${statusColor};border-bottom:1px solid #EEF2F6">${statusLabel}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px;border-bottom:1px solid #EEF2F6">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right;border-bottom:1px solid #EEF2F6">${reference.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>
+          <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Date</td><td style="padding:8px 0;font-size:13px;text-align:right">${dateStr}</td></tr>
+        </table>
+        <p style="font-size:12px;color:#9CA3AF">If you have any questions about this transaction, contact us at ${config.supportEmail}</p>
+        <p style="font-size:12px;color:#9CA3AF">— TopFlowNG</p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: `TopFlowNG — Receipt for ${txn.description.slice(0, 60)}`,
+      replyTo: config.supportEmail,
+      html,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    logger.error('Email receipt error', { message: err.message });
+    sendError(res, 500, 'Failed to send receipt email');
+  }
+});
+
 // ── Paystack ─────────────────────────────────────────────────────────────────
 app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paystackInitSchema), async (req, res) => {
   try {
