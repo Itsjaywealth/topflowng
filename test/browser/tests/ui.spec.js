@@ -308,6 +308,30 @@ test.describe('logged-in app shell', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('#svc-airtime')).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('support overlay has searchable categorized FAQ and chat/email actions', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    await page.evaluate(() => openSupport());
+    await expect(page.locator('#support-overlay')).toHaveClass(/open/);
+    await expect(page.locator('#support-search')).toBeVisible();
+    await expect(page.locator('.support-faq .faq-item')).toHaveCount(16);
+    await expect(page.locator('.support-faq .support-faq-cat').first()).toBeVisible();
+    // search filters items and hides empty category headers
+    await page.locator('#support-search').fill('wallet');
+    await expect(page.locator('#faq-empty')).toBeHidden();
+    const visibleItems = await page.locator('#support-faq .faq-item:visible').count();
+    expect(visibleItems).toBeGreaterThan(0);
+    expect(visibleItems).toBeLessThan(16);
+    // chat action present and wired to tawk
+    await expect(page.locator('.chat-action')).toContainText('Chat with us');
+    await expect(page.locator('.support-actions button').nth(1)).toContainText('Email support');
+    // clear search restores all items
+    await page.locator('#support-search').fill('');
+    await expect(page.locator('#support-faq .faq-item:visible')).toHaveCount(16);
+    await page.evaluate(() => closeSupport());
+    await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
+  });
 });
 
 test.describe('admin login screen', () => {
