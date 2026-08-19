@@ -861,7 +861,7 @@ async function creditVerifiedPaystackPayment(reference, userId, amount) {
       );
       if (referrerRow.rows.length > 0) {
         const referrerId = referrerRow.rows[0].referred_by;
-        const REFERRAL_BONUS = 100; // ₦100 per referred user's first top-up
+        const REFERRAL_BONUS = 200; // ₦200 per referred user's first top-up
         await client.query(
           'UPDATE users SET wallet = wallet + $1 WHERE id = $2',
           [REFERRAL_BONUS, referrerId]
@@ -1092,7 +1092,7 @@ async function getReferralStats(userId) {
     referralCode: code,
     totalReferrals: parseInt(referred.rows[0].total, 10),
     totalEarned: parseFloat(earned.rows[0].earned),
-    rewardsEnabled: false,
+    rewardsEnabled: true,
   };
 }
 

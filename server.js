@@ -635,6 +635,59 @@ async function fulfilVerifiedDirectOrder(reference, payment) {
   return { direct: true, result, order };
 }
 
+// ── BizFlow invoice payment credit ─────────────────────────────────────────
+// When a client pays a BizFlow invoice via Paystack, the BIZ- reference prefix
+// routes here instead of the normal wallet-credit path. Credits the BizFlow
+// user's wallet and marks the invoice paid in their bizflow_data document.
+// Idempotent: paystack_refs unique reference prevents double-credit.
+async function creditBizflowInvoicePayment(reference, payment) {
+  const meta = payment.metadata || {};
+  const ownerId = meta.bizflow_user_id;
+  const invoiceId = meta.invoice_id;
+  const invoiceToken = meta.invoice_token;
+  if (!ownerId || !invoiceToken) {
+    logger.error('BIZ payment missing owner metadata', { reference });
+    return { credited: false, message: 'Missing invoice metadata' };
+  }
+
+  const claimed = await db.paystackRefExists(reference);
+  if (claimed) return { credited: false, message: 'Already credited' };
+
+  await db.savePaystackRef(reference, ownerId, payment.amount);
+
+  // Credit the BizFlow user's wallet
+  const balance = await db.creditWallet(ownerId, payment.amount,
+    `Invoice payment received — #${invoiceId}`,
+    reference
+  );
+
+  // Mark the invoice paid in the bizflow_data document
+  try {
+    const data = await db.getBizflowData(ownerId);
+    if (data && Array.isArray(data.invoices)) {
+      const inv = data.invoices.find(i => i.paymentToken === invoiceToken);
+      if (inv && inv.status !== 'paid') {
+        inv.status = 'paid';
+        inv.paidAt = new Date().toISOString();
+        inv.paymentMethod = 'paystack-client';
+        inv.paymentReference = reference;
+        await db.saveBizflowData(ownerId, data);
+        logger.info('BizFlow invoice paid via client Paystack', { invoiceId, ownerId, reference, amount: payment.amount });
+      }
+    }
+  } catch (err) {
+    logger.error('Failed to mark BizFlow invoice paid', { invoiceId, ownerId, message: err.message });
+  }
+
+  await db.createNotification({
+    userId: ownerId, category: 'wallet', title: 'Invoice payment received',
+    message: `₦${Number(payment.amount).toLocaleString()} from invoice #${invoiceId} has been added to your wallet.`,
+    link: `/api/wallet/transactions?q=${encodeURIComponent(reference)}`,
+  }).catch(() => {});
+
+  return { credited: true, balance, userId: ownerId };
+}
+
 async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) {
   const payment = await getVerifiedPayment(reference);
   if (expectedUserId && payment.userId !== Number(expectedUserId)) {
@@ -647,6 +700,12 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
   if (direct.direct) {
     return { direct: true, userId: payment.userId, ...direct.result };
   }
+
+  // BizFlow invoice payment: credit the BizFlow user's wallet, mark invoice paid
+  if (reference.startsWith('BIZ-')) {
+    return await creditBizflowInvoicePayment(reference, payment);
+  }
+
   monitorUncreditedPaystackPayment(reference);
   const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
   if (result.credited) {
@@ -1212,20 +1271,142 @@ app.post('/api/bizflow/invoices/:id/send', authMiddleware, async (req, res) => {
     const clientEmail = (client?.email || inv.clientEmail || '').trim();
     if (!clientEmail) return sendError(res, 400, 'The linked client has no email address on file');
 
+    // Generate a payment token so the client can pay via Paystack through TopFlowNG
+    if (!inv.paymentToken) {
+      inv.paymentToken = crypto.randomBytes(24).toString('hex');
+    }
+    const paymentUrl = `${config.appUrl}/?pay_invoice=${inv.paymentToken}`;
     const user = await db.findUserById(req.user.id);
     await sendInvoiceEmail(clientEmail, {
       invoice: inv,
       client: client || { name: inv.clientName },
       ownerName: user.full_name,
       ownerCompany: 'TopFlowNG BizFlow',
+      paymentUrl,
     });
 
     if (inv.status !== 'paid') inv.status = 'sent';
     await db.saveBizflowData(req.user.id, data);
-    res.json({ message: 'Invoice sent.', status: inv.status });
+    res.json({ message: 'Invoice sent.', status: inv.status, paymentUrl });
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to send invoice');
+  }
+});
+
+// Pay a BizFlow invoice from the user's TopFlowNG wallet. Debits the wallet
+// by the invoice total, then marks the invoice paid in the user's BizFlow data.
+// Rejects if the wallet balance is insufficient.
+app.post('/api/bizflow/invoices/:id/pay-with-wallet', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getBizflowData(req.user.id);
+    const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
+    const inv = invoices.find(i => String(i.id) === String(req.params.id));
+    if (!inv) return sendError(res, 404, 'Invoice not found');
+    if (inv.status === 'paid') return sendError(res, 400, 'This invoice is already paid');
+    const amount = parseFloat(inv.total);
+    if (!Number.isFinite(amount) || amount <= 0) return sendError(res, 400, 'Invoice total is invalid');
+
+    const balance = await db.getWalletBalance(req.user.id);
+    if (balance < amount) return sendError(res, 402, 'Insufficient wallet balance to pay this invoice');
+
+    await db.debitWallet(req.user.id, amount,
+      `Invoice payment — #${inv.id} ${inv.clientName || ''}`.trim(),
+      `INV-${inv.id}`
+    );
+
+    inv.status = 'paid';
+    inv.paidAt = new Date().toISOString();
+    inv.paymentMethod = 'wallet';
+    await db.saveBizflowData(req.user.id, data);
+
+    logger.info('BizFlow invoice paid via wallet', { invoiceId: inv.id, userId: req.user.id, amount });
+    res.json({ message: 'Invoice paid from wallet.', balance: balance - amount, invoice: inv });
+  } catch (err) {
+    if (err.message === 'Insufficient balance') return sendError(res, 402, 'Insufficient wallet balance');
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to pay invoice from wallet');
+  }
+});
+
+// ── Public: Client invoice payment via Paystack ─────────────────────────────
+// Clients receive a payment link in their invoice email. No TopFlowNG account
+// is needed. The payment flows through TopFlowNG's Paystack and credits the
+// BizFlow user's wallet when confirmed.
+
+// Look up an invoice by its payment token (public, read-only invoice details).
+app.get('/api/public/invoice/:token', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (token.length < 10) return sendError(res, 404, 'Invoice not found');
+
+    // Scan all bizflow_data documents for the matching invoice token.
+    // This is O(n) but acceptable at current scale; add an index lookup table
+    // if it becomes a bottleneck.
+    const { rows } = await db.pool.query('SELECT user_id, data FROM bizflow_data');
+    for (const row of rows) {
+      const invoices = Array.isArray(row.data?.invoices) ? row.data.invoices : [];
+      const inv = invoices.find(i => i.paymentToken === token);
+      if (inv) {
+        return res.json({
+          exists: true, paid: inv.status === 'paid',
+          id: inv.id, clientName: inv.clientName || 'Client',
+          amount: parseFloat(inv.total), description: inv.notes || '',
+          createdAt: inv.created,
+        });
+      }
+    }
+    sendError(res, 404, 'Invoice not found');
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to look up invoice');
+  }
+});
+
+// Initialize a Paystack payment for an invoice. No auth required — the
+// payment token is the auth. On success the BizFlow user's wallet is credited.
+app.post('/api/public/pay-invoice/:token', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (token.length < 10) return sendError(res, 404, 'Invoice not found');
+
+    // Find the invoice across all bizflow_data
+    const { rows } = await db.pool.query('SELECT user_id, data FROM bizflow_data');
+    let foundOwnerId = null, foundInv = null;
+    for (const row of rows) {
+      const invoices = Array.isArray(row.data?.invoices) ? row.data.invoices : [];
+      const inv = invoices.find(i => i.paymentToken === token);
+      if (inv) { foundOwnerId = row.user_id; foundInv = inv; break; }
+    }
+    if (!foundInv || !foundOwnerId) return sendError(res, 404, 'Invoice not found');
+    if (foundInv.status === 'paid') return sendError(res, 400, 'This invoice has already been paid');
+    const amount = parseFloat(foundInv.total);
+    if (!Number.isFinite(amount) || amount <= 0) return sendError(res, 400, 'Invoice total is invalid');
+
+    // Create a Paystack checkout via the payment provider. The reference prefix
+    // BIZ- lets the webhook handler route this to the BizFlow user's wallet.
+    const provider = getPaymentProvider();
+    const owner = await db.findUserById(foundOwnerId);
+    const reference = `BIZ-${foundOwnerId}-${Date.now()}`;
+    const result = await provider.initializePayment({
+      email: owner ? owner.email : 'client@topflowng.com',
+      amount,
+      reference,
+      metadata: {
+        bizflow_invoice: true,
+        bizflow_user_id: foundOwnerId,
+        invoice_id: foundInv.id,
+        invoice_token: token,
+      },
+      callbackUrl: `${config.appUrl}/?invoice_paid=${reference}`,
+    });
+
+    logger.info('Invoice Paystack checkout created', { invoiceId: foundInv.id, ownerId: foundOwnerId, reference, amount });
+    res.json({ authorization_url: result.authorizationUrl, reference, amount });
+  } catch (err) {
+    logger.error('Invoice payment init error', { message: err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Could not initiate payment');
   }
 });
 

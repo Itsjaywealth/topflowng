@@ -2445,6 +2445,39 @@ html.dark .btn-wa-share{color:#25D366!important}
   </main>
 </div>
 
+<!-- ══════════════ INVOICE PAYMENT SCREEN ══════════════ -->
+<div class="invoice-payment-screen" id="screen-invoice-pay" style="display:none">
+  <div style="min-height:100vh;background:#F4F6F9;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="background:#fff;border-radius:20px;max-width:440px;width:100%;padding:36px 28px;box-shadow:0 8px 32px rgba(0,0,0,.08)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font:800 22px/1 'Plus Jakarta Sans',sans-serif;color:#0B7E8E">TopFlowNG</div>
+        <div style="font:500 13px/1 'Inter',sans-serif;color:#8896A4;margin-top:4px">Secure Invoice Payment</div>
+      </div>
+      <div id="invpay-loading" style="text-align:center;padding:40px 0;color:#8896A4">Loading invoice details…</div>
+      <div id="invpay-details" style="display:none">
+        <div style="background:#E0F5F7;border-radius:14px;padding:20px;margin-bottom:20px">
+          <div style="font:500 12px/1 'Inter',sans-serif;color:#096878;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Invoice from BizFlow NG</div>
+          <div style="font:700 28px/1 'Plus Jakarta Sans',sans-serif;color:#0F1923" id="invpay-amount">—</div>
+          <div style="font:400 13px/1.4 'Inter',sans-serif;color:#4A5568;margin-top:8px">
+            <div>To: <strong id="invpay-client">—</strong></div>
+            <div style="margin-top:4px" id="invpay-desc"></div>
+          </div>
+        </div>
+        <div id="invpay-error" style="display:none;background:#FEF2F2;color:#C53030;border-radius:10px;padding:12px 16px;font:500 13px/1.3 'Inter',sans-serif;margin-bottom:16px" role="alert"></div>
+        <button class="btn-primary" id="invpay-btn" onclick="payInvoiceNow()" style="width:100%;padding:14px;font-size:15px;border-radius:12px">
+          Pay Now
+        </button>
+        <p style="font:400 11px/1.3 'Inter',sans-serif;color:#8896A4;text-align:center;margin-top:12px">Pay securely via Paystack. Powered by TopFlowNG.</p>
+      </div>
+      <div id="invpay-success" style="display:none;text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">✓</div>
+        <div style="font:700 18px/1 'Plus Jakarta Sans',sans-serif;color:#16803C;margin-bottom:8px">Payment Successful!</div>
+        <div style="font:400 13px/1.4 'Inter',sans-serif;color:#4A5568">The BizFlow invoice has been paid. You can close this page.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
   <!-- Bottom Nav -->
   <!-- Bottom Nav -->
   <nav class="bottom-nav" aria-label="Primary">
@@ -3265,6 +3298,57 @@ function logout() {
   showAuthTab('login');
 }
 
+// ── INVOICE PAYMENT (from email link, no account needed) ──────────────────
+let currentInvoiceToken = null;
+
+async function showInvoicePaymentScreen(token) {
+  currentInvoiceToken = token;
+  document.querySelectorAll('.active-screen').forEach(s => s.classList.remove('active-screen'));
+  document.getElementById('screen-invoice-pay').style.display = 'block';
+  document.getElementById('invpay-loading').style.display = 'block';
+  document.getElementById('invpay-details').style.display = 'none';
+  document.getElementById('invpay-success').style.display = 'none';
+  try {
+    const inv = await api('GET', '/api/public/invoice/' + encodeURIComponent(token));
+    if (inv.paid) {
+      document.getElementById('invpay-loading').style.display = 'none';
+      document.getElementById('invpay-success').style.display = 'block';
+      return;
+    }
+    document.getElementById('invpay-amount').textContent = '₦' + Number(inv.amount).toLocaleString('en-NG', {minimumFractionDigits:2});
+    document.getElementById('invpay-client').textContent = escHtml(inv.clientName);
+    document.getElementById('invpay-desc').textContent = 'Invoice #' + escHtml(inv.id) + (inv.description ? ' — ' + escHtml(inv.description) : '');
+    document.getElementById('invpay-loading').style.display = 'none';
+    document.getElementById('invpay-details').style.display = 'block';
+  } catch (e) {
+    document.getElementById('invpay-loading').textContent = 'Invoice not found or has expired.';
+  }
+}
+
+function showInvoiceSuccessScreen() {
+  document.querySelectorAll('.active-screen').forEach(s => s.classList.remove('active-screen'));
+  document.getElementById('screen-invoice-pay').style.display = 'block';
+  document.getElementById('invpay-loading').style.display = 'none';
+  document.getElementById('invpay-details').style.display = 'none';
+  document.getElementById('invpay-success').style.display = 'block';
+}
+
+async function payInvoiceNow() {
+  const btn = document.getElementById('invpay-btn');
+  const errEl = document.getElementById('invpay-error');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Processing…';
+  try {
+    const res = await api('POST', '/api/public/pay-invoice/' + encodeURIComponent(currentInvoiceToken));
+    // Redirect to Paystack checkout
+    window.location.href = res.authorization_url;
+  } catch (e) {
+    errEl.textContent = e.message || 'Payment could not be initiated. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Pay Now';
+  }
+}
+
 // ── APP INIT ─────────────────────────────────────────────────────────────
 async function init() {
   // Check URL for password reset token
@@ -3282,7 +3366,27 @@ async function init() {
   }
 
   if (!token) {
+    // Check for invoice payment link (no auth required)
+    const invToken = params.get('pay_invoice');
+    const invPaid = params.get('invoice_paid');
+    if (invToken) {
+      showInvoicePaymentScreen(invToken);
+      return;
+    }
+    if (invPaid) {
+      showInvoiceSuccessScreen();
+      return;
+    }
     document.getElementById('marketing').classList.add('active-screen');
+    return;
+  }
+
+  // Handle invoice_paid callback for authenticated users too
+  const invPaidRef = params.get('invoice_paid');
+  if (invPaidRef) {
+    // Try to verify and credit (will route to BizFlow credit if BIZ- prefix)
+    try { await api('GET', '/api/paystack/verify/' + encodeURIComponent(invPaidRef)); } catch (e) {}
+    showInvoiceSuccessScreen();
     return;
   }
 

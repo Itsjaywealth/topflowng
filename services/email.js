@@ -161,7 +161,7 @@ function sendPurchaseEmail(userEmail, userName, { service, description, amount, 
   }).catch(e => logger.error('Purchase email error', { message: e.message }));
 }
 
-function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompany }) {
+function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompany, paymentUrl }) {
   const fmt = (n) => `₦${parseFloat(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const rows = (invoice.items || []).map(item => `
     <tr>
@@ -171,6 +171,14 @@ function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompan
       <td style="padding:10px 8px;border-bottom:1px solid #EEF2F6;text-align:right;font-weight:600">${fmt((item.qty || 1) * (item.price || 0))}</td>
     </tr>`).join('');
   const due = invoice.due ? `<tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Due date</td><td style="padding:8px 0;font-size:13px;text-align:right">${new Date(invoice.due).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}</td></tr>` : '';
+  const payButton = paymentUrl ? `
+    <div style="text-align:center;margin:20px 0">
+      <a href="${escapeHtml(paymentUrl)}"
+         style="display:inline-block;background:#0B7E8E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px">
+        Pay Now — ${fmt(invoice.total)}
+      </a>
+    </div>
+    <p style="font-size:12px;color:#9CA3AF;text-align:center">Pay securely via Paystack. Powered by TopFlowNG.</p>` : '';
   sendEmail({
     to: clientEmail,
     subject: `Invoice #${invoice.id} from ${ownerCompany || 'Your business'} — ${fmt(invoice.total)}`,
@@ -180,6 +188,7 @@ function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompan
         <h2 style="color:#0E2235;margin:0 0 4px">Invoice #${escapeHtml(invoice.id)}</h2>
         <p style="margin:0;color:#6B7280;font-size:13px">From ${escapeHtml(ownerName || ownerCompany || 'Your business')}</p>
         <p style="margin:4px 0 20px;color:#6B7280;font-size:13px">To ${escapeHtml(client.name || invoice.clientName)}</p>
+        ${payButton}
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr>
@@ -201,7 +210,7 @@ function sendInvoiceEmail(clientEmail, { invoice, client, ownerName, ownerCompan
           ${due}
         </table>
         ${invoice.notes ? `<p style="margin:16px 0 0;color:#374151;font-size:13px">${escapeHtml(invoice.notes)}</p>` : ''}
-        <p style="font-size:12px;color:#9CA3AF;margin:24px 0 0">This invoice was sent from TopFlowNG BizFlow. If you have any questions, reply to this email.</p>
+        ${!paymentUrl ? `<p style="font-size:12px;color:#9CA3AF;margin:24px 0 0">This invoice was sent from TopFlowNG BizFlow. If you have any questions, reply to this email.</p>` : ''}
       </div>
     `,
   });

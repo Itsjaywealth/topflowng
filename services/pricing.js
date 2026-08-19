@@ -14,10 +14,15 @@
 
 const DATA_PLANS = {
   MTN: [
+    // Wholesale ~₦720 → margin ~₦80 (10%)
     { code: 'MTN1GB',    name: '1GB + 1GB YouTube Night — 7 days', price: 800 },
+    // Wholesale ~₦1,350 → margin ~₦150 (10%)
     { code: 'MTN2GB',    name: '2GB + 2 mins — 30 days', price: 1500 },
+    // Wholesale ~₦1,620 → margin ~₦180 (10%)
     { code: 'MTN7GB',    name: '7GB — 2 days', price: 1800 },
+    // Wholesale ~₦4,500 → margin ~₦500 (10%)
     { code: 'MTN14GB',   name: '14.5GB — 30 days', price: 5000 },
+    // Wholesale ~₦6,750 → margin ~₦750 (10%)
     { code: 'MTN20GB',   name: '20GB — 30 days', price: 7500 },
   ],
   GLO: [
@@ -82,6 +87,58 @@ const ELECTRICITY_DISCOS = [
 ];
 
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'];
+
+// ── Markup / service fees ──────────────────────────────────────────────────────
+// Airtime: percentage-based markup, minimum ₦2 so tiny denominations still
+// contribute. Electricity: flat ₦100 service fee per transaction.
+// These are subtracted from the customer's wallet before the provider is paid
+// the base amount.
+
+function applyAirtimeMarkup(amount) {
+  const config = require('../config');
+  const pct = Math.ceil(amount * config.markup.airtimeRate);
+  return Math.max(pct, config.markup.airtimeMinMarkup);
+}
+
+function airtimeDebitAmount(amount) {
+  return amount + applyAirtimeMarkup(amount);
+}
+
+function electricityDebitAmount(amount) {
+  const config = require('../config');
+  return amount + config.markup.electricityFee;
+}
+
+// ── Discounts / promotions ──────────────────────────────────────────────────
+// Calculates the discount amount (in naira) to subtract from a purchase.
+// Applies service-specific percentage + weekend happy hour when applicable.
+
+function serviceDiscountPercent(serviceType) {
+  const config = require('../config');
+  const d = config.discounts;
+  let pct = 0;
+  if (serviceType === 'airtime') pct = d.airtimePercent;
+  else if (serviceType === 'data') pct = d.dataPercent;
+  else if (serviceType === 'cable') pct = d.cablePercent;
+  else if (serviceType === 'electricity') pct = d.electricityPercent;
+  else if (serviceType === 'exam-pin') pct = d.examPercent;
+  if (d.weekendHappyHourEnabled) {
+    const day = new Date().getDay();
+    if (day === 0 || day === 6) pct = Math.max(pct, d.weekendHappyHourPercent);
+  }
+  return pct;
+}
+
+function discountAmount(serviceType, baseAmount) {
+  const pct = serviceDiscountPercent(serviceType);
+  if (pct <= 0) return 0;
+  return Math.ceil(baseAmount * pct / 100);
+}
+
+function debitAfterDiscount(serviceType, baseAmount, debitAmount) {
+  const disc = discountAmount(serviceType, baseAmount);
+  return Math.max(debitAmount - disc, 0);
+}
 
 /**
  * Exam-PIN catalogue.
@@ -231,4 +288,6 @@ module.exports = {
   findDataPlan, findCablePlan, findExamPrice,
   validatePlanAmount, validateCablePlanAmount,
   getCatalog,
+  applyAirtimeMarkup, airtimeDebitAmount, electricityDebitAmount,
+  serviceDiscountPercent, discountAmount, debitAfterDiscount,
 };

@@ -252,6 +252,11 @@ textarea:focus-visible,[role="button"]:focus-visible{
     </button>
   </nav>
   <div class="sidebar-footer">
+    <div style="padding:0 10px 8px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:8px">
+      <div style="font:500 10px/1 var(--font);color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em">TopFlowNG Wallet</div>
+      <div style="font:700 16px/1 var(--font);color:#84CC16;margin-top:4px" id="biz-wallet-balance">—</div>
+      <a href="/topflowng.html" style="font:500 11px/1 var(--font);color:rgba(255,255,255,.4);text-decoration:none;margin-top:5px;display:inline-block">Fund wallet →</a>
+    </div>
     <div class="sidebar-user">
       <div class="sidebar-avatar" id="biz-avatar">JW</div>
       <div class="sidebar-user-info">
@@ -812,8 +817,9 @@ function renderInvoices() {
       <td><strong>${fmtN(inv.total)}</strong></td>
       <td>${statusBadge(inv)}</td>
       <td>
-        <div style="display:flex;gap:4px">
+        <div style="display:flex;gap:4">
           ${inv.status !== 'paid' ? `<button class="btn btn-sm" style="background:#ECFDF5;color:#065F46;border:0" onclick="markPaid('${inv.id}')">Mark paid</button>` : ''}
+          ${inv.status !== 'paid' ? `<button class="btn btn-sm" style="background:#0B7E8E;color:#fff;border:0" onclick="payInvoiceWithWallet('${inv.id}')">Pay with wallet</button>` : ''}
           ${inv.status !== 'paid' ? `<button class="btn btn-sm" style="background:#EFF6FF;color:#1D4ED8;border:0" onclick="sendInvoice('${inv.id}', this)" aria-label="Send by email"><svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>Send</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="deleteInvoice('${inv.id}')" aria-label="Delete"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
         </div>
@@ -1117,6 +1123,8 @@ function renderStaff() {
       </div>
       <div class="staff-actions">
         <div style="text-align:right;margin-right:8px"><div style="font:700 14px/1 var(--font)">${fmtN(m.salary)}</div><div style="font:400 11px/1 var(--font);color:var(--muted)">per month</div></div>
+        ${m.phone ? `<button class="btn btn-sm" style="background:#E0F5F7;color:#0B7E8E;border:0;font-size:11px" onclick="buyStaffAirtime('${m.id}','${escHtml(m.phone)}')" title="Buy airtime">📱</button>` : ''}
+        ${m.phone ? `<button class="btn btn-sm" style="background:#E0F5F7;color:#0B7E8E;border:0;font-size:11px" onclick="buyStaffData('${m.id}','${escHtml(m.phone)}')" title="Buy data">📶</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="deleteStaff('${m.id}')" aria-label="Delete"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
       </div>
     </div>`).join('') :
@@ -1153,6 +1161,49 @@ function deleteStaff(id) {
   staff = staff.filter(s => s.id !== id); save(); renderStaff(); renderPayroll();
 }
 
+// ── INTEGRATIONS: Pay invoice from TopFlowNG wallet ─────────────────────────
+async function payInvoiceWithWallet(id) {
+  if (!confirm('Pay this invoice from your TopFlowNG wallet?')) return;
+  const btn = event && event.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Paying…'; }
+  try {
+    const res = await api('POST', '/api/bizflow/invoices/' + encodeURIComponent(id) + '/pay-with-wallet');
+    // Refresh from cloud data to get updated invoice status
+    const data = (await api('GET', '/api/bizflow/data')).data;
+    if (data && Array.isArray(data.invoices)) invoices = data.invoices;
+    save();
+    // Update wallet balance in sidebar
+    try {
+      const w = await api('GET', '/api/wallet/balance');
+      document.getElementById('biz-wallet-balance').textContent = fmtN(w.balance);
+    } catch (e) {}
+    renderInvoices();
+    renderDashboard();
+    alert('Paid ✓\n' + res.message);
+  } catch (e) {
+    alert(e.message || 'Payment failed');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay with wallet'; }
+  }
+}
+
+// ── INTEGRATIONS: Buy airtime/data for a staff member ───────────────────────
+function buyStaffAirtime(staffId, phone) {
+  const staffMember = staff.find(s => s.id === staffId);
+  const name = staffMember ? staffMember.name : phone;
+  const amount = prompt('Buy airtime for ' + name + ' (' + phone + ')\nEnter amount (₦):', '100');
+  if (!amount || isNaN(amount) || Number(amount) < 50) return alert('Enter a valid amount (min ₦50)');
+  if (!confirm('Buy ₦' + Number(amount).toLocaleString() + ' airtime for ' + name + '?')) return;
+  window.open('/topflowng.html?quick=airtime&phone=' + encodeURIComponent(phone) + '&amount=' + encodeURIComponent(amount), '_blank');
+}
+
+function buyStaffData(staffId, phone) {
+  const staffMember = staff.find(s => s.id === staffId);
+  const name = staffMember ? staffMember.name : phone;
+  if (!confirm('Open TopFlowNG to buy data for ' + name + ' (' + phone + ')?')) return;
+  window.open('/topflowng.html?quick=data&phone=' + encodeURIComponent(phone), '_blank');
+}
+
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 // Show the real sign-in screen in topflowng.html when unauthenticated, then
 // hydrate from the server (falling back to the localStorage cache offline).
@@ -1165,6 +1216,14 @@ async function boot() {
     const prof = await api('GET', '/api/user/profile');
     document.getElementById('biz-user-name').textContent = prof.fullName || 'Business Owner';
     document.getElementById('biz-avatar').textContent = initials(prof.fullName || 'BZ');
+
+    // Load wallet balance for the sidebar
+    try {
+      const w = await api('GET', '/api/wallet/balance');
+      if (w && typeof w.balance === 'number') {
+        document.getElementById('biz-wallet-balance').textContent = fmtN(w.balance);
+      }
+    } catch (e) { /* wallet unavailable; keep '—' */ }
 
     const res = await api('GET', '/api/bizflow/data');
     if (res.data && res.data !== null) {

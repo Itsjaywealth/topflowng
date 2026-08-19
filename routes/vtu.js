@@ -19,6 +19,8 @@ const { processVtpassPurchase, productFor, getProductRegistry, buildRequestId, V
 const {
   validatePlanAmount, validateCablePlanAmount, getCatalog,
   findExamPrice, ENABLED_EXAM_BODIES,
+  applyAirtimeMarkup, airtimeDebitAmount, electricityDebitAmount,
+  discountAmount, debitAfterDiscount,
 } = require('../services/pricing');
 const { sendPurchaseEmail } = require('../services/email');
 const { resolveRequest, recordRequest } = require('../services/idempotency');
@@ -127,12 +129,15 @@ router.post('/airtime', authMiddleware, apiLimiter, purchasesGuard, validate(air
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
+    const markup = applyAirtimeMarkup(cost);
+    const debitAmount = cost + markup;
+    const finalDebit = debitAfterDiscount('airtime', cost, debitAmount);
     const desc = `${network} airtime — ${phone}`;
 
     const resolved = await resolveRequest({
       req, res, userId: req.user.id, serviceType: 'airtime',
       payload: { network: network.toUpperCase(), phone, amount: cost },
-      amount: cost, description: desc,
+      amount: finalDebit, description: desc,
     });
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
@@ -140,18 +145,18 @@ router.post('/airtime', authMiddleware, apiLimiter, purchasesGuard, validate(air
     const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
+    if (balance < finalDebit) return sendError(res, 402, 'Insufficient wallet balance');
 
     const product = productFor('airtime', { network, phone, amount: cost });
 
     const result = await processVtpassPurchase({
-      userId: req.user.id, requestId, serviceType: 'airtime', amount: cost,
+      userId: req.user.id, requestId, serviceType: 'airtime', amount: finalDebit,
       description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Airtime', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      const body = { success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId };
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Airtime', description: desc, amount: finalDebit, reference: requestId, newBalance: result.balance });
+      const body = { success: true, message: `₦${cost} ${network} airtime sent to ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId, markup, discount: discountAmount('airtime', cost) };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
     }
@@ -179,12 +184,13 @@ router.post('/data', authMiddleware, apiLimiter, purchasesGuard, validate(dataSc
     await checkTransactionPin(req.user.id, pin);
     try { validatePlanAmount(network, planCode, cost); } catch (e) { return sendError(res, 400, e.message); }
 
+    const finalDebit = Math.max(cost - discountAmount('data', cost), 0);
     const desc = `${network} data ${planCode} — ${phone}`;
 
     const resolved = await resolveRequest({
       req, res, userId: req.user.id, serviceType: 'data',
       payload: { network: network.toUpperCase(), planCode, phone, amount: cost },
-      amount: cost, description: desc,
+      amount: finalDebit, description: desc,
     });
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
@@ -192,7 +198,7 @@ router.post('/data', authMiddleware, apiLimiter, purchasesGuard, validate(dataSc
     const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
+    if (balance < finalDebit) return sendError(res, 402, 'Insufficient wallet balance');
 
     let product;
     try {
@@ -203,12 +209,12 @@ router.post('/data', authMiddleware, apiLimiter, purchasesGuard, validate(dataSc
     }
 
     const result = await processVtpassPurchase({
-      userId: req.user.id, requestId, serviceType: 'data', amount: cost,
+      userId: req.user.id, requestId, serviceType: 'data', amount: finalDebit,
       description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Data', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Data', description: desc, amount: finalDebit, reference: requestId, newBalance: result.balance });
       const body = { success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
@@ -301,6 +307,9 @@ router.post('/electricity', authMiddleware, apiLimiter, purchasesGuard, validate
     if (cost === null) return sendError(res, 400, `Amount must be a positive number up to ₦${MAX_PURCHASE_AMOUNT}`);
     await checkTransactionPin(req.user.id, pin);
 
+    const serviceFee = config.markup.electricityFee;
+    const debitAmount = cost + serviceFee;
+    const finalDebit = debitAfterDiscount('electricity', cost, debitAmount);
     const ckDisco = disco.toUpperCase();
     const ckMeterType = meterType.toUpperCase();
     const desc = `${disco} electricity — ${meterNumber}`;
@@ -308,7 +317,7 @@ router.post('/electricity', authMiddleware, apiLimiter, purchasesGuard, validate
     const resolved = await resolveRequest({
       req, res, userId: req.user.id, serviceType: 'electricity',
       payload: { disco: ckDisco, meterNumber, meterType: ckMeterType, amount: cost },
-      amount: cost, description: desc,
+      amount: finalDebit, description: desc,
     });
     if (resolved.kind === 'error' || resolved.kind === 'replay'
       || resolved.kind === 'conflict' || resolved.kind === 'in_progress') return;
@@ -316,7 +325,7 @@ router.post('/electricity', authMiddleware, apiLimiter, purchasesGuard, validate
     const requestId = isIdempotent ? resolved.requestId : buildRequestId();
 
     const balance = await db.getWalletBalance(req.user.id);
-    if (balance < cost) return sendError(res, 402, 'Insufficient wallet balance');
+    if (balance < finalDebit) return sendError(res, 402, 'Insufficient wallet balance');
 
     let product;
     try {
@@ -330,13 +339,13 @@ router.post('/electricity', authMiddleware, apiLimiter, purchasesGuard, validate
     }
 
     const result = await processVtpassPurchase({
-      userId: req.user.id, requestId, serviceType: 'electricity', amount: cost,
+      userId: req.user.id, requestId, serviceType: 'electricity', amount: finalDebit,
       description: desc, product,
     });
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
-      sendPurchaseEmail(user.email, user.full_name, { service: 'Electricity', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
-      const body = { success: true, message: 'Electricity token sent', token: result.provider?.token || result.provider?.purchasedCode || '', balance: result.balance, reference: requestId, orderId: result.orderId };
+      sendPurchaseEmail(user.email, user.full_name, { service: 'Electricity', description: desc, amount: finalDebit, reference: requestId, newBalance: result.balance });
+      const body = { success: true, message: 'Electricity token sent', token: result.provider?.token || result.provider?.purchasedCode || '', balance: result.balance, reference: requestId, orderId: result.orderId, serviceFee };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
     }

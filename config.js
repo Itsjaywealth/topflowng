@@ -182,6 +182,33 @@ const config = {
     reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
   },
 
+  // ── Markup / service fees ───────────────────────────────────────────────────
+  // The platform charges a percentage markup on airtime and a flat service fee
+  // on electricity to cover provider costs and operating margin. These rates are
+  // applied server-side — customers see the total (service amount + markup) as
+  // their final debit amount.
+  markup: {
+    // Airtime: percentage markup applied to every purchase (e.g. 0.02 = 2%).
+    // The minimum markup is ₦2 so very small purchases still contribute.
+    airtimeRate: num(process.env.AIRTIME_MARKUP_RATE, 0.02),
+    airtimeMinMarkup: num(process.env.AIRTIME_MIN_MARKUP, 2),
+    // Electricity: flat naira fee added to every electricity token purchase.
+    electricityFee: num(process.env.ELECTRICITY_SERVICE_FEE, 100),
+  },
+
+  // ── Promotions / discounts ───────────────────────────────────────────────────
+  // Percentage discounts applied at purchase time. All default to 0 (no discount).
+  // Weekend happy hour applies an additional discount on Saturday and Sunday.
+  discounts: {
+    airtimePercent: num(process.env.DISCOUNT_AIRTIME_PERCENT, 0),
+    dataPercent: num(process.env.DISCOUNT_DATA_PERCENT, 0),
+    cablePercent: num(process.env.DISCOUNT_CABLE_PERCENT, 0),
+    electricityPercent: num(process.env.DISCOUNT_ELECTRICITY_PERCENT, 0),
+    examPercent: num(process.env.DISCOUNT_EXAM_PERCENT, 0),
+    weekendHappyHourPercent: num(process.env.DISCOUNT_WEEKEND_HAPPY_HOUR_PERCENT, 2),
+    weekendHappyHourEnabled: str(process.env.DISCOUNT_WEEKEND_HAPPY_HOUR, 'false') === 'true',
+  },
+
   // ── Provider capability registry & feature flags ──────────────────────────
   // Server-controlled model for multi-provider readiness. Each provider is
   // described by its status and the capabilities it offers. Unfinished
