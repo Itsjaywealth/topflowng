@@ -324,7 +324,11 @@ test.describe('logged-in app shell', () => {
     expect(visibleItems).toBeGreaterThan(0);
     expect(visibleItems).toBeLessThan(16);
     // chat action present and wired to tawk
-    await expect(page.locator('.chat-action')).toContainText('Chat with us');
+    await expect(page.locator('.chat-action')).toContainText('Chat with Support');
+    // quick help chips present and filter the FAQ
+    await expect(page.locator('.support-quick .quick-help')).toHaveCount(8);
+    await page.locator('.support-quick .quick-help').first().click();
+    await expect(page.locator('#support-search')).toHaveValue(/pending|Transaction/i);
     await expect(page.locator('.support-actions button').nth(1)).toContainText('Email support');
     // clear search restores all items
     await page.locator('#support-search').fill('');
