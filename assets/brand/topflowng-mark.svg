@@ -2,8 +2,8 @@
   <title id="title">TopFlowNG</title>
   <defs>
     <linearGradient id="topflow-gradient" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#00B67A"/>
-      <stop offset="1" stop-color="#00915B"/>
+      <stop offset="0" stop-color="#0B7E8E"/>
+      <stop offset="1" stop-color="#0E9BAE"/>
     </linearGradient>
   </defs>
   <rect width="40" height="40" rx="12" fill="url(#topflow-gradient)"/>

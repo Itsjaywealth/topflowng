@@ -144,6 +144,11 @@ await checkInlineSyntax('bizflow.html');
   check('manifest display', manifest.display === 'standalone');
   check('manifest icons (>=2)', Array.isArray(manifest.icons) && manifest.icons.length >= 2);
   check('manifest theme_color', Boolean(manifest.theme_color));
+  check('manifest short_name is TopFlowNG', manifest.short_name === 'TopFlowNG');
+  check('manifest theme_color matches brand teal', manifest.theme_color === '#0B7E8E');
+  for (const p of ['/icons/icon-192.png', '/icons/icon-512.png']) {
+    check(`manifest icon exists ${p}`, fs.existsSync(path.join(ROOT, p.slice(1))));
+  }
 }
 
 // ── 7. sw.js cache policy ───────────────────────────────────────────────────
@@ -210,6 +215,25 @@ await checkInlineSyntax('bizflow.html');
     brandProviders.every((k) => new RegExp(`:\\s*'${k}'`).test(app)));
   check('selectNet applies brand color', /function selectNet[\s\S]{0,400}?applyBrand\(el\)/.test(app));
   check('boot seeds brand colors', /function boot\(\)[\s\S]{0,200}?seedBrands\(\)/.test(app));
+}
+
+// ── 9b. Brand + single service-grid integrity ────────────────────────────────
+{
+  const app = read('topflowng.html');
+  check('exactly one "Buy a service" heading', (app.match(/Buy a service/g) || []).length === 1);
+  check('no inline dashboard quickpay grid (duplicate service list)', !/id="quickpay-grid"/.test(app));
+  check('dashboard service search opens launcher', /onclick="openLauncher\(\)"/.test(app));
+  check('quickpay renders active services only', /activeQuickPay\(\)/.test(app) && /filter\(function\s*\(\s*s\s*\)\s*\{\s*return\s*!s\.disabled/.test(app));
+  check('disabled Recharge Cards excluded from quickpay rendering', /recharge.*disabled: true/.test(app) && !/svc\.disabled \? .*Recharge Cards/.test(app.replace(/activeQuickPay/g, 'x')));
+  check('favicon uses TopFlowNG brand SVG', /rel="icon" href="\/assets\/brand\/topflowng-mark\.svg"/.test(app));
+  check('favicon PNG fallbacks present', /favicon-32\.png/.test(app) && /favicon-16\.png/.test(app));
+  check('apple-touch icon points to branded icon', /rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png"/.test(app));
+  check('brand mark uses teal gradient', /stop-color="#0B7E8E"/.test(read('assets/brand/topflowng-mark.svg'))
+    && /stop-color="#0E9BAE"/.test(read('assets/brand/topflowng-mark.svg')));
+  for (const p of ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png', '/icons/favicon-16.png']) {
+    check(`brand icon file exists ${p}`, fs.existsSync(path.join(ROOT, p.slice(1))));
+  }
+  check('service worker precaches branded icons', ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'favicon-16.png'].every((p) => read('sw.js').includes(p)));
 }
 
 // ── 10. Dual-palette + theme persistence ────────────────────────────────────

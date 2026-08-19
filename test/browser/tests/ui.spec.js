@@ -221,6 +221,26 @@ test.describe('logged-in app shell', () => {
     }
   });
 
+  test('dashboard has one service grid and search opens the launcher', async ({ page, request }) => {
+    await login(request, page);
+    await page.goto('/');
+    await expect(page.locator('#main-app')).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Buy a service' })).toHaveCount(1);
+    await expect(page.locator('.service-grid')).toHaveCount(1);
+    await expect(page.locator('#quickpay-grid')).toHaveCount(0);
+    for (const active of ['Airtime', 'Data', 'Electricity', 'Cable TV', 'Exam PINs']) {
+      await expect(page.locator('.service-tile', { hasText: active })).toHaveCount(1);
+    }
+    await expect(page.locator('.service-tile', { hasText: 'Recharge Cards' })).toHaveCount(0);
+    await page.locator('.quickpay-bar .quickpay-search').click();
+    const launcher = page.locator('#quickpay-launcher');
+    await expect(launcher).toBeVisible();
+    await expect(launcher.locator('.quickpay-item', { hasText: 'Airtime' })).toHaveCount(1);
+    await expect(launcher.locator('.quickpay-item', { hasText: 'Recharge Cards' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(launcher).toBeHidden();
+  });
+
   test('provider logos remain visible in light and dark themes', async ({ page, request }) => {
     await login(request, page);
     await page.goto('/');

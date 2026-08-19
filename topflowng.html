@@ -20,10 +20,12 @@
 <meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and T2 airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0B7E8E" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0C1828" media="(prefers-color-scheme: dark)"><meta name="theme-color" content="#0B7E8E" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0C1828" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="/assets/brand/topflowng-mark.svg" type="image/svg+xml">
-<link rel="canonical" href="https://topflowng.com/">
+ <meta name="theme-color" content="#0C1828" media="(prefers-color-scheme: dark)">
+ <link rel="icon" href="/assets/brand/topflowng-mark.svg" type="image/svg+xml">
+ <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+ <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+ <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+ <link rel="canonical" href="https://topflowng.com/">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TopFlowNG">
@@ -73,9 +75,8 @@
 }
 </script>
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
 <script defer src="https://js.paystack.co/v1/inline.js"></script>
@@ -779,15 +780,14 @@ html.dark .icon-moon{display:none}
 .tile-last{font:500 10px/1 var(--font);color:var(--text-muted)}
 .availability{font:500 9px/1 var(--font);color:var(--text-muted)}
 
-/* Quick-pay bar */
+/* Quick-pay search trigger */
 .quickpay-bar{background:var(--surface);border:1px solid var(--border-subtle);
   border-radius:18px;overflow:hidden}
-.quickpay-search{display:flex;align-items:center;gap:10px;
-  padding:14px 16px;border-bottom:1px solid var(--border-subtle)}
+.quickpay-search{display:flex;align-items:center;gap:10px;width:100%;
+  padding:14px 16px;border:0;background:none;cursor:pointer;text-align:left;
+  font:500 14px/1 var(--font);color:var(--text-secondary);transition:background var(--transition)}
+.quickpay-search:hover{background:var(--brand-soft)}
 .quickpay-search svg{width:16px;height:16px;color:var(--text-muted);flex-shrink:0}
-.quickpay-search input{flex:1;border:none;background:none;
-  font:500 14px/1 var(--font);color:var(--text-primary);outline:none}
-.quickpay-search input::placeholder{color:var(--text-muted)}
 .quickpay-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
   gap:1px;background:var(--border-subtle)}
 .quickpay-item{background:var(--surface);padding:14px 12px;cursor:pointer;
@@ -1639,12 +1639,11 @@ html.dark .icon-moon{display:none}
             </div>
           </section>
 
-          <section class="quickpay-bar" aria-label="Quick pay">
-            <div class="quickpay-search">
+          <section class="quickpay-bar" aria-label="Search services">
+            <button type="button" class="quickpay-search" onclick="openLauncher()" aria-haspopup="dialog">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-              <input type="text" id="quickpay-input" placeholder="Search airtime, data, bills…" aria-label="Search services" oninput="filterQuickPay(this.value)">
-            </div>
-            <div class="quickpay-grid" id="quickpay-grid"></div>
+              <span>Search airtime, data, bills…</span>
+            </button>
           </section>
 
           <section class="home-activity" aria-labelledby="activity-heading">
@@ -4699,22 +4698,15 @@ init();
       '</button>';
   }
 
+  function activeQuickPay() {
+    return QUICKPAY_SERVICES.filter(function (s) { return !s.disabled; });
+  }
+
   function renderQuickPay(gridId, list) {
     var el = $(gridId);
     if (!el) return;
-    var items = (list || QUICKPAY_SERVICES).map(quickpayHTML).join('');
+    var items = (list || activeQuickPay()).map(quickpayHTML).join('');
     el.innerHTML = items || '<div class="quickpay-empty">No services match your search.</div>';
-  }
-
-  function filterQuickPay(value) {
-    var q = (value || '').trim().toLowerCase();
-    var grid = $('quickpay-grid');
-    if (!grid) return;
-    if (!q) { renderQuickPay('quickpay-grid'); return; }
-    var hit = QUICKPAY_SERVICES.filter(function (s) {
-      return (s.label + ' ' + s.sub + ' ' + s.key).toLowerCase().indexOf(q) !== -1;
-    });
-    renderQuickPay('quickpay-grid', hit);
   }
 
   function filterLauncher(value) {
@@ -4722,7 +4714,7 @@ init();
     var grid = $('launcher-grid');
     if (!grid) return;
     if (!q) { renderQuickPay('launcher-grid'); return; }
-    var hit = QUICKPAY_SERVICES.filter(function (s) {
+    var hit = activeQuickPay().filter(function (s) {
       return (s.label + ' ' + s.sub + ' ' + s.key).toLowerCase().indexOf(q) !== -1;
     });
     renderQuickPay('launcher-grid', hit);
@@ -4751,8 +4743,6 @@ init();
     var ov = $('quickpay-launcher');
     if (ov) ov.hidden = true;
     document.body.style.overflow = '';
-    var from = $('quickpay-input');
-    if (from && document.getElementById('main-app').classList.contains('active-screen')) from.focus();
   }
 
   document.addEventListener('keydown', function (e) {
@@ -4975,7 +4965,6 @@ init();
   /* ── Boot ───────────────────────────────────────────────────── */
   function boot() {
     seedBrands();
-    renderQuickPay('quickpay-grid');
     renderQuickPay('launcher-grid');
     renderPromos();
     bootOutage();
@@ -4988,7 +4977,6 @@ init();
     document.querySelectorAll('.service-screen .network-chip.selected').forEach(el => applyBrand(el));
   }
 
-  window.filterQuickPay = filterQuickPay;
   window.filterLauncher = filterLauncher;
   window.openLauncher = openLauncher;
   window.closeLauncher = closeLauncher;
