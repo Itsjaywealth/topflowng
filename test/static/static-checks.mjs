@@ -288,6 +288,9 @@ await checkInlineSyntax('bizflow.html');
   check('support email surface exists', /hello@topflowng\.com/.test(app));
   check('legacy support email removed from customer UI', !/support@topflowng\.com/.test(app));
   check('support email is a clickable mailto link', /mailto:hello@topflowng\.com/.test(app));
+  check('support FAQ is searchable', /filterSupportFAQ/.test(app) && /id="support-search"/.test(app));
+  check('support FAQ is categorized', /support-faq-cat/.test(app));
+  check('support chat action present', /openTawkChat/.test(app) && /Chat with us/.test(app));
 }
 
 // ── 14. Marketing rates come from the server catalogue ─────────────────────
