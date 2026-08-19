@@ -735,8 +735,8 @@ html.dark .marketing-nav{
   border-top:1px solid rgba(255,255,255,.07);
   font:400 12px/1 var(--font);color:rgba(255,255,255,.28)}
 .marketing-footer-legal{display:flex;flex-wrap:wrap;gap:6px 20px}
-.marketing-footer-legal a{font:400 12px/1 var(--font);color:rgba(255,255,255,.28);text-decoration:none;transition:color .18s}
-.marketing-footer-legal a:hover{color:var(--brand)}
+.marketing-footer-legal a,.marketing-footer-legal button{font:400 12px/1 var(--font);color:rgba(255,255,255,.28);text-decoration:none;transition:color .18s;background:none;border:none;cursor:pointer;padding:0}
+.marketing-footer-legal a:hover,.marketing-footer-legal button:hover{color:var(--brand)}
 .marketing-footer .marketing-brand{color:#fff}
 .marketing-footer .marketing-brand span{color:var(--brand)}
 
@@ -1617,6 +1617,109 @@ html.dark .icon-moon{display:none}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
   overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 [hidden]{display:none!important}
+
+/* ── Skeleton loaders ─────────────────────────────────────── */
+@keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+.skeleton{border-radius:8px;
+  background:linear-gradient(90deg,
+    var(--surface-muted) 0%,
+    color-mix(in srgb,var(--border-subtle) 70%,var(--surface-muted)) 40%,
+    var(--surface-muted) 80%);
+  background-size:1200px 100%;
+  animation:shimmer 1.6s ease-in-out infinite}
+.txn-skeleton{display:flex;align-items:center;gap:14px;padding:15px 18px;
+  border-bottom:1px solid var(--border-subtle)}
+.txn-skeleton-icon{width:46px;height:46px;border-radius:15px;flex-shrink:0}
+.txn-skeleton-body{flex:1;display:flex;flex-direction:column;gap:8px}
+.txn-skeleton-line{height:11px}
+.txn-skeleton-sub{width:55%}
+.txn-skeleton-amt{width:56px;height:14px;border-radius:6px;flex-shrink:0}
+
+/* ── Toast notifications ──────────────────────────────────── */
+.toast-container{position:fixed;left:50%;bottom:84px;
+  transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  z-index:10000;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+.toast{display:inline-flex;align-items:center;gap:8px;
+  padding:11px 20px 11px 14px;border-radius:99px;
+  font:500 13.5px/1.2 var(--font);
+  background:var(--text-primary);color:var(--surface);
+  box-shadow:0 8px 28px rgba(0,0,0,.22);
+  transform:translateY(16px) scale(.95);opacity:0;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .22s;
+  pointer-events:all;max-width:340px;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast.show{transform:translateY(0) scale(1);opacity:1}
+.toast.toast-success{background:var(--success);color:#fff}
+.toast.toast-error{background:var(--danger);color:#fff}
+.toast.toast-info{background:var(--brand);color:#fff}
+.toast-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7;flex-shrink:0}
+
+/* ── Better empty states ──────────────────────────────────── */
+.txn-empty{font:400 13px/1.6 var(--font);color:var(--text-muted);
+  padding:44px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.txn-empty-icon{width:52px;height:52px;border-radius:16px;
+  background:var(--surface-muted);border:1.5px solid var(--border-subtle);
+  display:flex;align-items:center;justify-content:center;margin-bottom:6px;
+  color:var(--text-muted)}
+.txn-empty strong{font:600 14px/1 var(--display);color:var(--text-secondary)}
+.txn-empty-cta{margin-top:8px;padding:9px 20px;border-radius:99px;
+  font:600 13px/1 var(--font);
+  background:var(--brand-soft);color:var(--brand);border:none;cursor:pointer;
+  transition:background var(--transition)}
+.txn-empty-cta:hover{background:color-mix(in srgb,var(--brand) 15%,var(--surface))}
+
+/* ── Onboarding welcome overlay ───────────────────────────── */
+.welcome-overlay{position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.welcome-overlay.open{opacity:1;pointer-events:all}
+.welcome-card{background:var(--surface);border-radius:24px 24px 0 0;
+  padding:32px 24px 40px;width:100%;max-width:480px;
+  transform:translateY(100%);transition:transform .38s cubic-bezier(.34,1.2,.64,1)}
+.welcome-overlay.open .welcome-card{transform:translateY(0)}
+.welcome-card-emoji{font-size:40px;line-height:1;margin-bottom:12px}
+.welcome-card h2{font:800 22px/1.2 var(--display);color:var(--text-primary);margin-bottom:8px}
+.welcome-card p{font:400 14px/1.6 var(--font);color:var(--text-secondary);margin-bottom:20px}
+.welcome-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.welcome-step{display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:14px;background:var(--surface-muted);
+  border:1px solid var(--border-subtle)}
+.welcome-step-num{width:26px;height:26px;border-radius:50%;
+  background:var(--brand-soft);color:var(--brand);
+  font:700 12px/26px var(--display);text-align:center;flex-shrink:0}
+.welcome-step-text{font:500 13px/1.4 var(--font);color:var(--text-secondary)}
+.welcome-close{width:100%;padding:14px;border-radius:14px;
+  background:var(--brand);color:#fff;border:none;
+  font:700 15px/1 var(--display);cursor:pointer;
+  box-shadow:0 4px 16px color-mix(in srgb,var(--brand) 35%,transparent)}
+
+/* ── Terms / Privacy modal ────────────────────────────────── */
+.legal-modal-overlay{position:fixed;inset:0;z-index:800;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .22s}
+.legal-modal-overlay.open{opacity:1;pointer-events:all}
+.legal-modal{background:var(--surface);border-radius:22px 22px 0 0;
+  width:100%;max-width:560px;max-height:80vh;
+  display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .32s cubic-bezier(.34,1.2,.64,1)}
+.legal-modal-overlay.open .legal-modal{transform:translateY(0)}
+.legal-modal-head{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 20px 14px;border-bottom:1px solid var(--border-subtle)}
+.legal-modal-title{font:700 17px/1 var(--display);color:var(--text-primary)}
+.legal-modal-close{width:32px;height:32px;border-radius:50%;border:none;
+  background:var(--surface-muted);color:var(--text-secondary);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+.legal-modal-body{overflow-y:auto;padding:20px;flex:1;
+  font:400 13.5px/1.7 var(--font);color:var(--text-secondary)}
+.legal-modal-body h3{font:700 15px/1.4 var(--display);color:var(--text-primary);
+  margin:18px 0 6px;padding-top:4px}
+.legal-modal-body h3:first-child{margin-top:0}
+.legal-modal-body p{margin-bottom:10px}
+.legal-modal-footer{padding:14px 20px;border-top:1px solid var(--border-subtle);
+  font:400 12px/1.4 var(--font);color:var(--text-muted);text-align:center}
 </style>
 </head>
 <body>
@@ -1844,9 +1947,9 @@ html.dark .icon-moon{display:none}
       </div>
       <div class="marketing-footer-bottom">
         <span class="marketing-footer-legal">
-          <a href="/terms">Terms</a>
-          <a href="/privacy">Privacy</a>
-          <a href="/refund-policy">Refund Policy</a>
+          <button type="button" onclick="openLegalModal('terms')">Terms</button>
+          <button type="button" onclick="openLegalModal('privacy')">Privacy</button>
+          <a href="mailto:hello@topflowng.com">Refund Policy</a>
         </span>
         <span>© 2026 TopFlowNG · Brandverse Ventures</span>
       </div>
@@ -3070,6 +3173,7 @@ async function handleRegister() {
     const nx = safeNextPath();
     if (nx) { window.location.href = nx; return; }
     launchApp();
+    showWelcome();
     await completePendingPayment();
   } catch (e) {
     showErr('register-error', e.message);
@@ -3164,6 +3268,14 @@ function launchApp() {
   document.getElementById('main-app').classList.add('active-screen');
     goTab('home');
   updateUserUI();
+  // Welcome toast (only on this session's login, not on every page load)
+  try {
+    if (!sessionStorage.getItem('tf_greeted') && user) {
+      var first = (user.fullName || user.name || '').split(' ')[0];
+      showToast('Welcome back' + (first ? ', ' + first : '') + ' 👋', 'info', 2800);
+      sessionStorage.setItem('tf_greeted', '1');
+    }
+  } catch(e) {}
   loadBalance();
   loadRecentTxns();
   loadPlans().then(() => { loadDataPlans(); loadCablePlans(); });
@@ -3443,16 +3555,29 @@ function txnHTML(t) {
 }
 
 async function loadRecentTxns() {
+  const el = document.getElementById('recent-txns');
+  el.innerHTML = skeletonTxnList(4);
   try {
     const data = await api('GET', '/api/wallet/transactions?limit=5');
-    const el = document.getElementById('recent-txns');
     if (!data.transactions.length) {
-      el.innerHTML = '<div class="txn-empty">No transactions yet.</div>';
+      el.innerHTML = txnEmptyHTML(
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><path d="M12 5v14M5 12l7-7 7 7"/></svg>',
+        'No transactions yet',
+        'Make your first purchase below',
+        'Buy airtime now',
+        "openService('airtime')"
+      );
     } else {
       el.innerHTML = data.transactions.map(txnHTML).join('');
     }
   } catch {
-    document.getElementById('recent-txns').innerHTML = '<div class="txn-empty">Transactions are temporarily unavailable. Please try again.</div>';
+    el.innerHTML = txnEmptyHTML(
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>',
+      'Temporarily unavailable',
+      'Could not load transactions',
+      'Try again',
+      'loadRecentTxns()'
+    );
   }
 }
 
@@ -3951,18 +4076,14 @@ function copyDetailRef() {
   if (!detailTxn) return;
   const ref = detailTxn.reference || detailTxn.provider_order_id || '';
   navigator.clipboard.writeText(ref).then(() => {
-    const btn = document.getElementById('btn-copy-detail-ref');
-    const orig = btn.textContent; btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = orig, 1800);
-  }).catch(() => {});
+    showToast('Reference copied to clipboard', 'success', 2000);
+  }).catch(() => { showToast('Could not copy — try selecting it manually', 'error', 3000); });
 }
 
 function copyDetailToken(token) {
   navigator.clipboard.writeText(token).then(() => {
-    const btn = document.querySelector('#txn-detail-token .btn-copy-ref');
-    const orig = btn.textContent; btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = orig, 1800);
-  }).catch(() => {});
+    showToast('Token copied to clipboard', 'success', 2000);
+  }).catch(() => { showToast('Could not copy — try selecting it manually', 'error', 3000); });
 }
 
 function transactionReceiptText(t) {
@@ -3986,10 +4107,8 @@ async function shareTransactionReceipt() {
   } catch (e) { /* user cancelled */ }
   try {
     await navigator.clipboard.writeText(text);
-    const btn = document.getElementById('btn-share-receipt');
-    const orig = btn.textContent; btn.textContent = 'Copied to clipboard';
-    setTimeout(() => btn.textContent = orig, 1800);
-  } catch (e) {}
+    showToast('Receipt copied to clipboard', 'success', 2200);
+  } catch (e) { showToast('Could not copy receipt', 'error', 2500); }
 }
 
 function printTransactionReceipt() {
@@ -4155,6 +4274,90 @@ function filterSupportFAQ() {}
 function quickHelp() {}
 function openTawkChat() { openSupport(); }
 function copySupportRef() {}
+
+// ── TOAST NOTIFICATIONS ──────────────────────────────────────────────────
+function showToast(msg, type, duration) {
+  duration = duration || 3200;
+  var container = document.getElementById('toast-container');
+  if (!container) return;
+  var t = document.createElement('div');
+  t.className = 'toast' + (type ? ' toast-' + type : '');
+  var dot = document.createElement('span');
+  dot.className = 'toast-dot';
+  t.appendChild(dot);
+  t.appendChild(document.createTextNode(msg));
+  container.appendChild(t);
+  // Force reflow then animate in
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() { t.classList.add('show'); });
+  });
+  setTimeout(function() {
+    t.classList.remove('show');
+    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 350);
+  }, duration);
+}
+
+// ── SKELETON LOADERS ─────────────────────────────────────────────────────
+function skeletonTxnList(n) {
+  var rows = '';
+  for (var i = 0; i < n; i++) {
+    rows += '<div class="txn-skeleton">'
+      + '<div class="skeleton txn-skeleton-icon"></div>'
+      + '<div class="txn-skeleton-body">'
+      + '<div class="skeleton txn-skeleton-line" style="width:' + (55 + Math.floor(i * 13) % 30) + '%"></div>'
+      + '<div class="skeleton txn-skeleton-line txn-skeleton-sub"></div>'
+      + '</div>'
+      + '<div class="skeleton txn-skeleton-amt"></div>'
+      + '</div>';
+  }
+  return '<div class="txn-list" style="border-radius:18px;border:1px solid var(--border-subtle);background:var(--surface)">' + rows + '</div>';
+}
+
+// ── EMPTY STATE HELPERS ──────────────────────────────────────────────────
+function txnEmptyHTML(icon, title, sub, ctaLabel, ctaAction) {
+  var iconSvg = icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7"/></svg>';
+  var cta = ctaLabel ? '<button class="txn-empty-cta" onclick="' + ctaAction + '">' + ctaLabel + '</button>' : '';
+  return '<div class="txn-empty"><div class="txn-empty-icon">' + iconSvg + '</div><strong>' + title + '</strong><span>' + sub + '</span>' + cta + '</div>';
+}
+
+// ── WELCOME ONBOARDING ───────────────────────────────────────────────────
+function showWelcome() {
+  try { if (localStorage.getItem('tf_welcomed')) return; } catch(e) {}
+  var overlay = document.getElementById('welcome-overlay');
+  if (!overlay) return;
+  setTimeout(function() {
+    overlay.classList.add('open');
+    overlay.focus && overlay.focus();
+  }, 600);
+}
+
+function closeWelcome() {
+  var overlay = document.getElementById('welcome-overlay');
+  if (overlay) overlay.classList.remove('open');
+  try { localStorage.setItem('tf_welcomed', '1'); } catch(e) {}
+}
+
+// ── TERMS / PRIVACY MODALS ───────────────────────────────────────────────
+function openLegalModal(which) {
+  var el = document.getElementById(which + '-modal');
+  if (!el) return;
+  el.classList.add('open');
+}
+
+function closeLegalModal(which) {
+  var el = document.getElementById(which + '-modal');
+  if (el) el.classList.remove('open');
+}
+
+// Close legal modals on backdrop click
+document.addEventListener('click', function(e) {
+  ['terms-modal','privacy-modal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.classList.contains('open') && e.target === el) {
+      el.classList.remove('open');
+    }
+  });
+});
 
 // ── FUND WALLET ───────────────────────────────────────────────────────────
 // ── FUND WALLET (disabled — wallet funding removed from customer experience) ──
@@ -4726,7 +4929,7 @@ function createTxnRow(t) {
 }
 
 async function loadAllTxns(reset) {
-  if (reset) { txnOffset = 0; document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Loading...</div>'; }
+  if (reset) { txnOffset = 0; document.getElementById('all-txns').innerHTML = skeletonTxnList(6); }
   const limit = 20;
   const search = (document.getElementById('txn-search-input')?.value || '').trim();
   try {
@@ -4742,7 +4945,12 @@ async function loadAllTxns(reset) {
     const el = document.getElementById('all-txns');
     if (reset) el.innerHTML = '';
     if (!txns.length && reset) {
-      el.innerHTML = '<div class="txn-empty">No transactions match your filters.</div>';
+      el.innerHTML = txnEmptyHTML(
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.4-4.4"/></svg>',
+        'No results found',
+        'Try adjusting your filters or search term',
+        '', ''
+      );
     } else {
       let lastGroup = null;
       txns.forEach(t => {
@@ -4762,7 +4970,12 @@ async function loadAllTxns(reset) {
       more.onclick = () => { txnOffset += limit; loadAllTxns(false); };
       el.appendChild(more);
     }
-  } catch { document.getElementById('all-txns').innerHTML = '<div class="txn-empty">Failed to load</div>'; }
+  } catch { document.getElementById('all-txns').innerHTML = txnEmptyHTML(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>',
+    'Could not load transactions',
+    'Check your connection and try again',
+    'Retry', 'loadAllTxns(true)'
+  ); }
 }
 
 // ── TRANSACTION PIN PROMPT ────────────────────────────────────────────────
@@ -4981,6 +5194,7 @@ async function saveBeneficiaryIfChecked(svc, identifier, network) {
     if (nb && !_bfrCache[svc].find(function(b) { return b.id === nb.id; })) {
       _bfrCache[svc].push(nb);
       renderBeneficiaries(svc, _bfrCache[svc]);
+      showToast('Saved to beneficiaries', 'success', 2200);
     }
   } catch { /* non-critical */ }
 }
@@ -5595,6 +5809,87 @@ init();
 </div>
 
 <!-- tawk.to removed — custom chat widget built in -->
+
+<!-- ══════════════ TOAST CONTAINER ══════════════ -->
+<div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<!-- ══════════════ WELCOME ONBOARDING OVERLAY ══════════════ -->
+<div class="welcome-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+  <div class="welcome-card">
+    <div class="welcome-card-emoji">🎉</div>
+    <h2 id="welcome-title">Welcome to TopFlowNG!</h2>
+    <p>You're all set. Here's how to get the most out of your account in the next 2 minutes.</p>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <div class="welcome-step-num">1</div>
+        <div class="welcome-step-text"><strong>Fund your wallet</strong> — top up to start making instant purchases.</div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num">2</div>
+        <div class="welcome-step-text"><strong>Set your transaction PIN</strong> — go to Account → Security to protect every purchase.</div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num">3</div>
+        <div class="welcome-step-text"><strong>Buy airtime or pay a bill</strong> — pick any service from the home screen.</div>
+      </div>
+    </div>
+    <button class="welcome-close" onclick="closeWelcome()">Let's go →</button>
+  </div>
+</div>
+
+<!-- ══════════════ TERMS MODAL ══════════════ -->
+<div class="legal-modal-overlay" id="terms-modal" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
+  <div class="legal-modal">
+    <div class="legal-modal-head">
+      <span class="legal-modal-title" id="terms-modal-title">Terms of Service</span>
+      <button class="legal-modal-close" onclick="closeLegalModal('terms')" aria-label="Close">✕</button>
+    </div>
+    <div class="legal-modal-body">
+      <h3>1. Acceptance</h3>
+      <p>By creating an account on TopFlowNG, you agree to these Terms. TopFlowNG is operated by Brandverse Ventures and provides a digital payment platform for airtime, data, electricity, cable TV and exam PINs in Nigeria.</p>
+      <h3>2. Account</h3>
+      <p>You must be at least 18 years old to register. You are responsible for keeping your password and transaction PIN confidential. TopFlowNG staff will never ask for your PIN or password.</p>
+      <h3>3. Payments &amp; Wallet</h3>
+      <p>Your wallet balance is held for use within the platform. TopFlowNG does not hold funds as a bank — wallets are for purchasing services only. All prices are displayed in Nigerian Naira (₦).</p>
+      <h3>4. Purchases</h3>
+      <p>Every purchase requires your transaction PIN. Successful orders are final. If a service is not delivered, TopFlowNG will investigate and, where applicable, reverse the charge to your wallet within 24–72 hours.</p>
+      <h3>5. Prohibited Use</h3>
+      <p>You may not use TopFlowNG for fraud, money laundering, or any unlawful purpose. We reserve the right to suspend or terminate accounts found in violation.</p>
+      <h3>6. Limitation of Liability</h3>
+      <p>TopFlowNG is not liable for provider outages or third-party delivery delays beyond our control. Our liability in any case is limited to the amount of the disputed transaction.</p>
+      <h3>7. Changes</h3>
+      <p>We may update these Terms at any time. Continued use of the platform constitutes acceptance of the updated terms. For questions, contact hello@topflowng.com.</p>
+    </div>
+    <div class="legal-modal-footer">Last updated · January 2026 · hello@topflowng.com</div>
+  </div>
+</div>
+
+<!-- ══════════════ PRIVACY MODAL ══════════════ -->
+<div class="legal-modal-overlay" id="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title">
+  <div class="legal-modal">
+    <div class="legal-modal-head">
+      <span class="legal-modal-title" id="privacy-modal-title">Privacy Policy</span>
+      <button class="legal-modal-close" onclick="closeLegalModal('privacy')" aria-label="Close">✕</button>
+    </div>
+    <div class="legal-modal-body">
+      <h3>What we collect</h3>
+      <p>We collect your name, email address, phone number, and transaction history when you create an account and make purchases. We do not store full card numbers.</p>
+      <h3>How we use it</h3>
+      <p>Your data is used to operate your account, process payments, deliver services, send receipts, and provide support. We do not sell your personal data to third parties.</p>
+      <h3>Data sharing</h3>
+      <p>We share only the minimum data required with payment providers and service providers (e.g., network operators, DISCOs, cable TV providers) to fulfil your transactions.</p>
+      <h3>Security</h3>
+      <p>Passwords and PINs are stored using industry-standard hashing. API access requires authentication tokens. We review our security practices regularly.</p>
+      <h3>Your rights</h3>
+      <p>You may request access to, correction of, or deletion of your personal data by emailing hello@topflowng.com. Account closure is available from Account → Settings.</p>
+      <h3>Cookies</h3>
+      <p>We use only essential cookies (authentication token storage). We do not use tracking or advertising cookies.</p>
+      <h3>Contact</h3>
+      <p>For any privacy enquiry, email hello@topflowng.com. TopFlowNG is operated by Brandverse Ventures, Nigeria.</p>
+    </div>
+    <div class="legal-modal-footer">Last updated · January 2026 · hello@topflowng.com</div>
+  </div>
+</div>
 
 </body>
 </html>
