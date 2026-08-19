@@ -95,3 +95,98 @@ All six commits are on `main` and auto-deployed to Railway (verified live).
 - [x] Final report delivered
 
 **Status: COMPLETE — certified.**
+
+---
+
+# TOPFLOWNG FINAL GAP CLOSURE & PRODUCTION CERTIFICATION REPORT (PASS 2)
+
+**Date**: 2026-08-19
+**Start commit**: `3b99f63` (previous pass final)
+**New commit**: `9361b69` (this pass)
+**Branch**: `main`
+
+## 1. Executive Summary
+
+This pass closed the remaining genuine gaps identified in the previous audit: a **notification centre** (real event-driven, no demo data), **dual selectable palettes** (Teal + Emerald) independent of Light/Dark/System with no-flash persistence, a **transaction history upgrade** (category/status/date filters, date grouping, transaction detail, receipt share/download/print, and the `createTxnRow` undefined-bug fix), a **support/FAQ centre** with failed-transaction help, **electricity token durability** (persisted + recoverable by user and admin), an **admin operations center**, an **internal monitoring/alerting watchdog** (no paid services), and the **operations/scale/reliability documentation**.
+
+All suites are green and CI is green on the pushed commit.
+
+## 2. Commits Shipped (this pass)
+
+| Commit | Description | Gates |
+|---|---|---|
+| `9361b69` | Notification centre, dual palettes, history detail/receipts, support, admin ops center, monitoring + ops docs | CI ✅ |
+
+## 3. What Was Built (this pass)
+
+### A. Notification Centre
+- `migrations/009_notifications.sql`: notifications table + `(user_id, created_at DESC)` and unread indexes.
+- `routes/notifications.js`: GET `/`, GET `/unread-count`, POST `/read/:id`, POST `/read-all`, DELETE `/:id` (auth + rate-limited, per-user scoped).
+- Real event hooks: wallet credit (Paystack + referral), purchase success/pending/failed (services/vtpass.js), scheduled-purchase runs, and security (new sign-in). No fake demo notifications in production.
+- Frontend: header bell + unread badge (polled), `#screen-notifications` with category filter chips, mark-all-read, deep-link to transaction, empty state, mobile/desktop, light/dark.
+
+### B. Dual Selectable Palettes + Appearance
+- **Palette A (TopFlow Teal, default)** and **Palette B (TopFlow Emerald)** as a brand layer independent of Light/Dark/System.
+- Early synchronous head init (no flash) reads `topflowng-theme` + `topflowng-palette` before CSS paints.
+- Account → Appearance panel: palette picker + theme picker (Light/Dark/System) with persistence and live system-preference listener; theme-color meta kept in sync.
+
+### C. Transaction History
+- Category filters (Wallet/Airtime/Data/Electricity/Cable/Education/Top-ups), status filters (All/Successful/Pending/Failed), date filters (Today/Week/Month), search.
+- Date grouping (Today/Yesterday/Earlier this week/date), amount hierarchy, recipient extraction, time display.
+- **Fixed the `createTxnRow` undefined-bug** (was called but never defined at the old line 3343).
+- Transaction **detail overlay**: status, provider logo, amount, service, reference lines, durable electricity token, copy reference / share receipt / download–print / get help.
+- Receipt generation as shareable text (Web Share API + clipboard fallback) and a printable window.
+
+### D. Support Centre
+- Support overlay with FAQ and a failed-transaction help block that pre-fills the transaction reference; reachable from Account and from any transaction detail.
+- `support@topflowng.com` surface.
+
+### E. Electricity Token Durability
+- `recordVtuProviderResponse` now persists any vended `token`/`purchasedCode` into the order's provider response.
+- User order endpoint (`/api/vtu/orders/:requestId`) exposes `electricityToken`; admin endpoint (`/api/admin/vtu-orders/:requestId`) exposes it for safe lookup.
+- Detail overlay auto-fetches and shows the token with a copy button.
+- Regression test: `electricity token is retrievable from the order after purchase`.
+
+### F. Admin Operations Center + Monitoring
+- `/api/admin/ops`: consolidated health (online, DB, provider, pending, stale pending, success rate, reconciliation, failed today, issues) — no secrets.
+- Admin overview gains an Operations Center panel and a per-order "View token" action for electricity.
+- `lib/alerting.js`: cooldown-gated structured ALERT conditions (vtpass_unreachable, stale_pending_orders, ledger_out_of_balance) with auto-clear on recovery. No paid monitoring.
+- Ops watchdog runs every 60s.
+
+### G. Documentation (docs/)
+`ROLLBACK_RUNBOOK`, `DISASTER_RECOVERY`, `INCIDENT_RESPONSE`, `OPERATIONS_RUNBOOK`, `100K_SCALE_ARCHITECTURE`, `GROWTH_AUDIT`, `FIRST_100_CUSTOMERS`, `BREAK_EVEN_MODEL`, `SCALE_MODEL`, `PRODUCTION_ARCHITECTURE`.
+
+## 4. Test Summary (this pass)
+
+| Suite | Result |
+|---|---|
+| Syntax | 55/55 ✅ |
+| Frontend/static | 107/107 ✅ |
+| Backend (unit+integration+db) | 221/221 ✅ |
+| Playwright/browser (incl. new `polish.spec.js`) | 82/82 ✅ |
+| `npm audit` | 0 vulnerabilities ✅ |
+| GitHub Actions (push `9361b69`) | all jobs green ✅ |
+
+New tests: `test/notifications.test.js` (lifecycle + scoping + auth), electricity-token regression, ops ACL, `test/browser/tests/polish.spec.js` (palettes, appearance persistence, notifications, history filters/detail, wallet), extended static checks.
+
+## 5. Production Status
+
+- **Railway deploy**: commit `9361b69` pushed; GitHub deployment created; **deployment is `in_progress`** on Railway. Production is **healthy** on the prior build `3b99f63` while the deploy propagates.
+- `https://topflowng.com/api/health` 200 · `/api/ready` 200 · `/api/providers/health` OPERATIONAL · root 200 · www 308→root.
+- The new code (notifications routes, emerald palette, admin ops) is NOT yet live until the Railway deployment completes; the owner should confirm the deploy finishes in the Railway dashboard.
+
+## 6. Readiness (this pass)
+
+- **SAFE FOR PUBLIC TRAFFIC = YES** (prior build healthy and complete).
+- **READY FOR CONTROLLED LIVE CERTIFICATION = YES** (all non-financial gates pass; new commit pending deploy).
+- **SAFE FOR REAL TRANSACTIONS = NO** (no owner authorization for real-money spending this session).
+- **LIVE CERTIFICATION AUTHORIZED = NO**.
+- **PAID INFRASTRUCTURE REQUIRED = YES (owner action)**: Railway Postgres backups/PITR require a paid plan — not purchased.
+- **STILL REQUIRES OWNER DECISION**: markup/service fees, referral reward, promotion/discount values, low-balance default threshold, ad budget, and live-certification authorization.
+- **REAL-MONEY TESTS NOT EXECUTED**: cable (no operator-owned IUC), electricity re-vend (needs operator confirmation), any live purchase.
+
+## 7. External Blockers
+
+- **Railway deployment propagation** for `9361b69` was still `in_progress` at report time (Railway-side; CLI has no authenticated session in this environment to force it). Production remained healthy on the previous build. Owner should confirm the deploy completes in the Railway dashboard (project `fd606d99-5e37-42c2-804e-75382864501c`).
+- **Cable / live money certification**: needs operator-owned IUC + owner authorization.
+- **Backups/PITR**: paid Railway plan only.
