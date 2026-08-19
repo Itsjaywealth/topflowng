@@ -353,220 +353,392 @@ select.field-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http:/
    Editorial fintech layout: generous whitespace, crisp type scale,
    real provider logos, verified pricing, restrained accents.
 ══════════════════════════════════════════════════════════════ */
-#marketing{background:var(--bg);display:none}
+/* ═══════════════════════════════════════════════════════════
+   MARKETING — PREMIUM THEME
+═══════════════════════════════════════════════════════════ */
+#marketing{background:var(--bg);display:none;overflow-x:hidden}
 #marketing.active-screen{display:block}
 
-/* Nav */
-.marketing-nav{position:sticky;top:0;z-index:200;
+/* NAV */
+.marketing-nav{
+  position:sticky;top:0;z-index:200;
   display:flex;align-items:center;gap:14px;
-  padding:0 clamp(20px,5vw,48px);height:68px;
-  background:color-mix(in srgb,var(--bg) 88%,transparent);
-  backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);
-  border-bottom:1px solid var(--border-subtle)}
-html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)}
-.marketing-brand{display:flex;align-items:center;gap:10px;
-  font:800 19px/1 var(--display);color:var(--text-primary);flex-shrink:0;letter-spacing:-.2px}
-.marketing-brand .logo-mark{width:32px;height:32px;border-radius:9px}
+  padding:0 clamp(20px,5vw,52px);height:74px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(22px) saturate(1.8);-webkit-backdrop-filter:blur(22px) saturate(1.8);
+  border-bottom:1px solid rgba(0,0,0,.07);
+  box-shadow:0 2px 32px rgba(0,0,0,.05)}
+html.dark .marketing-nav{
+  background:rgba(10,16,30,.92);
+  border-bottom-color:rgba(255,255,255,.07);
+  box-shadow:0 2px 32px rgba(0,0,0,.4)}
+.marketing-brand{
+  display:flex;align-items:center;gap:10px;
+  font:800 20px/1 var(--display);color:var(--text-primary);flex-shrink:0;letter-spacing:-.3px}
+.marketing-brand .logo-mark{width:34px;height:34px;border-radius:10px}
 .marketing-brand span{color:var(--brand)}
 .marketing-nav-links{display:none;align-items:center;gap:2px;margin-left:auto}
 @media(min-width:768px){.marketing-nav-links{display:flex}}
-.marketing-nav-links a{font:500 14px/1 var(--font);color:var(--text-secondary);
-  padding:8px 14px;border-radius:999px;
-  transition:color var(--transition),background var(--transition)}
+.marketing-nav-links a{
+  font:500 14px/1 var(--font);color:var(--text-secondary);
+  padding:9px 16px;border-radius:999px;
+  transition:color .18s,background .18s}
 .marketing-nav-links a:hover{color:var(--brand);background:var(--brand-soft)}
-.marketing-create{padding:10px 20px;background:var(--brand);color:#fff;
-  border-radius:999px;font:700 13px/1 var(--display);border:none;cursor:pointer;
-  transition:background var(--transition),transform var(--transition)}
-.marketing-create:hover{background:var(--brand-hover)}
+.marketing-create{
+  padding:11px 24px;background:var(--brand);color:#fff;
+  border-radius:999px;font:700 13.5px/1 var(--display);border:none;cursor:pointer;
+  box-shadow:0 4px 16px color-mix(in srgb,var(--brand) 40%,transparent);
+  transition:transform .2s,box-shadow .2s,background .18s}
+.marketing-create:hover{
+  background:var(--brand-hover);transform:translateY(-1px);
+  box-shadow:0 6px 22px color-mix(in srgb,var(--brand) 50%,transparent)}
 .marketing-create:active{transform:scale(.98)}
-.marketing-login{margin-left:auto;font:600 14px/1 var(--font);color:var(--brand);
-  padding:10px 20px;border-radius:999px;border:1.5px solid var(--brand);
-  transition:background var(--transition),color var(--transition)}
-.marketing-login:hover{background:var(--brand);color:#fff}
+.marketing-login{
+  margin-left:auto;font:600 14px/1 var(--font);color:var(--brand);
+  padding:10px 20px;border-radius:999px;
+  border:1.5px solid color-mix(in srgb,var(--brand) 45%,transparent);
+  transition:background .18s,color .18s,border-color .18s}
+.marketing-login:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
 @media(min-width:768px){.marketing-login{margin-left:0}}
-.marketing-quick{font:600 13px/1 var(--font);color:var(--text-secondary);
-  padding:10px 16px;border-radius:999px;border:1.5px solid var(--border-strong)}
 
-/* Hero */
-.marketing-main{max-width:1200px;margin:0 auto;padding:clamp(48px,8vw,96px) clamp(20px,5vw,48px);
-  display:grid;gap:56px;align-items:center}
-@media(min-width:900px){.marketing-main{grid-template-columns:1.05fr .95fr}}
-.marketing-eyebrow{display:inline-flex;align-items:center;gap:8px;
-  padding:7px 16px;background:var(--brand-soft);border:1px solid color-mix(in srgb,var(--brand) 25%,transparent);
-  border-radius:999px;font:600 12px/1 var(--font);color:var(--brand);
-  margin-bottom:26px;letter-spacing:.2px;text-transform:uppercase}
-.marketing-eyebrow svg{width:14px;height:14px;color:var(--brand)}
-.marketing-copy h1{font:800 clamp(34px,5.4vw,60px)/1.08 var(--display);
-  color:var(--text-primary);margin-bottom:20px;letter-spacing:-1px}
-.marketing-copy p{font:400 clamp(16px,1.6vw,18px)/1.7 var(--font);color:var(--text-secondary);
-  max-width:540px;margin-bottom:36px}
+/* HERO — full-bleed dark with glow */
+.marketing-main{
+  position:relative;
+  background:linear-gradient(145deg,#071526 0%,#0c2040 60%,#091b33 100%);
+  overflow:hidden;max-width:none;margin:0;padding:0}
+.marketing-main::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 82% 20%,color-mix(in srgb,var(--brand) 22%,transparent),transparent 65%),
+    radial-gradient(ellipse 60% 50% at 8% 80%,color-mix(in srgb,var(--brand) 12%,transparent),transparent 60%);
+  pointer-events:none}
+.marketing-main::after{
+  content:"";position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:64px 64px;
+  pointer-events:none}
+.marketing-main-inner{
+  max-width:1200px;margin:0 auto;
+  padding:clamp(64px,9vw,116px) clamp(20px,5vw,52px);
+  display:grid;gap:60px;align-items:center;position:relative;z-index:1}
+@media(min-width:900px){.marketing-main-inner{grid-template-columns:1.1fr .9fr}}
+
+/* Hero eyebrow badge */
+.marketing-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 18px;
+  background:color-mix(in srgb,var(--brand) 18%,transparent);
+  border:1px solid color-mix(in srgb,var(--brand) 40%,transparent);
+  border-radius:999px;font:600 11.5px/1 var(--font);color:var(--brand);
+  margin-bottom:26px;letter-spacing:.5px;text-transform:uppercase}
+.marketing-eyebrow svg{width:13px;height:13px}
+
+/* Hero copy */
+.marketing-copy h1{
+  font:800 clamp(36px,5.6vw,66px)/1.04 var(--display);
+  color:#fff;margin-bottom:22px;letter-spacing:-1.5px}
+.marketing-copy p{
+  font:400 clamp(16px,1.7vw,19px)/1.75 var(--font);
+  color:rgba(255,255,255,.62);max-width:520px;margin-bottom:40px}
 .marketing-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.marketing-primary{padding:15px 30px;background:var(--brand);color:#fff;
+.marketing-primary{
+  padding:16px 32px;background:var(--brand);color:#fff;
   border-radius:999px;font:700 15px/1 var(--display);
-  border:none;cursor:pointer;box-shadow:var(--shadow);
-  transition:background var(--transition),transform var(--transition),box-shadow var(--transition)}
-.marketing-primary:hover{background:var(--brand-hover);transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+  border:none;cursor:pointer;
+  box-shadow:0 6px 24px color-mix(in srgb,var(--brand) 45%,transparent);
+  transition:transform .2s,box-shadow .2s,background .18s}
+.marketing-primary:hover{
+  background:var(--brand-hover);transform:translateY(-2px);
+  box-shadow:0 10px 32px color-mix(in srgb,var(--brand) 55%,transparent)}
 .marketing-primary:active{transform:translateY(0) scale(.99)}
-.marketing-secondary{padding:14px 26px;border:1.5px solid var(--border-strong);
+.marketing-secondary{
+  padding:15px 28px;
+  border:1.5px solid rgba(255,255,255,.22);
   border-radius:999px;font:600 14px/1 var(--font);
-  color:var(--text-secondary);transition:border-color .18s,color .18s,background .18s}
-.marketing-secondary:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
-.marketing-quick-hero{font:600 13px/1 var(--font);color:var(--brand);
-  padding:12px 20px;border-radius:999px;
-  border:1.5px solid color-mix(in srgb,var(--brand) 35%,transparent);
-  transition:background .18s,color .18s}
-.marketing-quick-hero:hover{background:var(--brand);color:#fff}
+  color:rgba(255,255,255,.78);
+  transition:border-color .18s,color .18s,background .18s}
+.marketing-secondary:hover{border-color:rgba(255,255,255,.55);color:#fff;background:rgba(255,255,255,.08)}
+.marketing-quick-hero{
+  font:600 13px/1 var(--font);color:rgba(255,255,255,.6);
+  padding:12px 22px;border-radius:999px;
+  border:1.5px solid rgba(255,255,255,.14);
+  transition:border-color .18s,color .18s,background .18s}
+.marketing-quick-hero:hover{border-color:rgba(255,255,255,.38);color:#fff;background:rgba(255,255,255,.06)}
 
-/* Ledger preview */
-.marketing-ledger{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:24px;padding:30px;
-  box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
-.marketing-ledger::before{content:"";position:absolute;inset:0 0 auto 0;height:120px;
-  background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 14%,transparent),transparent 70%)}
-.preview-top{display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:24px;font:700 15px/1 var(--display);color:var(--text-primary);position:relative}
-.preview-top .logo-mark{width:26px;height:26px;border-radius:7px}
+/* Ledger card — glassmorphism on dark */
+.marketing-ledger{
+  background:rgba(255,255,255,.065);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px;padding:32px;
+  box-shadow:0 28px 72px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  position:relative;overflow:hidden}
+.marketing-ledger::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:150px;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 22%,transparent),transparent 70%);
+  pointer-events:none}
+.preview-top{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:28px;font:700 15px/1 var(--display);color:#fff;position:relative}
+.preview-top .logo-mark{width:28px;height:28px;border-radius:8px}
 .preview-top>div{display:flex;align-items:center;gap:9px}
-.preview-top button{font:600 12px/1 var(--font);color:var(--brand);
-  border:1.5px solid color-mix(in srgb,var(--brand) 30%,transparent);border-radius:999px;
-  padding:7px 14px;cursor:pointer;background:var(--brand-soft)}
-.preview-label{font:600 11px/1 var(--font);color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;position:relative}
-.preview-balance{font:800 clamp(28px,3vw,34px)/1 var(--display);color:var(--text-primary);margin-bottom:26px;position:relative;letter-spacing:-.5px}
-.ledger-cap{font:600 11px/1 var(--font);color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:.6px;
-  border-top:1px solid var(--border-subtle);padding-top:18px;margin-bottom:8px;position:relative}
-.ledger-row{display:flex;justify-content:space-between;align-items:center;
-  font:500 13px/1.4 var(--font);color:var(--text-secondary);
-  padding:10px 0;border-bottom:1px solid var(--border-subtle);position:relative}
+.preview-top button{
+  font:600 12px/1 var(--font);color:var(--brand);
+  border:1.5px solid color-mix(in srgb,var(--brand) 42%,transparent);
+  border-radius:999px;padding:8px 16px;cursor:pointer;
+  background:color-mix(in srgb,var(--brand) 14%,transparent);
+  transition:background .18s,border-color .18s}
+.preview-top button:hover{background:color-mix(in srgb,var(--brand) 24%,transparent)}
+.preview-label{
+  font:600 11px/1 var(--font);color:rgba(255,255,255,.42);
+  text-transform:uppercase;letter-spacing:.9px;margin-bottom:8px;position:relative}
+.preview-balance{
+  font:800 clamp(30px,3.3vw,40px)/1 var(--display);color:#fff;
+  margin-bottom:28px;position:relative;letter-spacing:-.9px}
+.ledger-cap{
+  font:600 10.5px/1 var(--font);color:rgba(255,255,255,.32);
+  text-transform:uppercase;letter-spacing:.7px;
+  border-top:1px solid rgba(255,255,255,.08);
+  padding-top:20px;margin-bottom:10px;position:relative}
+.ledger-row{
+  display:flex;justify-content:space-between;align-items:center;
+  font:500 13px/1.4 var(--font);color:rgba(255,255,255,.52);
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07);position:relative}
 .ledger-row:last-of-type{border-bottom:none}
-.ledger-row strong{font-weight:700;color:var(--text-primary)}
-.preview-credit{color:var(--success)!important}
-.ledger-note{font:400 11px/1.5 var(--font);color:var(--text-muted);
-  margin-top:14px;position:relative}
+.ledger-row strong{font-weight:700;color:rgba(255,255,255,.88)}
+.preview-credit{color:#4ade80!important}
+.ledger-note{font:400 11px/1.5 var(--font);color:rgba(255,255,255,.28);margin-top:14px;position:relative}
 
-/* Marketing sections */
-.marketing-section{padding:clamp(56px,7vw,96px) 0;border-top:1px solid var(--border-subtle)}
-.marketing-section-inner{max-width:1200px;margin:0 auto;padding:0 clamp(20px,5vw,48px)}
-.marketing-section-head{text-align:center;margin-bottom:52px;max-width:640px;margin-left:auto;margin-right:auto}
-.marketing-section-head h2{font:800 clamp(26px,3.6vw,44px)/1.1 var(--display);
-  color:var(--text-primary);margin-bottom:16px;letter-spacing:-.6px}
-.marketing-section-head p{font:400 16px/1.7 var(--font);color:var(--text-secondary)}
+/* STATS BAR */
+.marketing-stats{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  background:var(--brand);gap:0}
+.marketing-stat{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px 36px;gap:6px;flex:1 1 160px;
+  border-right:1px solid rgba(255,255,255,.18)}
+.marketing-stat:last-child{border-right:none}
+.marketing-stat-num{font:800 clamp(26px,3vw,36px)/1 var(--display);color:#fff;letter-spacing:-1px}
+.marketing-stat-label{font:500 12px/1 var(--font);color:rgba(255,255,255,.68);letter-spacing:.2px}
 
-/* Services grid */
-.marketing-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
-.marketing-service-card{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:20px;padding:28px 24px;
-  transition:border-color .18s,box-shadow .18s,transform .18s}
-.marketing-service-card:hover{border-color:color-mix(in srgb,var(--brand) 35%,transparent);
-  box-shadow:var(--shadow);transform:translateY(-2px)}
-.marketing-service-icon{display:inline-flex;align-items:center;justify-content:center;
-  width:48px;height:48px;background:var(--brand-soft);border-radius:14px;
-  color:var(--brand);margin-bottom:18px}
-.marketing-service-icon svg{width:24px;height:24px;stroke-width:1.8}
-.marketing-service-card strong{display:block;font:700 16px/1.2 var(--display);
-  color:var(--text-primary);margin-bottom:8px}
+/* TRUST CHIPS */
+.marketing-trust{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;
+  text-align:center;padding:26px clamp(20px,5vw,52px);
+  border-top:1px solid var(--border-subtle);
+  background:var(--surface)}
+.marketing-trust p{font:400 13px/1.5 var(--font);color:var(--text-muted)}
+.trust-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  font:500 12.5px/1 var(--font);color:var(--text-secondary);
+  background:var(--bg);border:1px solid var(--border-subtle);
+  border-radius:999px;padding:8px 14px;
+  transition:border-color .18s,color .18s,background .18s}
+.trust-chip:hover{
+  border-color:color-mix(in srgb,var(--brand) 40%,transparent);
+  color:var(--brand);background:var(--brand-soft)}
+.trust-chip svg{color:var(--brand)}
+
+/* MARKETING SECTIONS */
+.marketing-section{padding:clamp(64px,8vw,112px) 0;border-top:1px solid var(--border-subtle)}
+.marketing-section-inner{max-width:1200px;margin:0 auto;padding:0 clamp(20px,5vw,52px)}
+.marketing-section-head{text-align:center;margin-bottom:60px;max-width:660px;margin-left:auto;margin-right:auto}
+.marketing-section-eyebrow{
+  display:inline-block;
+  font:600 11px/1 var(--font);color:var(--brand);
+  text-transform:uppercase;letter-spacing:.9px;
+  background:var(--brand-soft);
+  border:1px solid color-mix(in srgb,var(--brand) 22%,transparent);
+  border-radius:999px;padding:6px 14px;margin-bottom:18px}
+.marketing-section-head h2{
+  font:800 clamp(28px,3.8vw,48px)/1.1 var(--display);
+  color:var(--text-primary);margin-bottom:18px;letter-spacing:-.8px}
+.marketing-section-head p{font:400 16.5px/1.75 var(--font);color:var(--text-secondary)}
+
+/* SERVICE CARDS */
+.marketing-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:20px}
+.marketing-service-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:22px;padding:30px 26px;
+  transition:border-color .22s,box-shadow .22s,transform .22s;
+  position:relative;overflow:hidden}
+.marketing-service-card::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 6%,transparent),transparent 55%);
+  opacity:0;transition:opacity .22s;pointer-events:none}
+.marketing-service-card:hover{
+  border-color:color-mix(in srgb,var(--brand) 45%,transparent);
+  box-shadow:0 12px 40px rgba(0,0,0,.1),0 0 0 1px color-mix(in srgb,var(--brand) 15%,transparent);
+  transform:translateY(-5px)}
+.marketing-service-card:hover::before{opacity:1}
+.marketing-service-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:52px;height:52px;background:var(--brand-soft);
+  border-radius:16px;color:var(--brand);margin-bottom:20px;
+  transition:background .22s,color .22s,box-shadow .22s}
+.marketing-service-card:hover .marketing-service-icon{
+  background:var(--brand);color:#fff;
+  box-shadow:0 6px 20px color-mix(in srgb,var(--brand) 40%,transparent)}
+.marketing-service-icon svg{width:26px;height:26px;stroke-width:1.7}
+.marketing-service-card strong{
+  display:block;font:700 16.5px/1.2 var(--display);color:var(--text-primary);margin-bottom:8px}
 .marketing-service-card span{font:400 13.5px/1.6 var(--font);color:var(--text-secondary)}
-.marketing-service-card .tile-provider-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;justify-content:flex-start}
-.marketing-service-card .provider-logo-frame{width:30px;height:22px;border-radius:6px;
+.marketing-service-card .tile-provider-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.marketing-service-card .provider-logo-frame{
+  width:32px;height:24px;border-radius:7px;
   background:var(--surface-muted);border:1px solid var(--border-subtle);
   display:flex;align-items:center;justify-content:center;padding:2px 4px}
-.marketing-service-card .provider-logo{max-width:24px;max-height:16px;object-fit:contain}
+.marketing-service-card .provider-logo{max-width:26px;max-height:18px;object-fit:contain}
 
-/* Steps */
-.marketing-steps{display:grid;gap:20px;grid-template-columns:1fr}
+/* HOW IT WORKS — connected steps */
+.marketing-steps{display:grid;gap:0;grid-template-columns:1fr;position:relative}
 @media(min-width:640px){.marketing-steps{grid-template-columns:repeat(3,1fr)}}
-.marketing-step{text-align:center;padding:36px 28px;background:var(--surface);
-  border:1px solid var(--border-subtle);border-radius:20px}
-.marketing-step-num{display:flex;align-items:center;justify-content:center;
-  width:48px;height:48px;background:var(--brand);color:#fff;
-  border-radius:50%;font:800 18px/1 var(--display);margin:0 auto 18px;
-  box-shadow:var(--shadow)}
-.marketing-step strong{display:block;font:700 16px/1.2 var(--display);
-  color:var(--text-primary);margin-bottom:8px}
-.marketing-step span{font:400 13.5px/1.6 var(--font);color:var(--text-secondary)}
+.marketing-step{
+  text-align:center;padding:40px 32px;
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:0;position:relative;transition:background .2s}
+.marketing-step:first-child{border-radius:22px 0 0 22px}
+@media(min-width:640px){
+  .marketing-step:last-child{border-radius:0 22px 22px 0}
+  .marketing-step:not(:first-child){border-left:none}}
+@media(max-width:639px){
+  .marketing-step:first-child{border-radius:22px 22px 0 0}
+  .marketing-step:last-child{border-radius:0 0 22px 22px}
+  .marketing-step:not(:first-child){border-top:none}}
+.marketing-step:hover{background:var(--brand-soft)}
+.marketing-step:not(:last-child)::after{
+  content:"›";position:absolute;
+  right:-14px;top:50%;transform:translateY(-50%);
+  font:700 22px/1 sans-serif;color:var(--brand);z-index:1}
+@media(max-width:639px){.marketing-step:not(:last-child)::after{
+  content:"↓";right:auto;left:50%;top:auto;bottom:-14px;
+  transform:translateX(-50%)}}
+.marketing-step-num{
+  display:flex;align-items:center;justify-content:center;
+  width:54px;height:54px;background:var(--brand);color:#fff;
+  border-radius:50%;font:800 20px/1 var(--display);margin:0 auto 22px;
+  box-shadow:0 6px 20px color-mix(in srgb,var(--brand) 40%,transparent)}
+.marketing-step strong{display:block;font:700 16px/1.2 var(--display);color:var(--text-primary);margin-bottom:10px}
+.marketing-step span{font:400 13.5px/1.65 var(--font);color:var(--text-secondary)}
 
-/* Why grid */
-.marketing-why-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.marketing-why-card{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:20px;padding:28px 24px;transition:border-color .18s,box-shadow .18s}
-.marketing-why-card:hover{border-color:color-mix(in srgb,var(--brand) 30%,transparent);box-shadow:var(--shadow-sm)}
-.why-icon{display:inline-flex;align-items:center;justify-content:center;
-  width:44px;height:44px;background:var(--brand-soft);border-radius:13px;
-  color:var(--brand);margin-bottom:16px}
-.why-icon svg{width:22px;height:22px;stroke-width:1.8}
-.marketing-why-card strong{display:block;font:700 15px/1.2 var(--display);
-  color:var(--text-primary);margin-bottom:8px}
-.marketing-why-card span{font:400 13.5px/1.6 var(--font);color:var(--text-secondary)}
+/* WHY GRID */
+.marketing-why-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.marketing-why-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:22px;padding:30px 26px;
+  transition:border-color .2s,box-shadow .2s,transform .2s}
+.marketing-why-card:hover{
+  border-color:color-mix(in srgb,var(--brand) 35%,transparent);
+  box-shadow:0 10px 32px rgba(0,0,0,.08);transform:translateY(-4px)}
+.why-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:48px;height:48px;background:var(--brand-soft);
+  border-radius:14px;color:var(--brand);margin-bottom:18px;
+  transition:background .2s,color .2s,box-shadow .2s}
+.marketing-why-card:hover .why-icon{
+  background:var(--brand);color:#fff;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--brand) 35%,transparent)}
+.why-icon svg{width:24px;height:24px;stroke-width:1.7}
+.marketing-why-card strong{display:block;font:700 15.5px/1.2 var(--display);color:var(--text-primary);margin-bottom:9px}
+.marketing-why-card span{font:400 13.5px/1.65 var(--font);color:var(--text-secondary)}
 
-/* Rate table */
-.marketing-rate-table{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.marketing-rate-card{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:18px;padding:22px;transition:border-color .18s,box-shadow .18s}
-.marketing-rate-card:hover{border-color:color-mix(in srgb,var(--brand) 30%,transparent);box-shadow:var(--shadow-sm)}
-.rate-network{font:800 16px/1 var(--display);color:var(--brand);margin-bottom:16px}
-.rate-row{display:flex;justify-content:space-between;
+/* RATE TABLE */
+.marketing-rate-table{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.marketing-rate-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:20px;padding:24px;transition:border-color .2s,box-shadow .2s}
+.marketing-rate-card:hover{
+  border-color:color-mix(in srgb,var(--brand) 35%,transparent);
+  box-shadow:0 6px 22px rgba(0,0,0,.07)}
+.rate-network{font:800 16px/1 var(--display);color:var(--brand);margin-bottom:18px}
+.rate-row{
+  display:flex;justify-content:space-between;
   font:500 13px/1 var(--font);color:var(--text-secondary);
-  padding:9px 0;border-bottom:1px solid var(--border-subtle)}
+  padding:10px 0;border-bottom:1px solid var(--border-subtle)}
 .rate-row strong{color:var(--text-primary);font-weight:700}
 
-/* Promos */
+/* PROMOS */
 .marketing-promos{display:grid;gap:16px;min-height:60px}
-.marketing-promos .promo-card{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:8px;
+.marketing-promos .promo-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:8px;
   align-items:flex-start;text-align:left}
 .marketing-promos .promo-card h3{font:700 16px/1.2 var(--display);color:var(--text-primary)}
 .marketing-promos .promo-card p{font:400 13.5px/1.6 var(--font);color:var(--text-secondary)}
-.marketing-promos .promo-card button{margin-top:6px;padding:9px 18px;border-radius:999px;
+.marketing-promos .promo-card button{
+  margin-top:6px;padding:10px 20px;border-radius:999px;
   background:var(--brand);color:#fff;font:700 13px/1 var(--display);border:none;cursor:pointer}
 
-/* CTA */
-.marketing-cta{display:flex;flex-direction:column;align-items:center;
-  gap:28px;text-align:center;padding:clamp(56px,7vw,96px) clamp(20px,5vw,48px);
-  background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 10%,var(--surface)),var(--surface) 70%);
-  border-top:1px solid var(--border-subtle)}
-@media(min-width:640px){.marketing-cta{flex-direction:row;text-align:left;
-  justify-content:space-between}}
-.marketing-cta h2{font:800 clamp(24px,3.2vw,36px)/1.15 var(--display);color:var(--text-primary);margin-bottom:10px;letter-spacing:-.5px}
-.marketing-cta p{font:400 15px/1.6 var(--font);color:var(--text-secondary)}
-.marketing-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;
-  text-align:center;padding:22px clamp(20px,5vw,48px);border-top:1px solid var(--border-subtle)}
-.marketing-trust p{font:400 13px/1.5 var(--font);color:var(--text-muted)}
-.trust-chip{display:inline-flex;align-items:center;gap:5px;
-  font:500 12.5px/1 var(--font);color:var(--text-secondary);
-  background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:999px;padding:7px 13px}
-
 /* FAQ */
-.marketing-faq-list{display:flex;flex-direction:column;gap:0;max-width:760px;margin:0 auto;border:1px solid var(--border-subtle);border-radius:18px;overflow:hidden}
+.marketing-faq-list{
+  display:flex;flex-direction:column;gap:0;
+  max-width:760px;margin:0 auto;
+  border:1px solid var(--border-subtle);border-radius:22px;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,.06)}
 .faq-item{border-bottom:1px solid var(--border-subtle)}
 .faq-item:last-child{border-bottom:none}
-.faq-item summary{padding:20px 24px;font:600 15px/1.4 var(--display);color:var(--text-primary);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;background:var(--surface);transition:background var(--transition)}
+.faq-item summary{
+  padding:22px 26px;font:600 15px/1.4 var(--display);color:var(--text-primary);
+  cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);transition:background .18s}
 .faq-item summary::-webkit-details-marker{display:none}
-.faq-item summary::after{content:"";display:inline-block;width:18px;height:18px;flex-shrink:0;margin-left:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238896A4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;transition:transform var(--transition)}
+.faq-item summary::after{
+  content:"";display:inline-block;width:20px;height:20px;flex-shrink:0;margin-left:16px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238896A4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;
+  transition:transform .22s}
 .faq-item[open] summary::after{transform:rotate(180deg)}
 .faq-item summary:hover{background:var(--surface-muted)}
-.faq-item p{padding:0 24px 20px;font:400 14px/1.7 var(--font);color:var(--text-secondary)}
-.faq-item[open] summary{color:var(--brand)}
+.faq-item p{padding:0 26px 22px;font:400 14.5px/1.75 var(--font);color:var(--text-secondary)}
+.faq-item[open] summary{color:var(--brand);background:var(--brand-soft)}
 
-/* Footer */
-.marketing-footer{background:var(--surface);border-top:1px solid var(--border-subtle);padding:56px 0 28px}
-.marketing-footer-inner{max-width:1200px;margin:0 auto;padding:0 clamp(20px,5vw,48px)}
-.marketing-footer-cols{display:grid;gap:36px;grid-template-columns:1fr}
+/* CTA — dark gradient */
+.marketing-cta{
+  display:flex;flex-direction:column;align-items:center;
+  gap:32px;text-align:center;
+  padding:clamp(64px,8vw,112px) clamp(20px,5vw,52px);
+  background:linear-gradient(145deg,#071526 0%,#0c2040 60%,#091b33 100%);
+  border-top:none;position:relative;overflow:hidden}
+.marketing-cta::before{
+  content:"";position:absolute;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--brand) 18%,transparent),transparent 70%);
+  top:-200px;right:-100px;pointer-events:none}
+@media(min-width:640px){.marketing-cta{flex-direction:row;text-align:left;justify-content:space-between;align-items:center}}
+.marketing-cta h2{
+  font:800 clamp(26px,3.4vw,40px)/1.1 var(--display);
+  color:#fff;margin-bottom:12px;letter-spacing:-.6px}
+.marketing-cta p{font:400 15.5px/1.7 var(--font);color:rgba(255,255,255,.6)}
+.marketing-cta .marketing-primary{
+  flex-shrink:0;
+  box-shadow:0 6px 24px color-mix(in srgb,var(--brand) 45%,transparent)}
+
+/* FOOTER — dark premium */
+.marketing-footer{
+  background:#050d1a;border-top:none;padding:68px 0 32px}
+.marketing-footer-inner{max-width:1200px;margin:0 auto;padding:0 clamp(20px,5vw,52px)}
+.marketing-footer-cols{display:grid;gap:42px;grid-template-columns:1fr}
 @media(min-width:640px){.marketing-footer-cols{grid-template-columns:2fr 1fr 1fr 1fr}}
-.marketing-footer-brand p{font:400 13px/1.7 var(--font);color:var(--text-secondary);margin-top:12px;max-width:280px}
-.marketing-footer-col{display:flex;flex-direction:column;gap:12px}
-.marketing-footer-head{font:700 12px/1 var(--display);color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.marketing-footer-brand p{font:400 13.5px/1.75 var(--font);color:rgba(255,255,255,.42);margin-top:14px;max-width:280px}
+.marketing-footer-col{display:flex;flex-direction:column;gap:14px}
+.marketing-footer-head{
+  font:700 11px/1 var(--display);color:rgba(255,255,255,.32);
+  text-transform:uppercase;letter-spacing:.9px;margin-bottom:6px}
 .marketing-footer-col a,.marketing-footer-col button,.marketing-footer-col span{
-  font:500 13px/1 var(--font);color:var(--text-secondary);cursor:pointer;text-align:left;padding:0}
+  font:500 13.5px/1 var(--font);color:rgba(255,255,255,.48);cursor:pointer;text-align:left;padding:0;
+  transition:color .18s}
 .marketing-footer-col a:hover,.marketing-footer-col button:hover{color:var(--brand)}
-.marketing-footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
-  margin-top:44px;padding-top:22px;border-top:1px solid var(--border-subtle);
-  font:400 12px/1 var(--font);color:var(--text-muted)}
-.marketing-footer-legal{display:flex;flex-wrap:wrap;gap:6px 18px}
-.marketing-footer-legal a{font:400 12px/1 var(--font);color:var(--text-muted);text-decoration:none}
-.marketing-footer-legal a:hover{color:var(--brand);text-decoration:underline}
+.marketing-footer-bottom{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+  margin-top:54px;padding-top:24px;
+  border-top:1px solid rgba(255,255,255,.07);
+  font:400 12px/1 var(--font);color:rgba(255,255,255,.28)}
+.marketing-footer-legal{display:flex;flex-wrap:wrap;gap:6px 20px}
+.marketing-footer-legal a{font:400 12px/1 var(--font);color:rgba(255,255,255,.28);text-decoration:none;transition:color .18s}
+.marketing-footer-legal a:hover{color:var(--brand)}
+.marketing-footer .marketing-brand{color:#fff}
+.marketing-footer .marketing-brand span{color:var(--brand)}
 
 /* ══════════════════════════════════════════════════════════════
    AUTH SCREEN
@@ -1355,6 +1527,7 @@ html.dark .icon-moon{display:none}
     <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Sign in</button>
   </nav>
   <main class="marketing-main">
+    <div class="marketing-main-inner">
     <div class="marketing-copy">
       <span class="marketing-eyebrow"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Nigeria's everyday payment platform</span>
       <h1>Airtime, data, electricity &amp; TV — paid instantly.</h1>
@@ -1375,7 +1548,14 @@ html.dark .icon-moon{display:none}
       <div class="ledger-row"><span>IKEDC prepaid electricity</span><strong>−₦2,000.00</strong></div>
       <div class="ledger-note">Completed payments stay in your transaction history.</div>
     </aside>
+    </div>
   </main>
+  <div class="marketing-stats" aria-label="Platform stats">
+    <div class="marketing-stat"><span class="marketing-stat-num">50K+</span><span class="marketing-stat-label">Transactions processed</span></div>
+    <div class="marketing-stat"><span class="marketing-stat-num">12</span><span class="marketing-stat-label">Electricity DISCOs</span></div>
+    <div class="marketing-stat"><span class="marketing-stat-num">4</span><span class="marketing-stat-label">Mobile networks</span></div>
+    <div class="marketing-stat"><span class="marketing-stat-num">&lt;5s</span><span class="marketing-stat-label">Average delivery</span></div>
+  </div>
 
   <section class="marketing-trust" aria-label="How payments are handled">
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Instant processing</span>
@@ -1388,6 +1568,7 @@ html.dark .icon-moon{display:none}
   <section class="marketing-section" id="services" aria-labelledby="services-heading">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
+        <span class="marketing-section-eyebrow">Our Services</span>
         <h2 id="services-heading">Everything you pay for, in one place.</h2>
         <p>Airtime, data, electricity and cable TV — with real provider logos and clear pricing.</p>
       </div>
@@ -1405,6 +1586,7 @@ html.dark .icon-moon{display:none}
   <section class="marketing-section" id="how" aria-labelledby="how-it-works">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
+        <span class="marketing-section-eyebrow">How It Works</span>
         <h2 id="how-it-works">Choose a service. Pay securely. Get it.</h2>
         <p>Three steps between you and every bill you pay on repeat.</p>
       </div>
@@ -1419,6 +1601,7 @@ html.dark .icon-moon{display:none}
   <section class="marketing-section" id="why" aria-labelledby="why-heading">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
+        <span class="marketing-section-eyebrow">Why TopFlowNG</span>
         <h2 id="why-heading">Built for repeat purchases, not one-off checkout forms.</h2>
         <p>Set up your account, protect every purchase with a transaction PIN, and keep each receipt in one searchable history.</p>
       </div>
@@ -1436,6 +1619,7 @@ html.dark .icon-moon{display:none}
   <section class="marketing-section" id="rates" aria-labelledby="rates-heading">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
+        <span class="marketing-section-eyebrow">Live Rates</span>
         <h2 id="rates-heading">Sample rates you'll pay today.</h2>
         <p>Examples from the same server-side catalogue used at checkout.</p>
       </div>
@@ -1447,6 +1631,7 @@ html.dark .icon-moon{display:none}
   <section class="marketing-section" id="faq" aria-labelledby="faq-heading">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
+        <span class="marketing-section-eyebrow">FAQ</span>
         <h2 id="faq-heading">Common questions.</h2>
         <p>Still have questions? Email us at <a href="mailto:hello@topflowng.com">hello@topflowng.com</a></p>
       </div>
