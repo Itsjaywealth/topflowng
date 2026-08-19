@@ -1856,6 +1856,7 @@ function schedulePendingOrderSweep() {
 
 async function start() {
   await db.initDB();
+  await require('./lib/cache').connect().catch(() => {});
   const server = app.listen(PORT, '0.0.0.0', () => {
     logger.info('TopFlowNG server started', { port: PORT, env: config.env });
   });
