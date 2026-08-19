@@ -679,7 +679,14 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
 .filter-chip--date.active{color:var(--brand)}
 
 /* Support overlay */
-.support-card{max-width:440px;width:100%}
+.support-card{max-width:440px;width:100%;display:flex;flex-direction:column;max-height:88vh}
+.support-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.support-card-head .receipt-brand{justify-content:flex-start;margin:0}
+.support-close{flex:none;width:40px;height:40px;border:0;border-radius:12px;background:var(--surface-muted);
+  color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:background var(--transition),color var(--transition)}
+.support-close:hover{background:var(--brand-soft);color:var(--brand)}
+.support-close svg{width:20px;height:20px}
 .support-title{font:800 22px/1.2 var(--display);text-align:center;letter-spacing:-.3px;margin-top:6px}
 .support-sub{font:500 13.5px/1.4 var(--font);color:var(--text-muted);text-align:center;margin:4px 0 16px}
 .support-search{position:relative;margin-bottom:12px}
@@ -2260,9 +2267,14 @@ html.dark .icon-moon{display:none}
 </button>
 
 <!-- ══════════════ SUPPORT OVERLAY ══════════════ -->
-<div class="receipt-overlay" id="support-overlay" role="dialog" aria-modal="true" aria-labelledby="support-title">
-  <div class="receipt-card support-card">
-    <div class="receipt-brand"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"><span>TopFlowNG</span></div>
+ <div class="receipt-overlay" id="support-overlay" role="dialog" aria-modal="true" aria-labelledby="support-title">
+   <div class="receipt-card support-card">
+     <div class="support-card-head">
+       <div class="receipt-brand"><img src="/assets/brand/topflowng-mark.svg" alt="TopFlowNG logo"><span>TopFlowNG</span></div>
+       <button type="button" class="support-close" id="support-close" onclick="closeSupport()" aria-label="Close support">
+         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10M17 7 7 17"/></svg>
+       </button>
+     </div>
     <div class="support-title" id="support-title">Customer Support</div>
     <div class="support-sub" id="support-sub">Hi 👋 How can we help you today?</div>
 
@@ -3672,17 +3684,29 @@ function openSupport(txn) {
     document.getElementById('support-sub').textContent = 'Hi 👋 How can we help you today?';
   }
   document.getElementById('support-overlay').classList.add('open');
+  // Lock body scroll while support is open so the underlying page does not
+  // scroll behind the overlay; restored on close.
+  document.body.style.overflow = 'hidden';
   setSupportLauncherState(true);
   const search = document.getElementById('support-search');
   if (search) search.value = '';
   filterSupportFAQ('');
+  // Focus the close control (or the search field) so keyboard users can
+  // immediately close or navigate the panel.
+  const closeBtn = document.getElementById('support-close');
+  if (closeBtn) { try { closeBtn.focus(); } catch (e) {} }
   const input = document.getElementById('support-search');
   if (input) { try { input.focus(); } catch (e) {} }
 }
 
 function closeSupport() {
   document.getElementById('support-overlay').classList.remove('open');
+  // Restore body scroll always — never leave the page trapped.
+  document.body.style.overflow = '';
   setSupportLauncherState(false);
+  // Restore focus to the launcher so keyboard navigation continues naturally.
+  const fab = document.getElementById('support-fab');
+  if (fab) { try { fab.focus(); } catch (e) {} }
 }
 
 function copySupportRef() {
@@ -4486,6 +4510,14 @@ document.addEventListener('keydown', e => {
     if (openServiceScreen) closeService(openServiceScreen.id.replace('svc-', ''));
     const supportOverlay = document.getElementById('support-overlay');
     if (supportOverlay && supportOverlay.classList.contains('open')) closeSupport();
+  }
+}, true);
+
+// Backdrop click closes the support overlay (clicking inside the card must NOT).
+document.addEventListener('click', e => {
+  const supportOverlay = document.getElementById('support-overlay');
+  if (supportOverlay && supportOverlay.classList.contains('open') && e.target === supportOverlay) {
+    closeSupport();
   }
 }, true);
 

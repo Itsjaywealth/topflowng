@@ -346,6 +346,29 @@ test.describe('logged-in app shell', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
     await expect(fab).toHaveAttribute('aria-expanded', 'false');
+
+    // Header close X is always visible and closes the panel
+    await fab.click();
+    await expect(page.locator('#support-overlay')).toHaveClass(/open/);
+    const closeBtn = page.locator('#support-close');
+    await expect(closeBtn).toBeVisible();
+    await expect(closeBtn).toHaveAttribute('aria-label', 'Close support');
+    // body scroll is locked while open
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+    await closeBtn.click();
+    await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
+    // body scroll restored after close
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+
+    // Repeated open/close stress — no stuck overlay or duplicate backdrops
+    for (let i = 0; i < 3; i++) {
+      await fab.click();
+      await expect(page.locator('#support-overlay')).toHaveClass(/open/);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
+    }
+    const openCount = await page.locator('#support-overlay.open').count();
+    expect(openCount).toBe(0);
   });
 });
 

@@ -295,6 +295,9 @@ await checkInlineSyntax('bizflow.html');
   check('single floating support launcher', (app.match(/class="support-fab"/g) || []).length === 1);
   check('launcher toggles the support overlay', /toggleSupportLauncher/.test(app));
   check('tawk default bubble hidden to avoid duplicate launcher', /hideWidget/.test(app));
+  check('support has always-visible header close button', /id="support-close"/.test(app) && /aria-label="Close support"/.test(app));
+  check('support close restores body scroll', /document\.body\.style\.overflow = ''/.test(app));
+  check('support backdrop click closes', /e\.target === supportOverlay/.test(app));
 }
 
 // ── 14. Marketing rates come from the server catalogue ─────────────────────
