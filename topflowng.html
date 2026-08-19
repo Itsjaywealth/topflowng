@@ -21,6 +21,7 @@
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0B7E8E" media="(prefers-color-scheme: light)">
  <meta name="theme-color" content="#0C1828" media="(prefers-color-scheme: dark)">
+ <link rel="icon" href="/favicon.ico" sizes="any">
  <link rel="icon" href="/assets/brand/topflowng-mark.svg" type="image/svg+xml">
  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
@@ -79,7 +80,7 @@
  <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
-<script defer src="https://js.paystack.co/v1/inline.js"></script>
+<!-- Paystack inline.js removed — wallet funding no longer customer-facing -->
 <style>
 /* ═══════════════════════════════════════════════════════════════
    TOPFLOWNG — NEW DESIGN SYSTEM v2 (Deep Teal)
@@ -528,9 +529,13 @@ html.dark .marketing-nav{background:color-mix(in srgb,var(--bg) 86%,transparent)
   justify-content:space-between}}
 .marketing-cta h2{font:800 clamp(24px,3.2vw,36px)/1.15 var(--display);color:var(--text-primary);margin-bottom:10px;letter-spacing:-.5px}
 .marketing-cta p{font:400 15px/1.6 var(--font);color:var(--text-secondary)}
-.marketing-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 24px;
-  text-align:center;padding:26px clamp(20px,5vw,48px);border-top:1px solid var(--border-subtle)}
+.marketing-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;
+  text-align:center;padding:22px clamp(20px,5vw,48px);border-top:1px solid var(--border-subtle)}
 .marketing-trust p{font:400 13px/1.5 var(--font);color:var(--text-muted)}
+.trust-chip{display:inline-flex;align-items:center;gap:5px;
+  font:500 12.5px/1 var(--font);color:var(--text-secondary);
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:999px;padding:7px 13px}
 
 /* Footer */
 .marketing-footer{background:var(--surface);border-top:1px solid var(--border-subtle);padding:56px 0 28px}
@@ -761,11 +766,7 @@ html.dark .icon-moon{display:none}
   text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
 .balance-amount{font:800 30px/1 var(--display);color:var(--text-primary);margin-bottom:16px;letter-spacing:-.5px}
 .header-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;position:relative}
-.btn-fund{padding:10px 22px;background:var(--brand);color:#fff;
-  border-radius:999px;font:700 13px/1 var(--display);border:none;cursor:pointer;
-  transition:background var(--transition),transform var(--transition)}
-.btn-fund:hover{background:var(--brand-hover)}
-.btn-fund:active{transform:scale(.98)}
+/* .btn-fund removed — wallet funding no longer customer-facing */
 .btn-history-quick{padding:10px 20px;border:1.5px solid var(--border-strong);
   border-radius:999px;font:600 13px/1 var(--font);
   color:var(--text-secondary);cursor:pointer;background:var(--surface);
@@ -908,8 +909,7 @@ html.dark .icon-moon{display:none}
 .wallet-hero-amount{font:800 clamp(34px,6vw,48px)/1 var(--display);letter-spacing:-1px;
   margin-bottom:20px;position:relative}
 .wallet-hero-actions{display:flex;gap:10px;flex-wrap:wrap;position:relative}
-.wallet-hero-actions .btn-fund{background:#fff;color:var(--brand)}
-.wallet-hero-actions .btn-fund:hover{background:rgba(255,255,255,.9);color:var(--brand-hover)}
+/* .wallet-hero-actions .btn-fund removed */
 .wallet-hero-actions .btn-history-quick{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);color:#fff}
 .wallet-hero-actions .btn-history-quick:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.6);color:#fff}
 .wallet-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
@@ -932,10 +932,11 @@ html.dark .icon-moon{display:none}
 .glance-label{font:500 11px/1 var(--font);color:var(--text-muted);
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:block}
 .glance-balance{font:800 24px/1 var(--display);color:var(--text-primary);display:block;margin-bottom:16px;letter-spacing:-.4px}
-.glance-fund{padding:10px 20px;background:var(--brand);color:#fff;
+/* .glance-fund removed — wallet funding no longer customer-facing */
+.glance-fund-DISABLED{padding:10px 20px;background:var(--brand);color:#fff;
   border-radius:999px;font:700 12px/1 var(--display);
   border:none;cursor:pointer;transition:background var(--transition)}
-.glance-fund:hover{background:var(--brand-hover)}
+/* .glance-fund:hover removed */
 .glance-shortcut{display:flex;justify-content:space-between;align-items:center;
   width:100%;padding:11px 15px;border-radius:12px;
   border:1.5px solid var(--border-strong);background:var(--surface);
@@ -1335,9 +1336,9 @@ html.dark .icon-moon{display:none}
   </nav>
   <main class="marketing-main">
     <div class="marketing-copy">
-      <span class="marketing-eyebrow"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> One wallet for everyday payments</span>
-      <h1>Airtime, data, electricity &amp; TV. All from one wallet.</h1>
-      <p>TopFlowNG keeps your everyday payments in one funded Naira wallet — instant airtime and data, electricity and cable bills, plus exam pins, with a receipt and a clean history for everything.</p>
+      <span class="marketing-eyebrow"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Nigeria's everyday payment platform</span>
+      <h1>Airtime, data, electricity &amp; TV — paid instantly.</h1>
+      <p>TopFlowNG puts all your everyday bill payments in one place — instant airtime and data top-ups, electricity tokens, cable TV subscriptions, and exam PINs, each with a receipt and full transaction history.</p>
       <div class="marketing-actions">
         <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Create free account</button>
         <a class="marketing-secondary" href="#rates">View rates</a>
@@ -1345,19 +1346,23 @@ html.dark .icon-moon{display:none}
       </div>
     </div>
     <aside class="marketing-ledger" aria-label="TopFlowNG wallet preview">
-      <div class="preview-top"><div><span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>TopFlowNG</div><button type="button" onclick="openAuthFromMarketing('register')">+ Fund wallet</button></div>
+      <div class="preview-top"><div><span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>TopFlowNG</div><button type="button" onclick="openAuthFromMarketing('register')">Open account</button></div>
       <div class="preview-label">Available balance</div>
       <div class="preview-balance">₦24,850.00</div>
       <div class="ledger-cap">Recent activity</div>
       <div class="ledger-row"><span>MTN airtime · 0803 123 4567</span><strong>−₦500.00</strong></div>
-      <div class="ledger-row"><span>Wallet funded · Paystack</span><strong class="preview-credit">+₦5,000.00</strong></div>
+      <div class="ledger-row"><span>DStv Smart · IUC 1234 5678</span><strong>−₦8,900.00</strong></div>
       <div class="ledger-row"><span>IKEDC prepaid electricity</span><strong>−₦2,000.00</strong></div>
       <div class="ledger-note">Completed payments stay in your transaction history.</div>
     </aside>
   </main>
 
   <section class="marketing-trust" aria-label="How payments are handled">
-    <p><strong>Fast processing.</strong>&nbsp; <strong>Transaction PIN.</strong>&nbsp; <strong>Provider validation.</strong>&nbsp; <strong>Receipts for every purchase.</strong>&nbsp; Payments secured by Paystack.</p>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Instant processing</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Transaction PIN</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Provider validation</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Receipt for every purchase</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Full transaction history</span>
   </section>
 
   <section class="marketing-section" id="services" aria-labelledby="services-heading">
@@ -1380,13 +1385,13 @@ html.dark .icon-moon{display:none}
   <section class="marketing-section" id="how" aria-labelledby="how-it-works">
     <div class="marketing-section-inner">
       <div class="marketing-section-head">
-        <h2 id="how-it-works">Fund your wallet. Buy what you need.</h2>
+        <h2 id="how-it-works">Choose a service. Pay securely. Get it.</h2>
         <p>Three steps between you and every bill you pay on repeat.</p>
       </div>
       <div class="marketing-steps">
-        <div class="marketing-step"><span class="marketing-step-num">1</span><strong>Fund your wallet</strong><span>Use card, bank transfer, or USSD through Paystack.</span></div>
-        <div class="marketing-step"><span class="marketing-step-num">2</span><strong>Pick a service</strong><span>Choose MTN, Glo, Airtel, T2, electricity, or TV.</span></div>
-        <div class="marketing-step"><span class="marketing-step-num">3</span><strong>See the result</strong><span>Your balance and transaction history update in place.</span></div>
+        <div class="marketing-step"><span class="marketing-step-num">1</span><strong>Choose a service</strong><span>Pick airtime, data, electricity, cable TV or an exam PIN.</span></div>
+        <div class="marketing-step"><span class="marketing-step-num">2</span><strong>Enter your details</strong><span>Recipient, network or meter — confirmed before you pay.</span></div>
+        <div class="marketing-step"><span class="marketing-step-num">3</span><strong>Pay &amp; receive</strong><span>Pay securely for that order and get your service, with a receipt.</span></div>
       </div>
     </div>
   </section>
@@ -1430,14 +1435,18 @@ html.dark .icon-moon{display:none}
 
   <section class="marketing-cta" aria-labelledby="cta-heading">
     <div>
-      <h2 id="cta-heading">Create your wallet and buy below retail today.</h2>
-      <p>Free to open. Top up from ₦100 and pay your everyday bills in seconds.</p>
+      <h2 id="cta-heading">Start paying your everyday bills in seconds.</h2>
+      <p>Free to create. Pay for airtime, data, electricity, cable TV and exam PINs — with a receipt and full history of every transaction.</p>
     </div>
     <button type="button" class="marketing-primary" onclick="openAuthFromMarketing('register')">Register now</button>
   </section>
 
   <section class="marketing-trust" aria-label="Payments and services">
-    <p><strong>Payments secured by Paystack.</strong> Pay for MTN, Glo, Airtel, T2, IKEDC, EKEDC, AEDC, DStv, GOtv, and StarTimes.</p>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> MTN, Glo, Airtel &amp; 9mobile</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> 12 electricity DISCOs</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> DStv, GOtv &amp; StarTimes</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> WAEC exam PINs</span>
+    <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> PIN-protected &amp; auditable</span>
   </section>
   <footer class="marketing-footer">
     <div class="marketing-footer-inner">
@@ -1447,7 +1456,7 @@ html.dark .icon-moon{display:none}
             <span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>
             TopFlow<span>NG</span>
           </div>
-          <p>Airtime, data, electricity and cable TV payments from one Naira wallet.</p>
+          <p>Nigeria's everyday payment platform — airtime, data, electricity, cable TV and exam PINs.</p>
         </div>
         <div class="marketing-footer-col">
           <span class="marketing-footer-head">Quick links</span>
@@ -1487,7 +1496,7 @@ html.dark .icon-moon{display:none}
       <span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>
       TopFlowNG
     </div>
-    <div class="auth-tagline">Pay for the things you use, with your wallet in view.</div>
+    <div class="auth-tagline">Airtime, data, electricity &amp; TV — paid instantly.</div>
   </div>
   <div class="auth-body">
     <div class="auth-tabs">
@@ -1615,22 +1624,14 @@ html.dark .icon-moon{display:none}
             <div class="balance-amount" id="balance-display">₦0.00</div>
           </div>
           <div class="header-actions">
-            <button class="btn-fund" onclick="openFundModal()">Fund wallet</button>
             <button class="btn-history-quick" onclick="goTab('history')">Transactions</button>
-          </div>
-        </div>
-        <div class="hero-slide" id="hero-slide-recharge">
-          <div class="balance-label">Top-up reminder</div>
-          <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Get a Paystack top-up link when your wallet drops below a threshold. Nothing is charged automatically.</div>
-          <div class="header-actions">
-            <button class="btn-fund" onclick="goTab('account');setTimeout(()=>{let e=document.getElementById('auto-recharge-section');if(e)e.scrollIntoView({behavior:'smooth'})},100)">Configure</button>
           </div>
         </div>
         <div class="hero-slide" id="hero-slide-schedule">
           <div class="balance-label">Scheduled purchases</div>
           <div style="font:500 14px/1.5 var(--font);color:var(--graphite);margin:8px 0">Set up recurring airtime, data or bills — daily, weekly or monthly.</div>
           <div class="header-actions">
-            <button class="btn-fund" onclick="openScheduledModal()">Schedule now</button>
+            <button class="btn-history-quick" onclick="openScheduledModal()">Schedule now</button>
           </div>
         </div>
       </div>
@@ -1708,7 +1709,7 @@ html.dark .icon-moon{display:none}
           <section class="glance-block">
             <span class="glance-label">Available balance</span>
             <strong class="glance-balance" id="at-glance-balance">₦0.00</strong>
-            <button class="glance-fund" type="button" onclick="openFundModal()">Fund wallet</button>
+            <!-- Fund wallet button removed — wallet funding no longer customer-facing -->
           </section>
           <section class="glance-block">
             <span class="glance-label">Quick access</span>
@@ -1733,7 +1734,6 @@ html.dark .icon-moon{display:none}
         <div class="wallet-hero-label">Available balance</div>
         <div class="wallet-hero-amount" id="wallet-balance">₦0.00</div>
         <div class="wallet-hero-actions">
-          <button class="btn-fund" onclick="openFundModal()">Fund wallet</button>
           <button class="btn-history-quick" onclick="goTab('history')">View transactions</button>
         </div>
       </div>
@@ -1963,11 +1963,7 @@ html.dark .icon-moon{display:none}
 
       <!-- Account actions -->
       <div class="account-card">
-        <div class="account-item" onclick="openFundModal()">
-          <div class="acct-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></div>
-          <div class="acct-label">Fund wallet</div>
-          <div class="acct-arrow">›</div>
-        </div>
+        <!-- Fund wallet account item removed — wallet funding no longer customer-facing -->
         <div class="account-item" onclick="openSupport()">
           <div class="acct-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.8.3-1.4 1-1.4 1.9V14"/><path d="M12 17.5h.01"/></svg></div>
           <div class="acct-label">Support &amp; FAQ</div>
@@ -2303,23 +2299,23 @@ html.dark .icon-moon{display:none}
       <div class="support-faq-cat">Getting started</div>
       <details class="faq-item" data-cat="Getting started">
         <summary>What is TopFlowNG?</summary>
-        <p>TopFlowNG is a Naira wallet for everyday payments — airtime, data, electricity and cable TV bills — with a receipt and history for everything.</p>
+        <p>TopFlowNG is a digital services platform for buying airtime, data, electricity, cable TV subscriptions and supported exam PINs — with a receipt and a clear history for everything.</p>
       </details>
       <details class="faq-item" data-cat="Getting started">
         <summary>How do I create an account?</summary>
-        <p>Tap "Create free account", enter your full name, a valid phone number and email, then choose a password. Your wallet is opened instantly and you can start buying right away.</p>
+        <p>Tap "Create free account", enter your full name, a valid phone number and email, then choose a password. You can start buying right away.</p>
       </details>
 
-      <div class="support-faq-cat">Wallet &amp; funding</div>
-      <details class="faq-item" data-cat="Wallet &amp; funding">
-        <summary>How do I fund my wallet?</summary>
-        <p>Tap "Fund wallet" on Home or Wallet, choose an amount, and pay securely with your card, bank transfer or USSD through Paystack.</p>
+      <div class="support-faq-cat">Payments</div>
+      <details class="faq-item" data-cat="Payments">
+        <summary>How do I pay for a service?</summary>
+        <p>Choose a service, enter the recipient or account details, and pay securely for that order at checkout. Your payment is verified before your service is processed.</p>
       </details>
-      <details class="faq-item" data-cat="Wallet &amp; funding">
-        <summary>How quickly is my wallet credited after funding?</summary>
-        <p>Card payments credit instantly. Bank transfer and USSD are credited automatically as soon as Paystack confirms the payment, usually within minutes.</p>
+      <details class="faq-item" data-cat="Payments">
+        <summary>What happens after I pay?</summary>
+        <p>Once your payment is confirmed, we process your order and the provider delivers your service. You can track the status in your transaction history.</p>
       </details>
-      <details class="faq-item" data-cat="Wallet &amp; funding">
+      <details class="faq-item" data-cat="Payments">
         <summary>Why do I need a transaction PIN?</summary>
         <p>Your 4–6 digit PIN protects every purchase. It is set once from your Account page and never stored in plain text.</p>
       </details>
@@ -2372,8 +2368,8 @@ html.dark .icon-moon{display:none}
         <p>Tap "Forgot password" on the login screen, enter your registered phone number or email, and follow the reset link we send you.</p>
       </details>
       <details class="faq-item" data-cat="Account &amp; security">
-        <summary>My card payment was successful but my wallet was not credited — what now?</summary>
-        <p>Wait a few minutes and refresh your balance. If it is still unchanged, email hello@topflowng.com with your Paystack reference and we will reconcile it for you.</p>
+        <summary>I paid but my service has not been delivered — what now?</summary>
+        <p>Open the transaction in your history to see its current status. If it is still processing, give it a few minutes. If it remains unresolved, email hello@topflowng.com with your TopFlowNG transaction reference and we will investigate.</p>
       </details>
     </div>
     <div class="faq-empty" id="faq-empty">No help topics match your search.</div>
@@ -2422,27 +2418,11 @@ html.dark .icon-moon{display:none}
 </div>
 
 <!-- ══════════════ FUND WALLET MODAL ══════════════ -->
-<div class="modal-overlay" id="fund-modal" role="dialog" aria-modal="true" aria-labelledby="fund-modal-title">
-  <div class="modal-card">
-    <div class="modal-title" id="fund-modal-title">Fund your wallet</div>
-    <div class="modal-sub">Pay with card, bank transfer, or USSD via Paystack.</div>
-    <div class="payment-provider"><span class="provider-logo-frame"><img class="provider-logo" src="/assets/providers/paystack.svg" alt="Paystack logo"></span><span>Secure checkout provided by Paystack</span></div>
-    <div id="fund-modal-error" class="modal-error" role="alert"></div>
-    <div class="field">
-      <label for="fund-amount">Amount (₦)</label>
-      <div class="amount-presets" style="margin-bottom:12px">
-        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦500</div>
-        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦1,000</div>
-        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦2,000</div>
-        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦5,000</div>
-        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦10,000</div>
-        <div role="button" tabindex="0" class="amount-preset" onclick="selectAmt(this,'fund-amount')">₦20,000</div>
-      </div>
-      <input type="number" id="fund-amount" placeholder="or enter amount" min="100">
-    </div>
-    <button class="btn-primary" id="btn-fund-pay" onclick="initiateFunding()">Continue to payment</button>
-    <button class="btn-cancel" onclick="closeFundModal()">Cancel</button>
-  </div>
+<!-- Fund modal replaced with inert stub — wallet funding no longer customer-facing -->
+<div id="fund-modal" hidden aria-hidden="true">
+  <div id="fund-modal-error"></div>
+  <input type="number" id="fund-amount" tabindex="-1">
+  <button id="btn-fund-pay" tabindex="-1"></button>
 </div>
 
 
@@ -2915,7 +2895,7 @@ async function loadWalletData() {
     const el = document.getElementById('wallet-txns');
     el.innerHTML = txns.length
       ? txns.map(txnHTML).join('')
-      : '<div class="txn-empty">No wallet activity yet. Fund your wallet to get started.</div>';
+      : '<div class="txn-empty">No wallet activity yet. Make your first purchase to get started.</div>';
   } catch {
     document.getElementById('wallet-balance').textContent = 'Unavailable';
   }
@@ -3764,56 +3744,14 @@ function openTawkChat() {
 }
 
 // ── FUND WALLET ───────────────────────────────────────────────────────────
-function openFundModal() {
-  document.getElementById('fund-modal').classList.add('open');
-  document.getElementById('fund-modal-error').classList.remove('show');
-}
+// ── FUND WALLET (disabled — wallet funding removed from customer experience) ──
+function openFundModal()  { /* no-op */ }
+function closeFundModal() { /* no-op */ }
+async function initiateFunding() { /* no-op */ }
 
-function closeFundModal() {
-  document.getElementById('fund-modal').classList.remove('open');
-}
-
-async function initiateFunding() {
-  hideErr('fund-modal-error');
-  const amount = parseFloat(document.getElementById('fund-amount').value);
-  if (!amount || amount < 100) return showErr('fund-modal-error', 'Minimum top-up is ₦100.');
-
-  document.getElementById('btn-fund-pay').dataset.label = 'Continue to payment';
-  setLoading('btn-fund-pay', true, 'Initializing…');
-  try {
-    const data = await api('POST', '/api/paystack/initialize', { amount });
-    window.location.href = data.authorization_url;
-  } catch (e) {
-    showErr('fund-modal-error', e.message);
-    setLoading('btn-fund-pay', false);
-  }
-}
-
-async function completePendingPayment() {
-  const reference = pendingPaymentReference;
-  if (!reference) return;
-
-  pendingPaymentReference = null;
-  window.history.replaceState({}, '', '/');
-  await verifyPayment(reference);
-}
-
-async function verifyPayment(reference) {
-  try {
-    const data = await api('GET', `/api/paystack/verify/${reference}`);
-    if (data.success) {
-      updateBalance(data.balance);
-      showReceipt({
-        title: 'Wallet funded!',
-        sub: 'Your balance has been updated.',
-        lines: [['Reference', reference], ['Status', 'Successful']],
-      });
-      loadRecentTxns();
-    }
-  } catch (e) {
-    console.error('Payment verification failed:', e.message);
-  }
-}
+// completePendingPayment / verifyPayment disabled (Paystack wallet funding removed)
+async function completePendingPayment() { /* no-op */ }
+async function verifyPayment(reference) { /* no-op */ }
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────────────
 function openChangePassword() {

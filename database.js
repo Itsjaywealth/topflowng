@@ -924,10 +924,14 @@ async function getAdminStats() {
        AND created_at < NOW() - INTERVAL '30 minutes'`
   );
   s.stale_pending = stale.rows[0].n;
-  const bg = await pool.query(
-    `SELECT COUNT(*)::int AS n FROM scheduled_execution_claims WHERE expires_at < NOW()`
-  );
-  s.expired_claims = bg.rows[0].n;
+  try {
+    const bg = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM scheduled_execution_claims WHERE expires_at < NOW()`
+    );
+    s.expired_claims = bg.rows[0].n;
+  } catch {
+    s.expired_claims = 0; // table may not exist yet
+  }
   return s;
 }
 
