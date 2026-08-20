@@ -1767,6 +1767,13 @@ html.dark .btn-wa-share{color:#25D366!important}
       <button type="button" class="marketing-create" onclick="openAuthFromMarketing('register')">Get started</button>
     </div>
     <button type="button" class="marketing-login" onclick="openAuthFromMarketing('login')">Sign in</button>
+    <select class="lang-switcher" onchange="setLanguage(this.value)" aria-label="Language" style="background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;font:500 12px/1 var(--font);cursor:pointer;appearance:none">
+      <option value="en">🇬🇧 EN</option>
+      <option value="ha">🇳🇬 HA</option>
+      <option value="yo">🇳🇬 YO</option>
+      <option value="ig">🇳🇬 IG</option>
+      <option value="pcm">🇳🇬 Pidgin</option>
+    </select>
   </nav>
   <main class="marketing-main">
     <div class="marketing-main-inner">
@@ -2176,12 +2183,12 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="hero-dots" id="hero-dots"></div>
     </div>
     <nav class="sidebar-nav" aria-label="Primary">
-      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg>Home</button>
-      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg>Wallet</button>
+      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg><span data-i18n="nav_home">Home</span></button>
+      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg><span data-i18n="nav_wallet">Wallet</span></button>
       <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Updates</button>
       <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Services</button>
-      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>History</button>
-      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>Account</button>
+      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span data-i18n="nav_history">History</span></button>
+      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span data-i18n="nav_account">Account</span></button>
     </nav>
   </header>
 
@@ -2454,6 +2461,17 @@ html.dark .btn-wa-share{color:#25D366!important}
             </button>
           </div>
         </div>
+      </div>
+
+      <div class="appearance-block">
+        <div class="appearance-label">Language</div>
+        <select onchange="setLanguage(this.value)" style="width:100%;min-height:40px;border:1px solid var(--border-subtle);border-radius:10px;padding:0 12px;font:500 13px/1 var(--font);background:var(--surface);color:var(--text-primary);cursor:pointer">
+          <option value="en">🇬🇧 English</option>
+          <option value="ha">🇳🇬 Hausa</option>
+          <option value="yo">🇳🇬 Yoruba</option>
+          <option value="ig">🇳🇬 Igbo</option>
+          <option value="pcm">🇳🇬 Pidgin</option>
+        </select>
       </div>
 
       <!-- Notification preferences -->
@@ -3388,6 +3406,40 @@ async function payInvoiceNow() {
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Pay Now';
   }
+}
+
+// ── MULTI-LANGUAGE ──────────────────────────────────────────────────────────
+let translations = {};
+let currentLang = localStorage.getItem('topflowng-lang') || 'en';
+
+async function loadTranslations() {
+  try {
+    const r = await fetch('/lang/translations.json');
+    translations = await r.json();
+    applyLanguage(currentLang);
+  } catch (e) { /* fall through to English */ }
+}
+
+function applyLanguage(lang) {
+  const t = translations[lang] || translations.en;
+  if (!t) return;
+  document.documentElement.lang = lang === 'en' ? 'en' : lang === 'ha' ? 'ha' : lang === 'yo' ? 'yo' : lang === 'ig' ? 'ig' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key]) el.textContent = t[key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (t[key]) el.placeholder = t[key];
+  });
+  // Update switchers
+  document.querySelectorAll('.lang-switcher, select[onchange*="setLanguage"]').forEach(s => s.value = lang);
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('topflowng-lang', lang);
+  applyLanguage(lang);
 }
 
 // ── APP INIT ─────────────────────────────────────────────────────────────
@@ -6073,6 +6125,7 @@ init();
     wireReceiptCopy();
     wireLauncherBackdrop();
     loadPlans().then(function () { renderMarketingRates(); });
+    loadTranslations();
   }
 
   function seedBrands() {
