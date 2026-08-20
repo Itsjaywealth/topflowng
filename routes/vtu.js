@@ -28,6 +28,7 @@ const { sendError } = require('../lib/errors');
 const { normalizeNigerianPhone } = require('../lib/validate');
 const { validate, airtimeSchema, dataSchema, cableSchema, electricitySchema, examPinSchema, rechargePinSchema } = require('../lib/schemas');
 const Sentry = require('@sentry/node');
+const cache = require('../lib/cache');
 
 const router = express.Router();
 
@@ -117,8 +118,16 @@ function captureError(service, err) {
 }
 
 // ── VTU — Pricing catalog (server-side source of truth) ─────────────────────
-router.get('/plans', (_req, res) => {
-  res.json({ ...getCatalog(), productRegistry: getProductRegistry() });
+router.get('/plans', async (_req, res) => {
+  try {
+    const cached = await cache.get('vtu:plans');
+    if (cached) return res.json(cached);
+    const catalog = { ...getCatalog(), productRegistry: getProductRegistry() };
+    await cache.set('vtu:plans', catalog, 5 * 60 * 1000);
+    res.json(catalog);
+  } catch (e) {
+    res.json({ ...getCatalog(), productRegistry: getProductRegistry() });
+  }
 });
 
 // ── VTU — Airtime ────────────────────────────────────────────────────────────

@@ -44,6 +44,7 @@ const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productF
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
+const cache = require('./lib/cache');
 const {
   validate,
   registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema,
@@ -468,7 +469,11 @@ app.get('/api/support/tawk-hash', authMiddleware, async (req, res) => {
 
 app.get('/api/wallet/balance', authMiddleware, apiLimiter, async (req, res) => {
   try {
+    const cacheKey = `wallet:balance:${req.user.id}`;
+    const cached = await cache.get(cacheKey);
+    if (cached !== null) return res.json({ balance: cached });
     const balance = await db.getWalletBalance(req.user.id);
+    await cache.set(cacheKey, balance, 30 * 1000);
     res.json({ balance });
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
@@ -866,7 +871,27 @@ app.use('/api/direct', directRouter);
 // Customer-facing read/acknowledge surface only. Events are created by the
 // transaction/wallet flows themselves, never by this router.
 const notificationsRouter = require('./routes/notifications');
+const push = require('./services/push');
 app.use('/api/notifications', notificationsRouter);
+
+// ── Push Notification Subscription ─────────────────────────────────────────
+app.post('/api/push/subscribe', authMiddleware, async (req, res) => {
+  try {
+    await push.subscribe(req.user.id, req.body);
+    res.json({ ok: true });
+  } catch (err) {
+    sendError(res, 400, 'Invalid subscription');
+  }
+});
+
+app.post('/api/push/unsubscribe', authMiddleware, async (req, res) => {
+  await push.unsubscribe(req.user.id);
+  res.json({ ok: true });
+});
+
+app.get('/api/push/vapid-key', (_req, res) => {
+  res.json({ publicKey: push.getVapidPublic() });
+});
 
 // ── AI Assistant (mounted /api/ai/*) — read-only, advisory ─────────────────
 app.use('/api/ai', aiRouter);
