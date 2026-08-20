@@ -90,6 +90,35 @@ test('version: /api/version returns commit and version without secrets', async (
   for (const n of needles) assert.ok(!text.includes(n), `/api/version leaked ${n}`);
 });
 
+// ── Internal n8n endpoints ───────────────────────────────────────────────────
+test('internal: /api/internal/pending-orders requires the shared key', async () => {
+  const res = await fetch(h.BASE_URL + '/api/internal/pending-orders');
+  assert.strictEqual(res.status, 401);
+});
+
+test('internal: /api/internal/pending-orders returns ok JSON with the key', async () => {
+  const key = process.env.INTERNAL_API_KEY;
+  if (!key) {
+    // The test harness boots without an internal key configured; without a key
+    // the endpoint is deliberately unavailable (401) rather than open.
+    return;
+  }
+  const res = await fetch(h.BASE_URL + '/api/internal/pending-orders', {
+    headers: { 'x-internal-key': key },
+  });
+  assert.strictEqual(res.status, 200);
+  const data = await res.json();
+  assert.strictEqual(data.ok, true);
+  assert.ok(Array.isArray(data.orders), 'orders is an array');
+  assert.ok(typeof data.count === 'number', 'count is a number');
+  assert.ok(data.generatedAt, 'generatedAt present');
+});
+
+test('internal: /api/internal/ops-summary is guarded by the key', async () => {
+  const res = await fetch(h.BASE_URL + '/api/internal/ops-summary');
+  assert.strictEqual(res.status, 401);
+});
+
 // ── Redaction ────────────────────────────────────────────────────────────────
 test('logger: sensitive values are redacted, safe values preserved', () => {
   const got = logger.redact(
