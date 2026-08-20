@@ -2620,7 +2620,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       </div>
     </div>
     <div class="field"><label for="airtime-phone">Phone number</label>
-      <input type="tel" id="airtime-phone" placeholder="08031234567" maxlength="11">
+      <input type="tel" id="airtime-phone" placeholder="08031234567" maxlength="11" oninput="autoDetectNetwork(this,'airtime')" autocomplete="off">
     </div>
     <div class="field"><label for="airtime-amount">Amount</label>
       <div class="amount-presets">
@@ -2656,7 +2656,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       </div>
     </div>
     <div class="field"><label for="data-phone">Phone number</label>
-      <input type="tel" id="data-phone" placeholder="08031234567" maxlength="11">
+      <input type="tel" id="data-phone" placeholder="08031234567" maxlength="11" oninput="autoDetectNetwork(this,'data')" autocomplete="off">
     </div>
     <div class="field"><label>Choose plan</label>
       <div class="data-plans" id="data-plan-list"></div>
@@ -3773,6 +3773,33 @@ function networkFromPhone(phone) {
   if (airtel.includes(prefix)) return 'airtel';
   if (t2.includes(prefix)) return 't2';
   return null;
+}
+
+function autoDetectNetwork(input, group) {
+  if (!input) return;
+  const digits = String(input.value || '').replace(/\D/g, '');
+  if (digits.length < 4) return;
+  const key = networkFromPhone(digits);
+  if (!key) return;
+  const NAME_BY_KEY = { mtn: 'MTN', glo: 'Glo', airtel: 'Airtel', t2: 'T2' };
+  const name = NAME_BY_KEY[key];
+  if (!name) return;
+  const screen = input.closest('.service-screen');
+  if (!screen) return;
+  const chip = Array.from(screen.querySelectorAll('.network-chip .provider-choice-name'))
+    .find(n => n.textContent.trim() === name);
+  if (!chip) return;
+  const chipEl = chip.closest('.network-chip');
+  if (chipEl.classList.contains('selected')) return;
+  chipEl.classList.add('selected');
+  chipEl.setAttribute('aria-pressed', 'true');
+  const siblings = chipEl.closest('.network-chips').querySelectorAll('.network-chip');
+  siblings.forEach(c => { if (c !== chipEl) { c.classList.remove('selected'); c.setAttribute('aria-pressed','false'); } });
+  applyBrand(chipEl);
+  if (group === 'data') loadDataPlans();
+  try {
+    if (window.toast) showToast(name + ' detected from number', 'info', 1400);
+  } catch(e) {}
 }
 
 function txnHTML(t) {
@@ -5922,6 +5949,25 @@ init();
   .txn-list,.notif-list{padding:4px}
   .txn-item,.notif-item{border-radius:14px;margin:2px 0}
 }
+
+/* ── Account screen polish (uniform with premium dashboard) ─────────────── */
+.acct-hero{border-radius:26px;padding:38px 24px;position:relative;overflow:hidden}
+.acct-hero::before{content:"";position:absolute;top:-60px;right:-40px;width:180px;height:180px;
+  border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+.acct-hero::after{content:"";position:absolute;bottom:-30px;left:-20px;width:120px;height:120px;
+  border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none}
+.acct-hero-avatar{width:72px;height:72px;font-size:28px;
+  box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.acct-hero-name{font-size:21px}
+.referral-card,.analytics-section,.pin-section{border-radius:20px;
+  transition:transform .18s,box-shadow .18s,border-color .18s}
+.referral-card:hover,.analytics-section:hover,.pin-section:hover{
+  transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.05);
+  border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
+.referral-code{letter-spacing:2.5px;font-size:21px}
+.referral-stat{border-radius:14px;padding:16px}
+.analytics-tile{border-radius:14px}
+.analytics-section-title{font-weight:700;letter-spacing:.8px}
 </style>
 
 <!-- ══════════════ QUICK PAY LAUNCHER ══════════════ -->
