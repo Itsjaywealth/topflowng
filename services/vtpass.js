@@ -36,7 +36,6 @@ const logger = require('../lib/logger');
 const { ApiError } = require('../lib/errors');
 const cache = require('../lib/cache');
 const sms = require('./sms');
-const push = require('./push');
 const {
   DATA_PLANS, CABLE_PLANS, ELECTRICITY_DISCOS, EXAM_PRODUCTS, NETWORKS,
 } = require('./pricing');
@@ -539,6 +538,7 @@ async function notifyPurchase({ userId, requestId, serviceType, amount, descript
     }
   }).catch(() => {});
   // Push notification
+  const push = require('./push');
   push.sendPush(userId, title, message, link).catch(() => {});
 }
 
