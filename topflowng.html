@@ -2410,11 +2410,6 @@ html.dark .btn-wa-share{color:#25D366!important}
         <aside class="at-a-glance" aria-label="Insights">
           <div class="at-a-glance-title">Insights</div>
           <section class="glance-block">
-            <span class="glance-label">Wallet balance</span>
-            <strong class="glance-balance" id="at-glance-balance">₦0.00</strong>
-            <!-- Fund wallet button removed — wallet funding no longer customer-facing -->
-          </section>
-          <section class="glance-block">
             <span class="glance-label">Quick actions</span>
             <button class="glance-shortcut" type="button" onclick="openService('airtime')">
               <span>Buy airtime</span><span aria-hidden="true">→</span>
@@ -3363,7 +3358,7 @@ function showSucc(id, msg) {
 
 // ── BALANCE COUNTER ───────────────────────────────────────────────────────
 function animateBalance(from, to) {
-  const targets = ['balance-display', 'at-glance-balance', 'dash-balance-main']
+  const targets = ['balance-display', 'dash-balance-main']
     .map(id => document.getElementById(id)).filter(Boolean);
   const start = performance.now();
   const dur = 350;
