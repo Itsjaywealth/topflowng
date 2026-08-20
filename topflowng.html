@@ -2519,6 +2519,13 @@ html.dark .btn-wa-share{color:#25D366!important}
     </div>
 
     <div class="screen" id="screen-wallet">
+      <div class="history-head">
+        <div>
+          <div class="eyebrow">Workspace</div>
+          <h1>Wallet</h1>
+        </div>
+        <button class="history-refresh" type="button" onclick="loadWalletData(true)">Refresh</button>
+      </div>
       <div class="wallet-hero">
         <div class="wallet-hero-label">Available balance</div>
         <div class="wallet-hero-amount" id="wallet-balance">₦0.00</div>
@@ -2614,6 +2621,13 @@ html.dark .btn-wa-share{color:#25D366!important}
 
     <div class="screen" id="screen-account">
       <!-- Profile header -->
+      <div class="history-head">
+        <div>
+          <div class="eyebrow">Manage</div>
+          <h1>Account</h1>
+        </div>
+        <button class="history-refresh" type="button" onclick="goTab('account')">Refresh</button>
+      </div>
       <div class="acct-hero">
         <div class="acct-hero-avatar" id="acct-avatar">T</div>
         <div class="acct-hero-name" id="acct-name">—</div>
