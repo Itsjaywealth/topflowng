@@ -42,6 +42,7 @@ const aiRouter = require('./routes/ai').router;
 const adminAnalyticsRouter = require('./routes/admin-analytics');
 const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productFor, buildRequestId } = require('./services/vtpass');
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
+const sms = require('./services/sms');
 const { sendError } = require('./lib/errors');
 const { normalizeEmail, isValidEmail, isValidPhone } = require('./lib/validate');
 const cache = require('./lib/cache');
@@ -719,6 +720,14 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
       userId: payment.userId, category: 'wallet', title: 'Wallet funded',
       message: `₦${Number(payment.amount).toLocaleString()} was added to your wallet via Paystack.`,
       link: `/api/wallet/transactions?q=${encodeURIComponent(reference)}`,
+    }).catch(() => {});
+    db.findUserById(payment.userId).then((user) => {
+      if (!user?.phone) return;
+      sms.sendWalletCreditSms(user.phone, {
+        amount: payment.amount,
+        balance: result.balance,
+        reference,
+      });
     }).catch(() => {});
   }
   logger.info(`Paystack payment ${result.credited ? 'credited' : 'already credited'}: user ${payment.userId} +₦${payment.amount} [${reference}]`);

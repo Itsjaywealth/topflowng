@@ -99,12 +99,6 @@ const config = {
     timeoutMs: num(process.env.PAYSTACK_TIMEOUT_MS, 30_000),
   },
 
-  // ── SMS (Termii) ──────────────────────────────────────────────────────────────
-  sms: {
-    termiiApiKey: str(process.env.TERMII_API_KEY, null),
-    senderId: str(process.env.SMS_SENDER_ID, 'TopFlowNG'),
-  },
-
   // ── Push notifications (Web Push / VAPID) ────────────────────────────────────
   push: {
     vapidPublicKey: str(process.env.VAPID_PUBLIC_KEY, null),
@@ -194,7 +188,7 @@ const config = {
     reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
   },
 
-  // ── Markup / service fees ───────────────────────────────────────────────────
+// ── Markup / service fees ───────────────────────────────────────────────────
   // The platform charges a percentage markup on airtime and a flat service fee
   // on electricity to cover provider costs and operating margin. These rates are
   // applied server-side — customers see the total (service amount + markup) as
@@ -219,6 +213,17 @@ const config = {
     examPercent: num(process.env.DISCOUNT_EXAM_PERCENT, 0),
     weekendHappyHourPercent: num(process.env.DISCOUNT_WEEKEND_HAPPY_HOUR_PERCENT, 2),
     weekendHappyHourEnabled: str(process.env.DISCOUNT_WEEKEND_HAPPY_HOUR, 'false') === 'true',
+  },
+
+  // ── SMS (Termii) ──────────────────────────────────────────────────────────────
+  // Transactional SMS (purchase receipts, wallet credits). Delivery is via
+  // Termii's Nigerian gateway. When no API key is configured, SMS is a silent
+  // no-op so the platform keeps working with email + in-app notifications only.
+  sms: {
+    termiiApiKey: str(process.env.TERMII_API_KEY, null),
+    senderId: str(process.env.TERMII_SENDER_ID || process.env.SMS_SENDER_ID, 'TopFlowNG'),
+    baseUrl: str(process.env.TERMII_BASE_URL, 'https://api.ng.termii.com/api/sms/send'),
+    timeoutMs: num(process.env.TERMII_TIMEOUT_MS, 15_000),
   },
 
   // ── Provider capability registry & feature flags ──────────────────────────
