@@ -1,7 +1,7 @@
 'use strict';
 
 const config = require('../config');
-const logger = require('./logger');
+const logger = require('../lib/logger');
 
 const VAPID_PUBLIC = config.push?.vapidPublicKey || process.env.VAPID_PUBLIC_KEY || 'BCWj3Xz8Mez7hMZHA1qgjIKZsObYx66d_l28eimzTmjNx-pWN20ijeVNMCD78s0BgLBI99ls12y14r0cQPO3IUc';
 const VAPID_PRIVATE = config.push?.vapidPrivateKey || process.env.VAPID_PRIVATE_KEY || 'K6MqK9Qb2cexINMta4_GX02hnOZxXssqxURUJDKkrfE';
