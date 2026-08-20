@@ -4,8 +4,8 @@
 // for purchase confirmations. skipWaiting + clients.claim for instant updates.
 const CACHE = 'topflowng-v10';
 const STATIC = [
-  '/icons/icon-192.png?v=2',
-  '/icons/icon-512.png?v=2',
+  '/icons/icon-192.png?v=3',
+  '/icons/icon-512.png?v=3',
   '/icons/apple-touch-icon.png',
   '/icons/favicon-32.png',
   '/icons/favicon-16.png',
@@ -91,7 +91,7 @@ self.addEventListener('push', e => {
     const title = data.title || 'TopFlowNG';
     const options = {
       body: data.body || '',
-      icon: '/icons/icon-192.png?v=2',
+      icon: '/icons/icon-192.png?v=3',
       badge: '/icons/favicon-32.png',
       data: { url: data.url || '/' },
     };
