@@ -41,6 +41,19 @@ process.env.SENTRY_DSN = '';
 process.env.PAYSTACK_WEBHOOK_SECRET = 'test-webhook-secret';
 process.env.PAYSTACK_SECRET_KEY = 'test-secret-key';
 process.env.DATABASE_URL = DATABASE_URL;
+// Disable markup / service fees and discounts so wallet debits equal the
+// service amount exactly (defaults: 2% airtime markup, ₦2 min, ₦100 elec fee,
+// 2% weekend happy hour).
+process.env.AIRTIME_MARKUP_RATE = '0';
+process.env.AIRTIME_MIN_MARKUP = '0';
+process.env.ELECTRICITY_SERVICE_FEE = '0';
+process.env.DISCOUNT_AIRTIME_PERCENT = '0';
+process.env.DISCOUNT_DATA_PERCENT = '0';
+process.env.DISCOUNT_CABLE_PERCENT = '0';
+process.env.DISCOUNT_ELECTRICITY_PERCENT = '0';
+process.env.DISCOUNT_EXAM_PERCENT = '0';
+process.env.DISCOUNT_WEEKEND_HAPPY_HOUR_PERCENT = '0';
+process.env.DISCOUNT_WEEKEND_HAPPY_HOUR = 'false';
 
 // AI config: a real-looking key (never used — openrouter is mocked), a base
 // URL that points at an unreachable loopback so any accidental real call would
