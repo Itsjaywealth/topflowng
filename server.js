@@ -1583,6 +1583,15 @@ const LEGAL_PAGES = new Map([
   ['/about', 'legal/about.html'],
 ]);
 
+const BLOG_ARTICLES = new Map([
+  ['/blog/how-to-buy-mtn-data', 'public/blog/how-to-buy-mtn-data.html'],
+  ['/blog/how-to-pay-electricity-bill', 'public/blog/how-to-pay-electricity-bill.html'],
+  ['/blog/buy-dstv-gotv-subscription', 'public/blog/buy-dstv-gotv-subscription.html'],
+  ['/blog/cheapest-data-plans-nigeria', 'public/blog/cheapest-data-plans-nigeria.html'],
+  ['/blog/how-to-send-airtime', 'public/blog/how-to-send-airtime.html'],
+  ['/blog/bizflow-invoicing', 'public/blog/bizflow-invoicing.html'],
+]);
+
 app.get(['/terms', '/privacy', '/refund-policy', '/contact', '/about'], (req, res) => {
   const file = LEGAL_PAGES.get(req.path);
   res.sendFile(path.join(__dirname, file), (err) => {
