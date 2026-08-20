@@ -440,8 +440,44 @@ test('15. auto-expire skips pending orders that hold a provider order ID', async
   assert.ok(order.provider_order_id, 'provider reference intact');
 });
 
-// ── 16. auto-reconcile settles traceable pending orders via the Query API ────
-test('16. auto-reconcile settles a pending order once the provider confirms', async () => {
+// ── 16. long-pending traceable orders get a final resolution ────────────────
+test('16. long-pending traceable orders get a final resolution after the reconcile ceiling', async () => {
+  const rid = orderId('LONG');
+  const balBefore = await walletOf(userIdB);
+  await createPendingOrder(rid, userIdB, 3000, { withProviderId: true });
+
+  // Simulate 26 hours of age so it exceeds the 24h long-pending window.
+  const pool = new Pool({ connectionString: h.DATABASE_URL, max: 2 });
+  try {
+    await pool.query(
+      `UPDATE vtu_orders SET created_at = NOW() - interval '26 hours' WHERE request_id = $1`,
+      [rid]
+    );
+  } finally {
+    await pool.end();
+  }
+
+  // Provider never confirms delivery on the final requery → order is failed,
+  // wallet untouched (it was never debited while pending).
+  h.providerState.reset();
+  h.providerState.queryOutcome = 'pending';
+  const longPending = await db.getLongPendingVtuOrders({ olderThanHours: 24, limit: 50 });
+  assert.ok(longPending.some((r) => r.request_id === rid), 'long-pending order surfaced for final resolution');
+
+  // Re-run the sweep's final-resolution block: one requery (pending) then fail.
+  await reconcileVtuOrder(rid);
+  assert.ok(h.providerState.queryCalls >= 1, 'provider was requeried one final time');
+
+  // Mark failed as the sweep would (provider never confirmed).
+  await db.markVtuOrderFailed(rid, { allowPending: true, failureSuffix: ' — provider never confirmed delivery, not charged' });
+
+  const order = await db.getVtuOrderByRequestId(rid);
+  assert.strictEqual(order.status, 'failed', 'order failed after final resolution');
+  assert.strictEqual(await walletOf(userIdB), balBefore, 'wallet untouched by long-pending resolution');
+});
+
+// ── 17. auto-reconcile settles traceable pending orders via the Query API ────
+test('17. auto-reconcile settles a pending order once the provider confirms', async () => {
   h.providerState.reset();
   const rid = orderId('AUTOREC');
   const balBefore = await walletOf(userIdB);

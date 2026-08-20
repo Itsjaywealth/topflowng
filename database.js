@@ -1320,6 +1320,28 @@ async function expireStaleVtuOrders({ olderThanMinutes = 10, limit = 100 } = {})
   return { scanned: rows.length, expired: expired.length, orders: expired };
 }
 
+// Traceable pending orders (those WITH a provider reference) are normally
+// reconciled by the sweeper up to reconcileMaxAttempts. After a very long time
+// without a terminal state, the sweeper asks the provider one final time and
+// then moves the order to a terminal state so it never hangs in the UI forever.
+// The wallet was never debited for pending orders, so marking it failed is
+// always safe and honest. This query only SELECTs the candidates — the actual
+// requery + settle/fail decision lives in server.js (which owns the provider
+// call and avoids a circular database <-> vtpass dependency).
+async function getLongPendingVtuOrders({ olderThanHours = 24, limit = 50 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT request_id, user_id, service_type, amount, description, provider_order_id
+     FROM vtu_orders
+     WHERE status = 'pending'
+       AND provider_order_id IS NOT NULL AND provider_order_id <> ''
+       AND created_at < NOW() - make_interval(hours => $1)
+     ORDER BY created_at ASC
+     LIMIT $2`,
+    [olderThanHours, limit]
+  );
+  return rows;
+}
+
 // ── Stale submitted order cleanup ───────────────────────────────────────────
 // Pre-idempotency artifacts or interrupted flows that stalled in 'submitted'
 // with no transaction_id and no provider_order_id. These were NEVER debited.
@@ -1661,6 +1683,7 @@ module.exports = {
   getPendingVtuOrders,
   backfillVtuOrderProviderIds,
   expireStaleVtuOrders,
+  getLongPendingVtuOrders,
   cleanStaleSubmittedOrders,
   getReconcilablePendingOrders,
   getFinancialReconciliation,

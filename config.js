@@ -190,7 +190,12 @@ const config = {
     pendingOrderExpiryMinutes: num(process.env.PENDING_ORDER_EXPIRY_MINUTES, 6),
     sweepIntervalMs: num(process.env.PENDING_ORDER_SWEEP_INTERVAL_MS, 30_000),
     reconcileBackoffMinutes: num(process.env.PENDING_ORDER_RECONCILE_BACKOFF_MINUTES, 2),
-    reconcileMaxAttempts: num(process.env.PENDING_ORDER_RECONCILE_MAX_ATTEMPTS, 30),
+    // The sweeper keeps auto-reconciling traceable pending orders up to this many
+    // attempts. At a 2-min backoff, 720 attempts covers a full 24h before the
+    // order is handed off to expireLongPendingVtuOrders for a final resolution.
+    // Orders are never debited while pending, so an eventually-failed outcome is
+    // always safe and honest.
+    reconcileMaxAttempts: num(process.env.PENDING_ORDER_RECONCILE_MAX_ATTEMPTS, 720),
     reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
   },
 

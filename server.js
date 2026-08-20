@@ -1895,6 +1895,54 @@ function schedulePendingOrderSweep() {
         logger.error('Failed to clean stale submitted orders', { message: err.message });
       }
 
+      // 1.6) Final resolution for traceable pending orders that have been stuck
+      // beyond the reconcile-attempt ceiling. The wallet was never debited, so
+      // moving them to a terminal state is always safe and honest: one last
+      // requery may still confirm delivery and settle properly; otherwise the
+      // order is marked failed with a clear message so it never hangs forever.
+      try {
+        const longPending = await db.getLongPendingVtuOrders({ olderThanHours: 24, limit: 50 });
+        if (longPending.length > 0) {
+          let resolved = 0;
+          for (const order of longPending) {
+            try {
+              const provider = await queryVtpassOrder(order.request_id).catch(() => null);
+              if (provider && provider.outcome === 'success') {
+                const settled = await db.completeVtuOrder(order.request_id, { allowPending: true });
+                db.findUserById(order.user_id).then(user => {
+                  if (!user) return;
+                  sendOrderStatusEmail(user.email, user.full_name, {
+                    service: order.service_type, description: order.description,
+                    amount: order.amount, requestId: order.request_id,
+                    status: 'completed', newBalance: settled.balance,
+                  });
+                }).catch(() => {});
+              } else {
+                await db.markVtuOrderFailed(order.request_id, {
+                  allowPending: true,
+                  failureSuffix: ' — provider never confirmed delivery, not charged',
+                });
+                db.findUserById(order.user_id).then(user => {
+                  if (!user) return;
+                  sendOrderStatusEmail(user.email, user.full_name, {
+                    service: order.service_type, description: order.description,
+                    amount: order.amount, requestId: order.request_id, status: 'failed',
+                  });
+                }).catch(() => {});
+              }
+              resolved += 1;
+            } catch (err) {
+              logger.error('Failed to resolve long-pending order', { requestId: order.request_id, message: err.message });
+            }
+          }
+          if (resolved > 0) {
+            logger.info('Resolved long-pending orders', { scanned: longPending.length, resolved });
+          }
+        }
+      } catch (err) {
+        logger.error('Failed to resolve long-pending orders', { message: err.message });
+      }
+
       // 3) Process due auto-recharges (wallet below threshold).
       await processDueAutoRecharges();
 
