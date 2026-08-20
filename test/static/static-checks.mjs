@@ -223,7 +223,7 @@ await checkInlineSyntax('bizflow.html');
 // ── 9b. Brand + single service-grid integrity ────────────────────────────────
 {
   const app = read('topflowng.html');
-  check('exactly one "Buy a service" heading', (app.match(/Buy a service/g) || []).length === 1);
+  check('exactly one "All services" heading', /<h2 class="section-title" id="dashboard-services-heading">All services<\/h2>/.test(app));
   check('no inline dashboard quickpay grid (duplicate service list)', !/id="quickpay-grid"/.test(app));
   check('dashboard service search opens launcher', /onclick="openLauncher\(\)"/.test(app));
   check('quickpay renders active services only', /activeQuickPay\(\)/.test(app) && /filter\(function\s*\(\s*s\s*\)\s*\{\s*return\s*!s\.disabled/.test(app));
@@ -237,7 +237,7 @@ await checkInlineSyntax('bizflow.html');
   for (const p of ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png', '/icons/favicon-16.png']) {
     check(`brand icon file exists ${p}`, fs.existsSync(path.join(ROOT, p.slice(1))));
   }
-  check('service worker precaches branded icons', ['icon-192.png?v=2', 'icon-512.png?v=2', 'apple-touch-icon.png', 'favicon-32.png', 'favicon-16.png'].every((p) => read('sw.js').includes(p)));
+  check('service worker precaches branded icons', ['icon-192.png?v=3', 'icon-512.png?v=3', 'apple-touch-icon.png', 'favicon-32.png', 'favicon-16.png'].every((p) => read('sw.js').includes(p)));
 }
 
 // ── 10. Dual-palette + theme persistence ────────────────────────────────────
@@ -291,11 +291,11 @@ await checkInlineSyntax('bizflow.html');
   check('support email is a clickable mailto link', /mailto:hello@topflowng\.com/.test(app));
   check('support FAQ is searchable', /filterSupportFAQ/.test(app) && /id="support-search"/.test(app));
   check('support FAQ is categorized', /support-faq-cat/.test(app));
-  check('support chat action present', /openTawkChat/.test(app) && /Chat with Support/.test(app));
-  check('support quick help present', /support-quick/.test(app) && /quickHelp/.test(app));
-  check('single floating support launcher', (app.match(/class="support-fab"/g) || []).length === 1);
-  check('launcher toggles the support overlay', /toggleSupportLauncher/.test(app));
-  check('tawk default bubble hidden to avoid duplicate launcher', /hideWidget/.test(app));
+check('support chat widget present (replaces legacy tawk)', /openTawkChat/.test(app) && /Chat with Support/.test(app));
+check('support quick help present', /support-quick/.test(app) && /quickHelp/.test(app));
+check('single floating support launcher', (app.match(/class="support-fab"/g) || []).length === 1);
+check('launcher toggles the support overlay', /toggleSupportLauncher/.test(app));
+check('chat panel hides launcher when open (no double UI)', /\.support-fab\[aria-expanded="true"\]\{[^}]*pointer-events:none/.test(app));
   check('support has always-visible header close button', /id="support-close"/.test(app) && /aria-label="Close support"/.test(app));
   check('support close restores body scroll', /document\.body\.style\.overflow = ''/.test(app));
   check('support backdrop click closes', /e\.target === supportOverlay/.test(app));
