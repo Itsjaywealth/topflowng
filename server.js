@@ -39,6 +39,7 @@ const { authLimiter, apiLimiter, purchaseLimiter } = require('./middleware/rate-
 const vtuRouter = require('./routes/vtu');
 const directRouter = require('./routes/direct');
 const aiRouter = require('./routes/ai').router;
+const adminAnalyticsRouter = require('./routes/admin-analytics');
 const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productFor, buildRequestId } = require('./services/vtpass');
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const { sendError } = require('./lib/errors');
@@ -869,6 +870,9 @@ app.use('/api/notifications', notificationsRouter);
 
 // ── AI Assistant (mounted /api/ai/*) — read-only, advisory ─────────────────
 app.use('/api/ai', aiRouter);
+
+// ── Admin Analytics (mounted /api/admin/analytics/*) ──────────────────────
+app.use('/api/admin/analytics', adminAnalyticsRouter);
 
 // ── VTPass VTU Reconciliation ───────────────────────────────────────────────
 // VTPass identifies a transaction solely by the request_id we sent, so every

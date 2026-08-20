@@ -35,6 +35,7 @@ const db = require('../database');
 const logger = require('../lib/logger');
 const { ApiError } = require('../lib/errors');
 const cache = require('../lib/cache');
+const sms = require('./sms');
 const {
   DATA_PLANS, CABLE_PLANS, ELECTRICITY_DISCOS, EXAM_PRODUCTS, NETWORKS,
 } = require('./pricing');
@@ -530,6 +531,12 @@ async function notifyPurchase({ userId, requestId, serviceType, amount, descript
     return;
   }
   await db.createNotification({ userId, category, title, message, link }).catch(() => {});
+  // SMS notification
+  db.findUserById(userId).then(user => {
+    if (user && user.phone) {
+      sms.sendSms(user.phone, sms.purchaseMessage(serviceType, amount, outcome)).catch(() => {});
+    }
+  }).catch(() => {});
 }
 
 async function processVtpassPurchase({ userId, requestId, serviceType, amount, description, product }) {

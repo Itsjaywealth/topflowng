@@ -99,6 +99,12 @@ const config = {
     timeoutMs: num(process.env.PAYSTACK_TIMEOUT_MS, 30_000),
   },
 
+  // ── SMS (Termii) ──────────────────────────────────────────────────────────────
+  sms: {
+    termiiApiKey: str(process.env.TERMII_API_KEY, null),
+    senderId: str(process.env.SMS_SENDER_ID, 'TopFlowNG'),
+  },
+
   // ── Payment provider selection ─────────────────────────────────────────────
   // TopFlowNG collects payment through a provider abstraction so it is not
   // permanently coupled to Paystack. `PAYMENT_PROVIDER` selects the active
