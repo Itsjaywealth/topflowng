@@ -22,7 +22,8 @@ const path = require('node:path');
 const { Pool } = require('pg');
 
 const PG_HOST = process.env.PG_HOST || '127.0.0.1';
-const PG_PORT = Number(process.env.PG_PORT || 55432);
+const { resolvePgPort } = require('./helpers/pg.js');
+const PG_PORT = resolvePgPort();
 const PG_USER = process.env.PG_USER || 'postgres';
 const PG_PASSWORD = process.env.PG_PASSWORD || '';
 const ADMIN_DB = 'postgres';

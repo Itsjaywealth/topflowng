@@ -9,7 +9,7 @@
  *
  * Connection basics are read from the environment (safe CI defaults):
  *   PG_HOST       (default 127.0.0.1)
- *   PG_PORT       (default 55432; set PG_PORT=5432 in GitHub Actions services)
+ *   PG_PORT       (auto-detected: probes 55432 then 5432 unless set explicitly)
  *   PG_USER       (default postgres)
  *   PG_PASSWORD   (default '' — works with postgres `trust` auth)
  *   PG_ADMIN_DB   (default postgres — control DB used to create/drop)
@@ -21,10 +21,41 @@ const { Pool } = require('pg');
 const { execFileSync } = require('node:child_process');
 
 const PG_HOST = process.env.PG_HOST || '127.0.0.1';
-const PG_PORT = Number(process.env.PG_PORT || 55432);
+const PG_PORT = resolvePgPort();
 const PG_USER = process.env.PG_USER || 'postgres';
 const PG_PASSWORD = process.env.PG_PASSWORD || '';
 const PG_ADMIN_DB = process.env.PG_ADMIN_DB || 'postgres';
+
+/**
+ * Resolve the Postgres port to use for tests.
+ *
+ * An explicit PG_PORT wins outright. Otherwise we probe candidates in order —
+ * the documented throwaway-cluster port (55432) first, then the standard local
+ * default (5432) — and pick the first one a Postgres server is actually
+ * listening on. This lets `npm test` "just work" against a standard Homebrew /
+ * distro install while still honouring a dedicated test cluster on 55432.
+ *
+ * The probe is fully synchronous (via a child node process) so it can run at
+ * module load, where this helper is required before the server boots.
+ */
+function resolvePgPort() {
+  if (process.env.PG_PORT) return Number(process.env.PG_PORT);
+  const { execFileSync } = require('node:child_process');
+  const script = `const {connect}=require('net');const s=connect({host:process.env.H,port:+process.env.P});s.once('connect',()=>process.exit(0));s.once('error',()=>process.exit(1));setTimeout(()=>process.exit(1),300);`;
+  for (const port of [55432, 5432]) {
+    try {
+      execFileSync(process.execPath, ['-e', script], {
+        encoding: 'utf8',
+        stdio: 'ignore',
+        env: { ...process.env, H: PG_HOST, P: String(port) },
+      });
+      return port;
+    } catch {
+      /* try next */
+    }
+  }
+  return 55432;
+}
 
 /** Build a libpq connection string to a specific database. */
 function dbUrl(name) {
@@ -139,6 +170,7 @@ module.exports = {
   PG_USER,
   PG_PASSWORD,
   PG_ADMIN_DB,
+  resolvePgPort,
   dbUrl,
   adminDbUrl,
   databaseName,

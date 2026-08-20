@@ -77,7 +77,7 @@ All optional, all non-secret placeholders in CI:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PG_HOST` | `127.0.0.1` | Postgres host |
-| `PG_PORT` | `55432` | Postgres port (set `5432` in GitHub Actions) |
+| `PG_PORT` | *(auto-detect)* | Postgres port. When unset, tests probe `55432` (documented throwaway-cluster port) then `5432` (standard local default) and use the first reachable one. Set it explicitly to pin a port (CI sets `5432`). |
 | `PG_USER` | `postgres` | Postgres user |
 | `PG_PASSWORD` | *(empty)* | Postgres password (`trust` auth) |
 | `PG_ADMIN_DB` | `postgres` | Control DB used to create/drop test DBs |
