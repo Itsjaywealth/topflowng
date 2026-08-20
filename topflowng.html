@@ -2215,12 +2215,12 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="hero-dots" id="hero-dots"></div>
     </div>
     <nav class="sidebar-nav" aria-label="Primary">
-      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg>Home</button>
-      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg>Wallet</button>
-      <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Updates</button>
-      <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Services</button>
-      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>History</button>
-      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>Account</button>
+      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg><span>Home</span></button>
+      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg><span>Wallet</span></button>
+      <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Updates</span></button>
+      <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span>Services</span></button>
+      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span>History</span></button>
+      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span>Account</span></button>
     </nav>
   </header>
 
@@ -2283,15 +2283,15 @@ html.dark .btn-wa-share{color:#25D366!important}
           <section class="promo-card" id="dashboard-promos" aria-label="Current offers" style="margin-top:4px"></section>
         </div>
 
-        <aside class="at-a-glance" aria-label="At a glance">
-          <div class="at-a-glance-title">At a glance</div>
+        <aside class="at-a-glance" aria-label="Insights">
+          <div class="at-a-glance-title">Insights</div>
           <section class="glance-block">
-            <span class="glance-label">Available balance</span>
+            <span class="glance-label">Wallet balance</span>
             <strong class="glance-balance" id="at-glance-balance">₦0.00</strong>
             <!-- Fund wallet button removed — wallet funding no longer customer-facing -->
           </section>
           <section class="glance-block">
-            <span class="glance-label">Quick access</span>
+            <span class="glance-label">Quick actions</span>
             <button class="glance-shortcut" type="button" onclick="openService('airtime')">
               <span>Buy airtime</span><span aria-hidden="true">→</span>
             </button>
@@ -5844,6 +5844,31 @@ init();
   .txn-amount{font-size:13px}
   .txn-recipient{font-size:11px}
   .txn-date{font-size:10px}
+}
+
+/* ── Premium Dashboard ──────────────────────────────────────────────────── */
+.dash-balance-card{background:linear-gradient(135deg,var(--brand),var(--brand-hover));border-radius:24px;padding:24px;color:#fff;position:relative;overflow:hidden}
+.dash-balance-card::before{content:"";position:absolute;top:-60px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.08)}
+.dash-balance-card::after{content:"";position:absolute;bottom:-30px;left:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.05)}
+.dash-balance-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;position:relative}
+.dash-balance-label{font:500 13px/1 var(--font);color:rgba(255,255,255,.75);letter-spacing:.3px}
+.dash-notif-btn{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:background .15s}
+.dash-notif-btn:hover{background:rgba(255,255,255,.25)}
+.dash-notif-btn svg{width:20px;height:20px}
+.dash-notif-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#FF5C05;border:2px solid var(--brand)}
+.dash-balance-amount{font:800 34px/1.1 var(--display);letter-spacing:-1px;margin:8px 0 18px;position:relative}
+.dash-balance-actions{display:flex;gap:8px;position:relative}
+.dash-action-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font:600 12px/1 var(--font);cursor:pointer;transition:all .15s}
+.dash-action-btn:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.35)}
+.dash-action-btn svg{width:16px;height:16px;opacity:.9}
+@media(max-width:639px){
+  .dash-balance-card{padding:20px;border-radius:20px}
+  .dash-balance-amount{font-size:28px}
+  .dash-action-btn{padding:6px 12px;font-size:11px}
+}
+@media(min-width:900px){
+  .dash-balance-card{padding:28px;border-radius:28px}
+  .dash-balance-amount{font-size:40px}
 }
 </style>
 
