@@ -827,6 +827,11 @@ html.dark .marketing-nav{
   border-color:color-mix(in srgb,var(--brand) 35%,var(--border-subtle))}
 .notif-icon{width:40px;height:40px;flex-shrink:0;border-radius:12px;
   background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center}
+.notif-icon.cat-wallet{background:color-mix(in srgb,var(--brand) 13%,var(--surface));color:var(--brand)}
+.notif-icon.cat-transaction{background:color-mix(in srgb,var(--success) 14%,var(--surface));color:var(--success)}
+.notif-icon.cat-schedule{background:color-mix(in srgb,var(--warning) 14%,var(--surface));color:var(--warning)}
+.notif-icon.cat-security{background:color-mix(in srgb,var(--danger) 11%,var(--surface));color:var(--danger)}
+.notif-icon.cat-system{background:color-mix(in srgb,var(--brand) 13%,var(--surface));color:var(--brand)}
 .notif-icon.has-provider{background:#fff;padding:5px}
 .notif-icon.has-provider img{max-width:100%;max-height:100%;object-fit:contain}
 .notif-icon svg{width:18px;height:18px}
@@ -847,12 +852,13 @@ html.dark .marketing-nav{
 .txn-detail-status.failed{background:var(--danger-soft);color:var(--danger)}
 .txn-detail-status svg{width:15px;height:15px}
 .txn-detail-amount{font:800 34px/1 var(--display);letter-spacing:-.5px;margin:6px 0 4px;
-  color:var(--text-primary)}
+  color:var(--text-primary);font-variant-numeric:tabular-nums}
 .txn-detail-amount.credit{color:var(--success)}
 .txn-detail-amount.failed{color:var(--text-muted)}
 .txn-detail-service{font:600 14px/1.4 var(--font);color:var(--text-secondary);margin-bottom:8px}
 .txn-detail-provider{display:flex;justify-content:center;margin-bottom:6px}
-.provider-logo-frame.detail{width:44px;height:44px;padding:6px;border-radius:12px}
+.provider-logo-frame.detail{width:44px;height:44px;padding:6px;border-radius:12px;
+  background:#fff;border:1px solid var(--border-subtle);box-shadow:0 3px 10px rgba(0,0,0,.05)}
 #txn-detail-provider{display:flex;justify-content:center;margin:8px 0 4px}
 #txn-detail-token{margin-top:12px}
 .receipt-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
@@ -1224,10 +1230,20 @@ html.dark .icon-moon{display:none}
 .wallet-hero-actions .btn-history-quick:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.6);color:#fff}
 .wallet-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
 .wallet-stat{background:var(--surface);border:1px solid var(--border-subtle);
-  border-radius:16px;padding:18px 20px}
+  border-radius:18px;padding:18px 20px;display:flex;align-items:flex-start;gap:14px;
+  transition:transform .18s,box-shadow .18s,border-color .18s}
+.wallet-stat:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.05);
+  border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
+.wallet-stat-icon{width:42px;height:42px;border-radius:13px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center}
+.wallet-stat-icon svg{width:20px;height:20px}
+.wallet-stat-icon.credit{background:color-mix(in srgb,var(--success) 14%,var(--surface));color:var(--success)}
+.wallet-stat-icon.debit{background:color-mix(in srgb,var(--brand) 13%,var(--surface));color:var(--brand)}
+.wallet-stat-body{min-width:0}
 .wallet-stat-label{display:block;font:500 11px/1 var(--font);color:var(--text-muted);
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.wallet-stat-value{display:block;font:800 20px/1 var(--display);color:var(--text-primary)}
+.wallet-stat-value{display:block;font:800 20px/1 var(--display);color:var(--text-primary);
+  font-variant-numeric:tabular-nums}
 .wallet-stat-value--credit{color:var(--success)}
 
 /* At a glance sidebar */
@@ -1527,12 +1543,14 @@ html.dark .icon-moon{display:none}
 #receipt-token{font:700 16px/1.4 var(--display);color:var(--text-primary);
   background:var(--surface-muted);border-radius:12px;
   padding:14px;margin-bottom:16px;word-break:break-all}
-.receipt-lines{text-align:left;border-top:1px solid var(--border-subtle);padding-top:16px;
-  margin-bottom:16px}
-.receipt-line{display:flex;justify-content:space-between;
-  padding:7px 0;font:500 13px/1 var(--font);color:var(--text-secondary);
-  border-bottom:1px solid var(--border-subtle)}
-.receipt-line:last-child{border-bottom:none}
+.receipt-lines{text-align:left;border-top:1px solid var(--border-subtle);padding-top:14px;
+  margin-bottom:16px;background:var(--surface-muted);border-radius:14px;
+  border-top:none;padding:14px 16px}
+.receipt-line{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  padding:8px 0;font:500 13px/1.3 var(--font);color:var(--text-secondary)}
+.receipt-line-label{flex-shrink:0;max-width:45%}
+.receipt-line-value{text-align:right;font-weight:600;color:var(--text-primary);
+  font-variant-numeric:tabular-nums;word-break:break-word}
 .receipt-line strong{color:var(--text-primary);font-weight:600}
 .receipt-actions{margin-bottom:12px}
 .btn-copy-ref{padding:11px 22px;border-radius:999px;
@@ -2347,12 +2365,18 @@ html.dark .btn-wa-share{color:#25D366!important}
       </div>
       <div class="wallet-stats">
         <div class="wallet-stat">
-          <span class="wallet-stat-label">Total credits</span>
-          <span class="wallet-stat-value wallet-stat-value--credit" id="wallet-credits">₦0.00</span>
+          <span class="wallet-stat-icon credit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></span>
+          <span class="wallet-stat-body">
+            <span class="wallet-stat-label">Total credits</span>
+            <span class="wallet-stat-value wallet-stat-value--credit" id="wallet-credits">₦0.00</span>
+          </span>
         </div>
         <div class="wallet-stat">
-          <span class="wallet-stat-label">Total spend</span>
-          <span class="wallet-stat-value" id="wallet-spend">₦0.00</span>
+          <span class="wallet-stat-icon debit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+          <span class="wallet-stat-body">
+            <span class="wallet-stat-label">Total spend</span>
+            <span class="wallet-stat-value" id="wallet-spend">₦0.00</span>
+          </span>
         </div>
       </div>
       <section class="home-activity" aria-labelledby="wallet-activity-heading">
@@ -3660,7 +3684,7 @@ function notificationHTML(n) {
   const providerKey = window.TopFlowLogos?.keyFor(n.title + ' ' + n.message);
   const providerLogo = providerKey ? window.TopFlowLogos.image(providerKey) : '';
   return `<div class="notif-item ${unread ? 'unread' : ''}" data-id="${n.id}" data-link="${escHtml(n.link || '')}" role="button" tabindex="0" aria-label="${escHtml(n.title)}${unread ? ' (unread)' : ''}" onclick="openNotification(${n.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openNotification(${n.id})}">
-    <div class="notif-icon${providerLogo ? ' has-provider' : ''}">${providerLogo || notificationIcon(n.category)}</div>
+    <div class="notif-icon${providerLogo ? ' has-provider' : ' cat-' + (n.category || 'system')}">${providerLogo || notificationIcon(n.category)}</div>
     <div class="notif-body">
       <div class="notif-title">${escHtml(n.title)}</div>
       <div class="notif-msg">${escHtml(n.message)}</div>
