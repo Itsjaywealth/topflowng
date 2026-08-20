@@ -499,9 +499,8 @@ html.dark .marketing-nav{
   margin-bottom:28px;position:relative;letter-spacing:-.9px}
 .preview-slides{position:relative;min-height:180px}
 .preview-slide{opacity:0;position:absolute;top:0;left:0;width:100%;transition:opacity .6s ease;pointer-events:none}
-.preview-slide.active{opacity:1;position:relative;pointer-events:auto}
+.preview-slide.active{opacity:1;position:relative;pointer-events:auto;animation:slideFade .6s ease}
 @keyframes slideFade{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
-.preview-slide.active{animation:slideFade .6s ease}
 .ledger-cap{
   font:600 10.5px/1 var(--font);color:rgba(255,255,255,.32);
   text-transform:uppercase;letter-spacing:.7px;
@@ -1840,13 +1839,6 @@ html.dark .btn-wa-share{color:#25D366!important}
     </aside>
     </div>
   </main>
-  <div class="marketing-stats" aria-label="Platform stats">
-    <div class="marketing-stat"><span class="marketing-stat-num">50K+</span><span class="marketing-stat-label">Transactions processed</span></div>
-    <div class="marketing-stat"><span class="marketing-stat-num">12</span><span class="marketing-stat-label">Electricity DISCOs</span></div>
-    <div class="marketing-stat"><span class="marketing-stat-num">4</span><span class="marketing-stat-label">Mobile networks</span></div>
-    <div class="marketing-stat"><span class="marketing-stat-num">&lt;5s</span><span class="marketing-stat-label">Lightning fast</span></div>
-  </div>
-
   <section class="marketing-trust" aria-label="How payments are handled">
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Instant processing</span>
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Transaction PIN</span>
