@@ -1092,7 +1092,7 @@ async function getReferralStats(userId) {
     referralCode: code,
     totalReferrals: parseInt(referred.rows[0].total, 10),
     totalEarned: parseFloat(earned.rows[0].earned),
-    rewardsEnabled: true,
+    rewardsEnabled: false,
   };
 }
 

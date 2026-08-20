@@ -2423,14 +2423,14 @@ html.dark .btn-wa-share{color:#25D366!important}
 
       <!-- Referral card -->
       <div class="referral-card" id="referral-section" style="display:none">
-        <h3>Your referral code</h3>
+        <h3>Invite friends</h3>
         <div class="referral-code" id="referral-code-display">—</div>
         <div class="referral-stats">
           <div class="referral-stat">
             <div class="referral-stat-value" id="referral-count">0</div>
-            <div class="referral-stat-label">Referrals</div>
+            <div class="referral-stat-label">Friends joined</div>
           </div>
-          <div class="referral-stat" id="referral-earned-stat">
+          <div class="referral-stat" id="referral-earned-stat" style="display:none">
             <div class="referral-stat-value" id="referral-earned">₦0.00</div>
             <div class="referral-stat-label">Earned</div>
           </div>
@@ -3477,6 +3477,7 @@ async function init() {
       return;
     }
     document.getElementById('marketing').classList.add('active-screen');
+    setupHeroSlider();
     return;
   }
 
@@ -5888,6 +5889,39 @@ init();
   .dash-balance-card{padding:28px;border-radius:28px}
   .dash-balance-amount{font-size:40px}
 }
+
+/* ── Premium screens polish (wallet / history / notifications) ──────────── */
+.wallet-hero{border-radius:26px;padding:34px 28px}
+.wallet-hero::before{content:;position:absolute;bottom:-40px;left:-30px;width:160px;height:160px;
+  border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.wallet-hero-actions .btn-history-quick{padding:10px 18px;border-radius:12px}
+.wallet-stat{border-radius:18px;padding:20px;transition:transform .18s,box-shadow .18s,border-color .18s}
+.wallet-stat:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.07);
+  border-color:color-mix(in srgb,var(--brand) 35%,transparent)}
+.wallet-stat-value{font-size:22px;letter-spacing:-.4px}
+.wallet-stat-value--credit{background:linear-gradient(135deg,var(--success),color-mix(in srgb,var(--success) 50%,var(--text-primary)));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.history-head h1{background:linear-gradient(135deg,var(--text-primary),color-mix(in srgb,var(--brand) 65%,var(--text-primary)));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding-bottom:2px}
+.history-head .eyebrow{font-weight:700;letter-spacing:.9px}
+.history-refresh{background:var(--surface);border:1.5px solid var(--border-strong);
+  color:var(--text-secondary);transition:all var(--transition)}
+.history-refresh:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+
+.filter-chip{box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.filter-chip:hover:not(.active){border-color:color-mix(in srgb,var(--brand) 50%,transparent);color:var(--brand);background:var(--brand-soft)}
+
+.notif-item{border-radius:16px;transition:transform .18s,box-shadow .18s,background var(--transition),border-color var(--transition)}
+.notif-item:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.05)}
+.notif-icon{border-radius:14px;width:42px;height:42px}
+.notif-dot{margin-top:8px}
+
+@media(min-width:900px){
+  .wallet-stats{grid-template-columns:repeat(2,1fr)}
+  .txn-list,.notif-list{padding:4px}
+  .txn-item,.notif-item{border-radius:14px;margin:2px 0}
+}
 </style>
 
 <!-- ══════════════ QUICK PAY LAUNCHER ══════════════ -->
@@ -6009,7 +6043,7 @@ init();
     { id: 'bills',   title: 'One wallet for every bill', description: 'Electricity, cable TV and WAEC result checker PINs — pay them all from your balance.', cta: 'See services', target: 'cable', placement: ['marketing'], active: true, priority: 2 },
     { id: 'repeat',  title: 'Built for repeat buyers', description: 'Save numbers, protect purchases with a PIN and keep one searchable history.', cta: 'Open an account', target: 'register', placement: ['marketing'], active: true, priority: 3 },
     { id: 'pin',     title: 'Secure your wallet', description: 'Set a 4–6 digit transaction PIN and approve every purchase with it.', cta: 'Set up', target: 'account', placement: ['dashboard'], active: true, priority: 1 },
-    { id: 'refer',   title: 'Invite friends', description: 'Share your referral link. Reward credits are not currently active.', cta: 'Share link', target: 'referral', placement: ['dashboard'], active: true, priority: 2 },
+    { id: 'refer',   title: 'Invite friends', description: 'Share your referral link so friends get instant access to cheap airtime, data, electricity and more.', cta: 'Share link', target: 'referral', placement: ['dashboard'], active: true, priority: 2 },
     { id: 'history', title: 'Full transaction history', description: 'Every purchase is logged. Search, filter and download your history from the Transactions tab.', cta: 'View history', target: 'history', placement: ['dashboard'], active: true, priority: 3 }
   ];
 
@@ -6297,15 +6331,15 @@ init();
     <div class="welcome-steps">
       <div class="welcome-step">
         <div class="welcome-step-num">1</div>
-        <div class="welcome-step-text"><strong>Fund your wallet</strong> — top up to start making instant purchases.</div>
-      </div>
-      <div class="welcome-step">
-        <div class="welcome-step-num">2</div>
         <div class="welcome-step-text"><strong>Set your transaction PIN</strong> — go to Account → Security to protect every purchase.</div>
       </div>
       <div class="welcome-step">
+        <div class="welcome-step-num">2</div>
+        <div class="welcome-step-text"><strong>Buy airtime or pay a bill</strong> — pick any service from the home screen and pay from your balance.</div>
+      </div>
+      <div class="welcome-step">
         <div class="welcome-step-num">3</div>
-        <div class="welcome-step-text"><strong>Buy airtime or pay a bill</strong> — pick any service from the home screen.</div>
+        <div class="welcome-step-text"><strong>Get instant receipts</strong> — every purchase is logged with a receipt and full history.</div>
       </div>
     </div>
     <button class="welcome-close" onclick="closeWelcome()">Let's go →</button>
