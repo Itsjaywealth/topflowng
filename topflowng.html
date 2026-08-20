@@ -223,7 +223,7 @@ html[data-palette="emerald"] {
   --teal-soft:   #E7F8F1;
   --teal-mid:    #B9E8D6;
   --teal-dark:   #065F46;
-  --grad:        linear-gradient(135deg,#087F5B 0%,#20B486 100%);
+  --grad:        linear-gradient(135deg,#04543C 0%,#087F5B 46%,#20B486 100%);
 
   --green:       #087F5B;
   --green-soft:  #E7F8F1;
@@ -246,7 +246,7 @@ html.dark[data-palette="emerald"] {
   --teal-soft:   #0C2A20;
   --teal-mid:    #144032;
   --teal-dark:   #16A97B;
-  --grad:        linear-gradient(135deg,#20B486 0%,#2FD9A8 100%);
+  --grad:        linear-gradient(135deg,#065F46 0%,#0E8A66 52%,#1CC488 100%);
 
   --green:       #20B486;
   --green-soft:  #0C2A20;
@@ -257,11 +257,11 @@ html.dark[data-palette="emerald"] {
   --shadow:      0 4px 20px rgba(0,0,0,.35);
   --shadow-lg:   0 8px 36px rgba(0,0,0,.4);
 
-  --brand:          #20B486;
-  --brand-hover:    #2FD9A8;
+  --brand:          #2BC892;
+  --brand-hover:    #35E0A8;
   --brand-soft:     #0C2A20;
-  --brand-ink:      #7FD8BC;
-  --focus-ring:     0 0 0 3px rgba(32,180,134,.35);
+  --brand-ink:      #8FE6C8;
+  --focus-ring:     0 0 0 3px rgba(43,200,146,.35);
 }
 
 /* ── Reset ────────────────────────────────────────────────────── */
@@ -404,8 +404,9 @@ html.dark .marketing-nav{
 /* HERO — full-bleed dark with glow */
 .marketing-main{
   position:relative;
-  background:linear-gradient(145deg,#071526 0%,#0c2040 60%,#091b33 100%);
+  background:linear-gradient(150deg,#052e22 0%,#074733 45%,#06261d 100%);
   overflow:hidden;max-width:none;margin:0;padding:0}
+html[data-palette="teal"] .marketing-main{background:linear-gradient(150deg,#05283a 0%,#073a52 45%,#062330 100%)}
 .marketing-main::before{
   content:"";position:absolute;inset:0;
   background:
@@ -937,6 +938,8 @@ html.dark .marketing-nav{
 .fab-icon-close{display:none}
 @media(max-width:480px){
   .support-fab{right:14px;bottom:calc(88px + env(safe-area-inset-bottom))}}
+@media(min-width:481px) and (max-width:899px){
+  .support-fab{bottom:calc(84px + env(safe-area-inset-bottom))}}
 
 /* Chat panel */
 .chat-panel{position:fixed;right:20px;bottom:calc(94px + env(safe-area-inset-bottom));
@@ -1475,7 +1478,7 @@ html.dark .icon-moon{display:none}
 #main-app.active-screen ~ .bottom-nav,
 #main-app.active-screen + .bottom-nav,
 .bottom-nav.visible{display:grid}
-.bottom-nav{grid-template-columns:repeat(6,1fr)}
+.bottom-nav{grid-template-columns:repeat(5,1fr)}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:8px 4px;font:600 10px/1 var(--font);color:var(--text-muted);
   transition:color var(--transition);cursor:pointer;border:none;background:none;position:relative}
@@ -2805,22 +2808,18 @@ html.dark .btn-wa-share{color:#25D366!important}
 </div>
 
   <!-- Bottom Nav -->
-  <!-- Bottom Nav -->
   <nav class="bottom-nav" aria-label="Primary">
     <button class="nav-item active" id="nav-home" onclick="goTab('home')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg></span>Home
     </button>
-    <button class="nav-item" id="nav-wallet" onclick="goTab('wallet')">
-      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></span>Wallet
-    </button>
     <button class="nav-item" id="nav-services" onclick="openService('airtime')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span>Services
     </button>
-    <button class="nav-item" id="nav-notifications" onclick="goTab('notifications')">
-      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>Updates
-    </button>
     <button class="nav-item" id="nav-history" onclick="goTab('history')">
-      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>History
+      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>Activity
+    </button>
+    <button class="nav-item" id="nav-support" onclick="toggleSupportLauncher()">
+      <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 0 0-8.5-8.5A8.5 8.5 0 0 0 4 12"/><path d="M3.5 12v-1.5A2 2 0 0 1 5.5 8.5h.5"/><path d="M20.5 12v-1.5a2 2 0 0 0-2-2h-.5"/><rect x="3.5" y="12" width="4" height="5.5" rx="2"/><rect x="16.5" y="12" width="4" height="5.5" rx="2"/><path d="M18 17.5V19a2 2 0 0 1-2 2h-4"/></svg></span>Support
     </button>
     <button class="nav-item" id="nav-account" onclick="goTab('account')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg></span>Account
@@ -4180,7 +4179,8 @@ function _goTab(tab) {
    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
    document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
    document.getElementById('screen-'+tab).classList.add('active');
-   document.getElementById('nav-'+tab).classList.add('active');
+   const navItem = document.getElementById('nav-'+tab);
+   if (navItem) navItem.classList.add('active');
    const side = document.getElementById('side-nav-'+tab);
    if (side) side.classList.add('active');
    const header = document.getElementById('app-header');
@@ -4907,6 +4907,8 @@ function chatShowFAQ() {
 function setSupportLauncherState(open) {
   var fab = document.getElementById('support-fab');
   if (fab) fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+  var navSupport = document.getElementById('nav-support');
+  if (navSupport) navSupport.classList.toggle('active', open);
 }
 
 function toggleSupportLauncher() {
@@ -6534,6 +6536,197 @@ init();
 @media(min-width:900px){
   .dash-stat-value{font-size:22px}
 }
+
+/* ══════════════════════════════════════════════════════════════
+   EMERALD PRIVATE — premium banking-app redesign
+   Additive layer on top of the existing design system. Preserves all
+   functionality; purely visual/UX. Light + Dark + System aware via the
+   existing --brand / --grad / semantic tokens.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Ambient app background ─────────────────────────────────── */
+body{background:var(--bg)}
+#main-app.active-screen{background:
+  radial-gradient(1100px 420px at 85% -12%,color-mix(in srgb,var(--brand) 9%,transparent),transparent 62%),
+  radial-gradient(900px 400px at -8% 108%,color-mix(in srgb,var(--brand) 7%,transparent),transparent 60%),
+  var(--bg)}
+html.dark #main-app.active-screen{background:
+  radial-gradient(1100px 420px at 85% -12%,color-mix(in srgb,var(--brand) 12%,transparent),transparent 62%),
+  radial-gradient(900px 400px at -8% 108%,color-mix(in srgb,var(--brand) 9%,transparent),transparent 60%),
+  var(--bg)}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.header{background:color-mix(in srgb,var(--surface) 78%,transparent);
+  backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  border-bottom:1px solid var(--border-subtle)}
+.workspace-topline{padding:14px 18px 12px}
+.wordmark{font-weight:800;letter-spacing:-.3px}
+.wordmark .logo-mark{width:32px;height:32px;border-radius:10px;box-shadow:0 3px 10px color-mix(in srgb,var(--brand) 28%,transparent)}
+
+/* Frosted icon controls (bell / theme) */
+.notif-bell,.theme-toggle{border-radius:12px;border:1px solid var(--border-subtle);
+  background:color-mix(in srgb,var(--surface) 60%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* ── Premium hero / balance panel ───────────────────────────── */
+.balance-panel{
+  background:
+    radial-gradient(120% 160% at 88% -20%,rgba(255,255,255,.18),transparent 55%),
+    radial-gradient(90% 140% at -10% 120%,rgba(255,255,255,.10),transparent 50%),
+    var(--grad);
+  padding:30px 22px 20px}
+.balance-panel::before{background:radial-gradient(circle,rgba(255,255,255,.16),transparent 68%)}
+.balance-label{font:700 11px/1 var(--font);letter-spacing:1.4px;color:rgba(255,255,255,.78)}
+.balance-amount{font:800 clamp(34px,7vw,46px)/1 var(--display);letter-spacing:-1.6px;
+  text-shadow:0 4px 18px rgba(0,0,0,.22)}
+.btn-history-quick{border-radius:999px;background:rgba(255,255,255,.16);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.32);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.btn-history-quick:hover{background:rgba(255,255,255,.26);border-color:rgba(255,255,255,.55)}
+.btn-secondary-ghost{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.24)!important}
+.hero-dot.active{background:#fff;width:24px}
+
+/* ── Quick actions (circular premium tiles) ─────────────────── */
+.service-grid{gap:12px}
+.service-tile{border-radius:24px;padding:20px 8px 16px;border:1.5px solid var(--border-subtle);
+  background:color-mix(in srgb,var(--surface) 92%,transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  box-shadow:0 2px 8px rgba(0,0,0,.03);
+  transition:transform .18s,box-shadow .18s,border-color .2s}
+.service-tile:hover{border-color:color-mix(in srgb,var(--brand) 45%,transparent);
+  transform:translateY(-3px);box-shadow:0 14px 30px color-mix(in srgb,var(--brand) 12%,rgba(0,0,0,.06))}
+.tile-icon{width:52px;height:52px;border-radius:18px;
+  background:linear-gradient(140deg,color-mix(in srgb,var(--brand) 16%,#fff),color-mix(in srgb,var(--brand) 7%,#fff));
+  color:var(--brand);
+  box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 18%,transparent);
+  transition:transform .18s}
+html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--brand) 22%,var(--surface)),color-mix(in srgb,var(--brand) 10%,var(--surface)))}
+.tile-label{font:700 13.5px/1 var(--display);color:var(--text-primary)}
+.tile-provider-row .provider-logo-frame{border-radius:6px}
+
+/* ── Stat cards ─────────────────────────────────────────────── */
+.dash-stat{border-radius:20px;border:1px solid var(--border-subtle);
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.dash-stat:hover{transform:translateY(-2px);box-shadow:0 12px 28px color-mix(in srgb,var(--brand) 10%,rgba(0,0,0,.05))}
+.dash-stat-icon{width:38px;height:38px;border-radius:12px;margin-bottom:12px}
+
+/* ── Dash greeting ──────────────────────────────────────────── */
+.dash-greeting h1{font-size:clamp(24px,4.5vw,30px);letter-spacing:-.6px}
+.dash-greeting-btn{border-radius:14px}
+.dash-greeting-btn--primary{box-shadow:0 8px 22px color-mix(in srgb,var(--brand) 34%,transparent)}
+
+/* ── Recent transactions ────────────────────────────────────── */
+.txn-item{border-radius:14px;padding:13px 12px;transition:background .18s,transform .14s,box-shadow .18s}
+.txn-item:hover{background:var(--surface-muted)}
+.txn-icon{border-radius:14px}
+.txn-amount{font-variant-numeric:tabular-nums}
+.section-title{letter-spacing:-.3px}
+.section-link{border-radius:999px;font-weight:700}
+
+/* ── Bottom navigation (premium dock) ───────────────────────── */
+.bottom-nav{
+  background:color-mix(in srgb,var(--surface) 82%,transparent);
+  backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  border-top:1px solid var(--border-subtle);
+  padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 10px);
+  box-shadow:0 -8px 30px rgba(0,0,0,.05)}
+.nav-item{padding:8px 2px;border-radius:14px;margin:0 2px}
+.nav-item.active{color:var(--brand)}
+.nav-item.active::before{display:none}
+.nav-icon{width:38px;height:30px;border-radius:12px;transition:background .18s,transform .14s}
+.nav-item.active .nav-icon{background:color-mix(in srgb,var(--brand) 13%,var(--surface))}
+.nav-item:active .nav-icon{transform:scale(.92)}
+.nav-icon svg{width:21px;height:21px;stroke-width:1.9}
+.nav-item.active .nav-icon svg{stroke-width:2.2}
+
+/* ── Service screens (bottom-sheet style on mobile) ─────────── */
+.service-screen{background:var(--bg)}
+.svc-header{padding:18px 18px 14px;
+  background:color-mix(in srgb,var(--surface) 80%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border-subtle)}
+.svc-back{border-radius:12px}
+.svc-title{letter-spacing:-.3px}
+
+/* ── Auth screen ────────────────────────────────────────────── */
+#auth-screen::before{opacity:1}
+.auth-body{border-radius:26px;box-shadow:0 24px 60px rgba(0,0,0,.08),0 4px 20px rgba(0,0,0,.04)}
+.auth-logo{font-weight:800;letter-spacing:-.3px}
+.auth-tab{border-radius:12px}
+.btn-primary{border-radius:14px;box-shadow:0 10px 24px color-mix(in srgb,var(--brand) 30%,transparent)}
+
+/* ── Receipt / transaction detail ───────────────────────────── */
+.txn-detail-amount{font-size:clamp(30px,8vw,40px)}
+.provider-logo-frame.detail{border-radius:16px}
+
+/* ── Chat support launcher ──────────────────────────────────── */
+.support-fab{background:var(--grad);
+  box-shadow:0 10px 30px color-mix(in srgb,var(--brand) 46%,rgba(0,0,0,.25))}
+.chat-panel{border-radius:24px;border:1px solid var(--border-subtle);
+  background:color-mix(in srgb,var(--bg) 96%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+
+/* ── Account / wallet / history polish ──────────────────────── */
+.wallet-hero,.acct-hero{background:
+  radial-gradient(120% 160% at 88% -20%,rgba(255,255,255,.18),transparent 55%),
+  radial-gradient(90% 140% at -10% 120%,rgba(255,255,255,.10),transparent 50%),
+  var(--grad)}
+.referral-card,.analytics-section,.pin-section,.wallet-stat,.account-card{border-radius:20px}
+
+/* ══════════ DESKTOP — premium banking web dashboard ══════════ */
+@media(min-width:900px){
+  /* Sidebar */
+  .header{width:264px;background:color-mix(in srgb,var(--surface) 92%,transparent);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border-right:1px solid var(--border-subtle)}
+  .workspace-header{padding:0}
+  .workspace-topline{padding:24px 22px 18px}
+  .sidebar-nav{padding:10px 14px;margin-top:auto}
+  .sidebar-nav-item{border-radius:14px;padding:13px 16px;font-weight:600}
+  .sidebar-nav-item.active{background:color-mix(in srgb,var(--brand) 12%,var(--surface));
+    color:var(--brand);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand) 22%,transparent)}
+  .sidebar-nav-item:hover:not(.active){background:var(--surface-muted)}
+  .side-nav-user{border-radius:16px}
+  /* Content width + spacing */
+  .screen{padding:32px 40px;max-width:1180px}
+  .app-landmark{padding-bottom:40px}
+  .home-shell{gap:24px}
+  .dash-stat-grid{gap:16px}
+  .dash-stat{padding:20px}
+}
+
+@media(min-width:1280px){
+  .screen{padding:36px 48px;max-width:1320px}
+  .home-shell{grid-template-columns:minmax(0,1fr) 340px}
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  .balance-panel,.service-tile,.nav-icon,.txn-item,.dash-stat,.support-fab{transition:none!important}
+}
+
+/* ── Premium purchase CTA & form controls ───────────────────── */
+.btn-confirm{border-radius:14px;background:var(--grad);
+  box-shadow:0 10px 26px color-mix(in srgb,var(--brand) 34%,transparent)}
+.btn-confirm:hover{background:linear-gradient(135deg,var(--brand-hover),var(--brand))}
+.btn-cancel{border-radius:13px}
+.btn-primary{border-radius:14px}
+.field input,.field-input,.pw-field input,.pin-prompt-input{border-radius:12px}
+
+/* ── Wallet / history / account heroes share the emerald gradient ── */
+.wallet-hero,.acct-hero{background:
+  radial-gradient(120% 160% at 88% -20%,rgba(255,255,255,.18),transparent 55%),
+  radial-gradient(90% 140% at -10% 120%,rgba(255,255,255,.10),transparent 50%),
+  var(--grad)}
+.wallet-stat-value,.dash-stat-value{font-variant-numeric:tabular-nums}
+
+/* ── Appear / accent surfaces ───────────────────────────────── */
+.filter-chip.active{border-color:color-mix(in srgb,var(--brand) 55%,transparent);
+  background:var(--brand-soft);color:var(--brand)}
+.section-link{font-weight:700}
+.review-card{border-radius:24px}
+.svc-body{font-size:14px}
 </style>
 
 <!-- ══════════════ QUICK PAY LAUNCHER ══════════════ -->

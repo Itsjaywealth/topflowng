@@ -157,7 +157,8 @@ test.describe('logged-in app shell', () => {
     const joined = navLabels.map((s) => s.trim()).join(' ');
     expect(joined).toContain('Home');
     expect(joined).toContain('Services');
-    expect(joined).toContain('History');
+    expect(joined).toContain('Activity');
+    expect(joined).toContain('Support');
     expect(joined).toContain('Account');
   });
 
