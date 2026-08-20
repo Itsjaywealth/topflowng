@@ -4,8 +4,8 @@ const webPush = require('web-push');
 const config = require('../config');
 const logger = require('./logger');
 
-const VAPID_PUBLIC = config.push?.vapidPublicKey || process.env.VAPID_PUBLIC_KEY || 'BN6Zk9pHJm5QcX8wL3vR2tY7pA4dF1gH8jK0sD3fG6hJ9mL0qW2eR5tY7uI1oP3a';
-const VAPID_PRIVATE = config.push?.vapidPrivateKey || process.env.VAPID_PRIVATE_KEY || '8xK3mR9tL2vY5pA7dF1gH4jK6nQ0sW3eR6tY9uI1oP4a';
+const VAPID_PUBLIC = config.push?.vapidPublicKey || process.env.VAPID_PUBLIC_KEY || 'BCWj3Xz8Mez7hMZHA1qgjIKZsObYx66d_l28eimzTmjNx-pWN20ijeVNMCD78s0BgLBI99ls12y14r0cQPO3IUc';
+const VAPID_PRIVATE = config.push?.vapidPrivateKey || process.env.VAPID_PRIVATE_KEY || 'K6MqK9Qb2cexINMta4_GX02hnOZxXssqxURUJDKkrfE';
 
 webPush.setVapidDetails('mailto:hello@topflowng.com', VAPID_PUBLIC, VAPID_PRIVATE);
 

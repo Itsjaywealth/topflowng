@@ -105,6 +105,12 @@ const config = {
     senderId: str(process.env.SMS_SENDER_ID, 'TopFlowNG'),
   },
 
+  // ── Push notifications (Web Push / VAPID) ────────────────────────────────────
+  push: {
+    vapidPublicKey: str(process.env.VAPID_PUBLIC_KEY, null),
+    vapidPrivateKey: str(process.env.VAPID_PRIVATE_KEY, null),
+  },
+
   // ── Payment provider selection ─────────────────────────────────────────────
   // TopFlowNG collects payment through a provider abstraction so it is not
   // permanently coupled to Paystack. `PAYMENT_PROVIDER` selects the active
