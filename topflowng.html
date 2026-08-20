@@ -2983,8 +2983,8 @@ html.dark .btn-wa-share{color:#25D366!important}
     </button>
     <div class="chat-agent-avatar">TopFlow</div>
     <div class="chat-agent-info">
-      <div class="chat-agent-name">TopFlowNG Support</div>
-      <div class="chat-agent-status">Online · replies in minutes</div>
+      <div class="chat-agent-name">TopFlowNG Support Bot</div>
+      <div class="chat-agent-status">Automated assistant · online 24/7</div>
     </div>
     <button type="button" class="chat-head-btn" aria-label="Options" onclick="chatShowFAQ()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.8.3-1.4 1-1.4 1.9V14"/><path d="M12 17.5h.01"/></svg>
@@ -2995,7 +2995,7 @@ html.dark .btn-wa-share{color:#25D366!important}
   <div class="chat-body" id="chat-body">
     <div class="chat-bubble-wrap">
       <div class="bubble-avatar-sm">TopFlow</div>
-      <div class="chat-bubble agent">👋 Hey! What can I help you with today?</div>
+      <div class="chat-bubble agent">Hello. I am the TopFlowNG automated support bot. Select a topic below or type your question and I will respond automatically.</div>
     </div>
     <div class="chat-quick-wrap" id="chat-quick">
       <button class="chat-qr" onclick="chatPick('Transaction pending or failed')">Transaction issue</button>
@@ -4521,17 +4521,59 @@ function openSupportFromTxn() {
 // ── CHAT SUPPORT WIDGET ────────────────────────────────────────────────────
 var _chatReady = false; // whether the greeting has already been rendered
 
+var _chatRobotIntro = 'I am the TopFlowNG support bot. I respond automatically based on the topics below.';
+
 var _chatResponses = {
-  'Transaction pending or failed': 'Hey! No need to worry — if a transaction shows "Pending", it means we are still waiting for the provider to confirm. Your wallet will not be debited until it goes through. If it shows "Failed", you were not charged at all. Check your transaction history for the full story, or send me your reference number and I will look into it for you.',
-  'Airtime & Data': 'Airtime and data usually arrive within seconds after payment. Double-check that the recipient number is correct and active. If it has been more than a few minutes, drop your reference number here and I will get it sorted.',
-  'Electricity token': 'Your token pops up right after a successful purchase — just tap the transaction in your History to see it. It is also in your downloadable receipt. Need help finding it? Let me know!',
-  'Cable TV subscription': 'Cable TV renewals go through in seconds. Make sure your IUC or smart card number is correct. If something is off, send me your IUC number and reference and I will help sort it out.',
-  'Account or security issue': 'No problem! For password resets, head to the login screen and tap "Forgot password". To set up your transaction PIN, go to Account → Security. If you think someone else accessed your account, change your password right away and email <strong>hello@topflowng.com</strong> so we can secure things.',
-  'Something else': "Sure, just tell me what is going on below and I will help as best I can. You can also reach us directly at <strong>hello@topflowng.com</strong> - we are here for you."
+  'Transaction pending or failed': 'INITIATING RESPONSE — TRANSACTION STATUS CHECK.<br><br>If a transaction shows "Pending", the provider has not yet confirmed it. Your wallet has NOT been debited. If it shows "Failed", you were NOT charged. Please check your Transaction History for the current status, or email your reference number to <strong>hello@topflowng.com</strong> for manual review.',
+  'Airtime & Data': 'INITIATING RESPONSE — DELIVERY CHECK.<br><br>Airtime and data are delivered within seconds after payment. Confirm the recipient number is correct and active. If delivery exceeds a few minutes, email your reference number to <strong>hello@topflowng.com</strong> and a support agent will investigate.',
+  'Electricity token': 'INITIATING RESPONSE — TOKEN RETRIEVAL.<br><br>Your electricity token is displayed immediately after a successful purchase. Open the transaction in your History to view it, or check your downloadable receipt. To recover a token, provide your reference number to <strong>hello@topflowng.com</strong>.',
+  'Cable TV subscription': 'INITIATING RESPONSE — SUBSCRIPTION CHECK.<br><br>Cable TV renewals are processed in seconds. Verify that your IUC or smart card number is correct. If the renewal did not activate, email your IUC number and reference to <strong>hello@topflowng.com</strong> for review.',
+  'Account or security issue': 'INITIATING RESPONSE — ACCOUNT SECURITY.<br><br>To reset a password, open the login screen and select "Forgot password". To set up your transaction PIN, go to Account → Security. If you suspect unauthorised access, change your password immediately and email <strong>hello@topflowng.com</strong>.',
+  'Something else': 'INITIATING RESPONSE — GENERAL ENQUIRY.<br><br>Please describe your issue below. For direct human assistance, email <strong>hello@topflowng.com</strong> or visit the in-app support section.'
 };
 
 function _chatEsc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Attempt the real AI assistant. Returns { ok, text } or { ok:false }.
+async function _chatAskAI(message) {
+  try {
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ message }),
+    });
+    if (!res.ok) return { ok: false };
+    const data = await res.json();
+    return { ok: true, text: data.text || '' };
+  } catch (e) {
+    return { ok: false };
+  }
+}
+
+// Robot fallback for free-text messages when AI is not configured.
+function _chatRobotFallback(msg) {
+  var lower = String(msg).toLowerCase();
+  if (/ref(erence)?\s*[:# ]?[a-z0-9]{6,}/i.test(msg) || /transaction|pending|failed|order/i.test(lower)) {
+    return 'INITIATING RESPONSE — REFERENCE TRACE.<br><br>Recorded your reference. Please email it to <strong>hello@topflowng.com</strong> with your full name and the service purchased. A support agent will trace the order and reply with the outcome. No wallet debit occurs for pending or failed orders.';
+  }
+  if (/airtime|data|mtn|glo|airtel|9mobile/i.test(lower)) {
+    return 'INITIATING RESPONSE — TOP-UP CHECK.<br><br>Airtime and data are delivered automatically after payment. Confirm the recipient number. For failed delivery, email your reference to <strong>hello@topflowng.com</strong>.';
+  }
+  if (/electric|token|meter|disco|ikedc|ekedc|aedc/i.test(lower)) {
+    return 'INITIATING RESPONSE — TOKEN CHECK.<br><br>Your token is shown in the transaction details after a successful purchase. For a missing token, email your reference and meter number to <strong>hello@topflowng.com</strong>.';
+  }
+  if (/cable|dstv|gotv|startimes|iuc/i.test(lower)) {
+    return 'INITIATING RESPONSE — SUBSCRIPTION CHECK.<br><br>Confirm your IUC or smart card number. If the channel did not activate, email your IUC and reference to <strong>hello@topflowng.com</strong>.';
+  }
+  if (/password|pin|login|security|hack|unauthorised|unauthorized/i.test(lower)) {
+    return 'INITIATING RESPONSE — SECURITY.<br><br>Reset a forgotten password from the login screen. Change your password immediately if you suspect unauthorised access, then email <strong>hello@topflowng.com</strong>.';
+  }
+  if (/balance|wallet|credit|debit|money/i.test(lower)) {
+    return 'INITIATING RESPONSE — WALLET CHECK.<br><br>Your wallet balance is shown on your dashboard. Transactions and order status are visible in your Transaction History. The bot cannot modify your wallet — only a support agent can assist further via <strong>hello@topflowng.com</strong>.';
+  }
+  return 'INITIATING RESPONSE — GENERAL ENQUIRY.<br><br>I could not auto-match your message to a known topic. For assistance, email <strong>hello@topflowng.com</strong> with your full name and any reference numbers, or visit the in-app support section under Account → Support.';
 }
 
 function _chatAppend(role, html, isHtml) {
@@ -4570,11 +4612,11 @@ function chatPick(topic) {
   var typer = _chatTyping();
   setTimeout(function () {
     if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
-    var resp = _chatResponses[topic] || "No worries - just tell me what is up and I will do my best to help. You can also reach us at <strong>hello@topflowng.com</strong>.";
+    var resp = _chatResponses[topic] || _chatRobotFallback(topic);
     _chatAppend('agent', resp, true);
     // Follow-up
     setTimeout(function () {
-      _chatAppend('agent', 'Anything else I can help with? Just type below or email <strong>hello@topflowng.com</strong> anytime.', true);
+      _chatAppend('agent', 'AUTO-RESPONSE COMPLETE. Type a message below or email <strong>hello@topflowng.com</strong> for human support.', true);
       var body = document.getElementById('chat-body');
       if (body) body.scrollTop = body.scrollHeight;
       // Focus input
@@ -4593,12 +4635,16 @@ function chatSend() {
   inp.style.height = 'auto';
   _chatAppend('user', msg, false);
   var typer = _chatTyping();
-  setTimeout(function () {
-    if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
-    _chatAppend('agent', "Got it! Someone from the team will get back to you soon. If it is urgent, ping us at <strong>hello@topflowng.com</strong> and we will jump on it.", true);
-    var body = document.getElementById('chat-body');
-    if (body) body.scrollTop = body.scrollHeight;
-  }, 1000);
+  // Ask the real AI assistant; fall back to the robot script when it is not configured.
+  _chatAskAI(msg).then(function (res) {
+    setTimeout(function () {
+      if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
+      var text = res.ok && res.text ? res.text : _chatRobotFallback(msg);
+      _chatAppend('agent', text, true);
+      var body = document.getElementById('chat-body');
+      if (body) body.scrollTop = body.scrollHeight;
+    }, res.ok ? 200 : 1000);
+  });
 }
 
 function chatKey(e) {
