@@ -1915,7 +1915,7 @@ html.dark .btn-wa-share{color:#25D366!important}
           <div class="preview-balance">₦52,300.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>Glo data 10GB · 0813 555 7890</span><strong>−₦4,950.00</strong></div>
-          <div class="ledger-row"><span>Wallet top-up via Paystack</span><strong style="color:#20B486">+₦20,000.00</strong></div>
+          <div class="ledger-row"><span>Wallet top-up</span><strong style="color:#20B486">+₦20,000.00</strong></div>
           <div class="ledger-row"><span>Airtel 1GB data · 0702 333 4455</span><strong>−₦800.00</strong></div>
         </div>
         <div class="preview-slide">
@@ -1930,7 +1930,7 @@ html.dark .btn-wa-share{color:#25D366!important}
           <div class="preview-label">Available balance</div>
           <div class="preview-balance">₦67,150.00</div>
           <div class="ledger-cap">Recent activity</div>
-          <div class="ledger-row"><span>Wallet top-up via Paystack</span><strong style="color:#20B486">+₦50,000.00</strong></div>
+          <div class="ledger-row"><span>Wallet top-up</span><strong style="color:#20B486">+₦50,000.00</strong></div>
           <div class="ledger-row"><span>T2 airtime · 0906 888 1111</span><strong>−₦1,000.00</strong></div>
           <div class="ledger-row"><span>WAEC exam PIN × 2</span><strong>−₦10,700.00</strong></div>
         </div>
@@ -1947,7 +1947,7 @@ html.dark .btn-wa-share{color:#25D366!important}
           <div class="preview-balance">₦41,680.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>DStv Premium · IUC 3456 7890</span><strong>−₦44,500.00</strong></div>
-          <div class="ledger-row"><span>Wallet top-up via Paystack</span><strong style="color:#20B486">+₦80,000.00</strong></div>
+          <div class="ledger-row"><span>Wallet top-up</span><strong style="color:#20B486">+₦80,000.00</strong></div>
           <div class="ledger-row"><span>AEDC postpaid bill</span><strong>−₦12,000.00</strong></div>
         </div>
       </div>
@@ -2793,7 +2793,7 @@ html.dark .btn-wa-share{color:#25D366!important}
         <button class="btn-primary" id="invpay-btn" onclick="payInvoiceNow()" style="width:100%;padding:14px;font-size:15px;border-radius:12px">
           Pay Now
         </button>
-        <p style="font:400 11px/1.3 'Inter',sans-serif;color:#8896A4;text-align:center;margin-top:12px">Pay securely via Paystack. Powered by TopFlowNG.</p>
+        <p style="font:400 11px/1.3 'Inter',sans-serif;color:#8896A4;text-align:center;margin-top:12px">Payments are encrypted and secure. Powered by TopFlowNG.</p>
       </div>
       <div id="invpay-success" style="display:none;text-align:center;padding:20px 0">
         <div style="font-size:48px;margin-bottom:12px">✓</div>
@@ -3689,7 +3689,7 @@ async function payInvoiceNow() {
   btn.disabled = true; btn.textContent = 'Processing…';
   try {
     const res = await api('POST', '/api/public/pay-invoice/' + encodeURIComponent(currentInvoiceToken));
-    // Redirect to Paystack checkout
+    // Redirect to the active payment provider's secure checkout
     window.location.href = res.authorization_url;
   } catch (e) {
     errEl.textContent = e.message || 'Payment could not be initiated. Please try again.';
