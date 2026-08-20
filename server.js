@@ -556,7 +556,7 @@ app.post('/api/wallet/transactions/email-receipt', authMiddleware, apiLimiter, a
 });
 
 // ── Paystack ─────────────────────────────────────────────────────────────────
-app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paystackInitSchema), async (req, res) => {
+async function initializeWalletFunding(req, res) {
   try {
     // Global funding kill switch (server-controlled, admin-intent). Gates the
     // creation of NEW top-up sessions only; existing wallets, history,
@@ -585,7 +585,10 @@ app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paysta
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Payment initialization failed');
   }
-});
+}
+
+app.post('/api/paystack/initialize', authMiddleware, apiLimiter, validate(paystackInitSchema), initializeWalletFunding);
+app.post('/api/payment/initialize', authMiddleware, apiLimiter, validate(paystackInitSchema), initializeWalletFunding);
 
 async function getVerifiedPayment(reference) {
   const provider = getPaymentProvider();
@@ -716,9 +719,10 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
   monitorUncreditedPaystackPayment(reference);
   const result = await db.creditVerifiedPaystackPayment(reference, payment.userId, payment.amount);
   if (result.credited) {
+    const providerLabel = String(config.paymentProvider || 'paystack').toLowerCase() === 'monnify' ? 'Monnify' : 'Paystack';
     await db.createNotification({
       userId: payment.userId, category: 'wallet', title: 'Wallet funded',
-      message: `₦${Number(payment.amount).toLocaleString()} was added to your wallet via Paystack.`,
+      message: `₦${Number(payment.amount).toLocaleString()} was added to your wallet via ${providerLabel}.`,
       link: `/api/wallet/transactions?q=${encodeURIComponent(reference)}`,
     }).catch(() => {});
     db.findUserById(payment.userId).then((user) => {
@@ -737,46 +741,53 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
   return { ...result, userId: payment.userId };
 }
 
-app.get('/api/paystack/verify/:reference', authMiddleware, async (req, res) => {
+async function verifyWalletFunding(req, res) {
   try {
     const result = await verifyAndCreditPaystackPayment(req.params.reference, req.user.id);
     res.json({ success: true, balance: result.balance, credited: result.credited });
   } catch (err) {
-    logger.error('Paystack verify error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
+    logger.error('Payment verify error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
     if (config.sentry.dsn) Sentry.captureException(err);
     const status = ['PAYMENT_NOT_SUCCESSFUL', 'PAYMENT_USER_MISMATCH'].includes(err.code) ? 400 : 500;
     sendError(res, status, 'Payment verification failed');
   }
-});
+}
+
+app.get('/api/paystack/verify/:reference', authMiddleware, verifyWalletFunding);
+app.get('/api/payment/verify/:reference', authMiddleware, verifyWalletFunding);
 
 // In-memory webhook retry queue with exponential backoff.
 const webhookRetries = new Map(); // reference -> { attempts, nextRetryAt }
 
-app.post('/api/paystack/webhook', async (req, res) => {
+// Shared webhook handling for the active payment provider. Paystack and Monnify
+// both deliver a signed POST with a success event carrying the payment
+// reference; the only differences are the signature header name, the success
+// event name, and the callback that credits the wallet (which is already
+// provider-agnostic via verifyAndCreditPaystackPayment).
+async function handlePaymentWebhook(req, res, { provider, signatureHeader, successEvents }) {
   try {
-    const provider  = getPaymentProvider();
-    const signature = req.headers['x-paystack-signature'];
+    const signature = req.headers[signatureHeader];
 
     if (!provider.verifyWebhookSignature({ rawBody: req.body, signature })) {
-      logger.warn('Invalid Paystack webhook signature');
+      logger.warn('Invalid payment webhook signature', { provider: provider.NAME });
       return sendError(res, 400, 'Invalid signature');
     }
 
     const body = JSON.parse(req.body.toString());
     const { event, reference } = provider.webhookEvent(body);
 
-    if (event === 'charge.success' && reference) {
+    if (successEvents.includes(event) && reference) {
       await verifyAndCreditPaystackPayment(reference);
     }
 
     res.sendStatus(200);
   } catch (err) {
-    logger.error('Webhook error', { message: err.message });
+    logger.error('Payment webhook error', { provider: provider.NAME, message: err.message });
     // Queue for retry with exponential backoff: 30s, 2min, 8min, 32min
     try {
       const body = JSON.parse(req.body.toString());
       const { event, reference } = getPaymentProvider().webhookEvent(body);
-      if (event === 'charge.success' && reference) {
+      if (successEvents.includes(event) && reference) {
         const ref = reference;
         const existing = webhookRetries.get(ref);
         const attempts = (existing?.attempts || 0) + 1;
@@ -788,6 +799,27 @@ app.post('/api/paystack/webhook', async (req, res) => {
     if (config.sentry.dsn) Sentry.captureException(err);
     res.sendStatus(200);
   }
+}
+
+app.post('/api/paystack/webhook', async (req, res) => {
+  const provider = getPaymentProvider();
+  await handlePaymentWebhook(req, res, {
+    provider,
+    signatureHeader: 'x-paystack-signature',
+    successEvents: ['charge.success'],
+  });
+});
+
+app.post('/api/monnify/webhook', async (req, res) => {
+  const provider = getPaymentProvider();
+  await handlePaymentWebhook(req, res, {
+    provider,
+    signatureHeader: 'monnify-signature',
+    // Monnify emits SUCCESSFUL_TRANSACTION for card and transfer settlements,
+    // and SUCCESSFUL_TRANSACTION_WITH_TRANSFER for bank-transfer virtual-account
+    // settlements. All of them represent a completed, credited payment.
+    successEvents: ['SUCCESSFUL_TRANSACTION', 'SUCCESSFUL_TRANSACTION_WITH_TRANSFER'],
+  });
 });
 
 // Retry failed webhooks in the sweeper interval.

@@ -1664,6 +1664,18 @@ html.dark .icon-moon{display:none}
   font:500 12px/1 var(--font);color:var(--text-secondary);margin-bottom:16px}
 .payment-provider .provider-logo-frame{width:24px;height:24px;border-radius:6px}
 
+/* ── Fund wallet modal ─────────────────────────────────────────────── */
+.btn-fund{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5)}
+.btn-fund:hover{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.7)}
+.fund-quick-amounts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.fund-quick-amounts .chip{flex:1 1 auto;min-width:calc(50% - 4px);padding:10px;
+  border:1px solid color-mix(in srgb,var(--brand) 25%,transparent);
+  background:var(--surface-muted);color:var(--text-primary);border-radius:12px;
+  font:600 13px/1 var(--font);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.fund-quick-amounts .chip:hover{background:color-mix(in srgb,var(--brand) 10%,var(--surface-muted));border-color:var(--brand)}
+.fund-quick-amounts .chip.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.modal-note{font:400 11px/1.5 var(--font);color:var(--text-tertiary);margin:14px 0 0;text-align:center}
+
 /* ══════════════════════════════════════════════════════════════
    VISIBILITY HELPERS
 ══════════════════════════════════════════════════════════════ */
@@ -2530,6 +2542,7 @@ html.dark .btn-wa-share{color:#25D366!important}
         <div class="wallet-hero-label">Available balance</div>
         <div class="wallet-hero-amount" id="wallet-balance">₦0.00</div>
         <div class="wallet-hero-actions">
+          <button class="btn-fund btn-history-quick" onclick="openFundModal()">Fund wallet</button>
           <button class="btn-history-quick" onclick="goTab('history')">View transactions</button>
         </div>
       </div>
@@ -3287,11 +3300,31 @@ html.dark .btn-wa-share{color:#25D366!important}
 </div>
 
 <!-- ══════════════ FUND WALLET MODAL ══════════════ -->
-<!-- Fund modal replaced with inert stub — wallet funding no longer customer-facing -->
-<div id="fund-modal" hidden aria-hidden="true">
-  <div id="fund-modal-error"></div>
-  <input type="number" id="fund-amount" tabindex="-1">
-  <button id="btn-fund-pay" tabindex="-1" aria-hidden="true"></button>
+<!-- Fund wallet — Monnify checkout (card + bank transfer) on web and mobile -->
+<div id="fund-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fund-modal-title" hidden>
+  <div class="modal-card" id="fund-modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="fund-modal-title">Fund wallet</h2>
+      <button type="button" class="modal-close" onclick="closeFundModal()" aria-label="Close fund wallet">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p class="modal-sub">Add money to your wallet with a card or bank transfer. Your wallet is credited automatically once payment is confirmed.</p>
+    <div id="fund-modal-error" class="auth-error" role="alert"></div>
+    <div class="field">
+      <label for="fund-amount">Amount (₦)</label>
+      <input type="number" id="fund-amount" min="100" step="50" placeholder="e.g. 1000" inputmode="numeric">
+      <div class="fund-quick-amounts" role="listbox" aria-label="Quick amounts">
+        <button type="button" class="chip" data-amt="500">₦500</button>
+        <button type="button" class="chip" data-amt="1000">₦1,000</button>
+        <button type="button" class="chip" data-amt="2000">₦2,000</button>
+        <button type="button" class="chip" data-amt="5000">₦5,000</button>
+        <button type="button" class="chip" data-amt="10000">₦10,000</button>
+      </div>
+    </div>
+    <button id="btn-fund-pay" class="btn-primary btn-block" onclick="initiateFunding()">Continue to payment</button>
+    <p class="modal-note">Powered by Monnify. Card and bank transfer payments are secured by our payment provider.</p>
+  </div>
 </div>
 
 
@@ -5137,14 +5170,85 @@ window.closeReceipt = function() {
 };
 
 // ── FUND WALLET ───────────────────────────────────────────────────────────
-// ── FUND WALLET (disabled — wallet funding removed from customer experience) ──
-function openFundModal()  { /* no-op */ }
-function closeFundModal() { /* no-op */ }
-async function initiateFunding() { /* no-op */ }
+// Monnify checkout flow: pick an amount -> redirect to Monnify's hosted
+// checkout (card or bank transfer) -> return with ?verified=<ref> -> verify
+// and credit the wallet. Works identically on web and mobile.
+function lockBodyScroll(lock) {
+  document.body.style.overflow = lock ? 'hidden' : '';
+}
 
-// completePendingPayment / verifyPayment disabled (Paystack wallet funding removed)
-async function completePendingPayment() { /* no-op */ }
-async function verifyPayment(reference) { /* no-op */ }
+function openFundModal() {
+  var modal = document.getElementById('fund-modal');
+  modal.classList.add('open');
+  modal.hidden = false;
+  hideErr('fund-modal-error');
+  var input = document.getElementById('fund-amount');
+  input.value = '';
+  input.focus();
+  document.querySelectorAll('#fund-modal .chip').forEach(function (c) { c.classList.remove('active'); });
+  lockBodyScroll(true);
+}
+
+function closeFundModal() {
+  var modal = document.getElementById('fund-modal');
+  modal.classList.remove('open');
+  modal.hidden = true;
+  hideErr('fund-modal-error');
+  lockBodyScroll(false);
+}
+
+// Quick-amount chips
+document.addEventListener('click', function (e) {
+  var chip = e.target.closest && e.target.closest('#fund-modal .chip');
+  if (!chip) return;
+  document.querySelectorAll('#fund-modal .chip').forEach(function (c) { c.classList.remove('active'); });
+  chip.classList.add('active');
+  document.getElementById('fund-amount').value = chip.dataset.amt;
+});
+
+async function initiateFunding() {
+  var input = document.getElementById('fund-amount');
+  var amount = Math.round(Number(input.value));
+  hideErr('fund-modal-error');
+  if (!amount || amount < 100) {
+    return showErr('fund-modal-error', 'Enter an amount of at least ₦100.');
+  }
+  var btn = document.getElementById('btn-fund-pay');
+  btn.disabled = true; btn.textContent = 'Redirecting to payment…';
+  try {
+    var res = await api('POST', '/api/payment/initialize', { amount: amount });
+    pendingPaymentReference = res.reference || null;
+    if (res.authorization_url) {
+      window.location.href = res.authorization_url;
+      return;
+    }
+    showErr('fund-modal-error', 'Payment could not be started. Please try again.');
+  } catch (e) {
+    showErr('fund-modal-error', e.message || 'Payment could not be started. Please try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Continue to payment';
+  }
+}
+
+// After redirect back with ?verified=<reference>, confirm the payment and credit.
+async function completePendingPayment() {
+  if (!pendingPaymentReference) return;
+  try {
+    const res = await api('GET', '/api/payment/verify/' + encodeURIComponent(pendingPaymentReference));
+    pendingPaymentReference = null;
+    if (res.success) {
+      if (window.user) window.user.walletBalance = res.balance;
+      showToast('Wallet funded successfully 🎉', 'success', 3200);
+      loadWalletData && loadWalletData();
+    }
+  } catch (e) {
+    showToast('Payment confirmed, but credit is being processed. Check your wallet shortly.', 'info', 4000);
+  }
+}
+
+async function verifyPayment(reference) {
+  return api('GET', '/api/payment/verify/' + encodeURIComponent(reference));
+}
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────────────
 function openChangePassword() {
