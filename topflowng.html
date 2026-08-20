@@ -2320,7 +2320,7 @@ html.dark .btn-wa-share{color:#25D366!important}
           TopFlow<span>NG</span>
         </div>
         <div class="workspace-profile">
-          <div class="header-greeting">Good day, <span class="header-name" id="header-name">—</span></div>
+          <div class="header-greeting" id="header-greeting-text">Good day, <span class="header-name" id="header-name">—</span></div>
           <button type="button" class="notif-bell" id="notif-bell" onclick="openNotifications()" aria-label="Notifications" title="Notifications">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
             <span class="notif-badge" id="notif-badge" hidden>0</span>
@@ -2354,12 +2354,24 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="hero-dots" id="hero-dots"></div>
     </div>
     <nav class="sidebar-nav" aria-label="Primary">
+      <div class="side-nav-group-label">Workspace</div>
       <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg><span>Home</span></button>
       <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg><span>Wallet</span></button>
-      <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Updates</span></button>
       <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span>Services</span></button>
       <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span>History</span></button>
+      <div class="side-nav-group-label">Manage</div>
+      <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Updates</span></button>
       <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span>Account</span></button>
+      <div class="side-nav-user">
+        <div class="side-nav-user-avatar" id="side-nav-avatar">T</div>
+        <div class="side-nav-user-body">
+          <div class="side-nav-user-name" id="side-nav-name">—</div>
+          <div class="side-nav-user-email" id="side-nav-email">—</div>
+        </div>
+        <button type="button" class="side-nav-logout" onclick="logout()" aria-label="Log out" title="Log out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
+      </div>
     </nav>
   </header>
 
@@ -2369,6 +2381,54 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="home-shell">
         <div>
           <div class="sys-banner warn" id="outage-banner" role="status" hidden></div>
+
+          <div class="dash-greeting">
+            <div>
+              <h1 id="dash-greeting-text">Good day, <span id="dash-greeting-name">—</span></h1>
+              <div class="dash-greeting-sub">Here's your account summary for today.</div>
+            </div>
+            <div class="dash-greeting-actions">
+              <button class="dash-greeting-btn dash-greeting-btn--primary" onclick="openService('airtime')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg> Buy airtime</button>
+              <button class="dash-greeting-btn" onclick="openService('data')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a14.5 14.5 0 0 1 20 0"/><path d="M5 13.5a9.5 9.5 0 0 1 14 0"/><path d="M8.5 17a4.5 4.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg> Buy data</button>
+            </div>
+          </div>
+
+          <div class="dash-stat-grid">
+            <div class="dash-stat">
+              <span class="dash-stat-icon dash-stat-icon--teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></span>
+              <span class="dash-stat-label">Available balance</span>
+              <span class="dash-stat-value" id="stat-balance">₦0.00</span>
+              <span class="dash-stat-hint" id="stat-balance-hint">Ready to spend</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-icon dash-stat-icon--green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></span>
+              <span class="dash-stat-label">Total credits</span>
+              <span class="dash-stat-value" id="stat-credits">₦0.00</span>
+              <span class="dash-stat-hint" id="stat-credits-hint">Wallet top-ups</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-icon dash-stat-icon--purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+              <span class="dash-stat-label">Total spend</span>
+              <span class="dash-stat-value" id="stat-spend">₦0.00</span>
+              <span class="dash-stat-hint" id="stat-spend-hint">All purchases</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-icon dash-stat-icon--amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+              <span class="dash-stat-label">Orders this month</span>
+              <span class="dash-stat-value" id="stat-orders">0</span>
+              <span class="dash-stat-hint" id="stat-orders-hint">Completed purchases</span>
+            </div>
+          </div>
+
+          <div class="dash-attention" id="dash-attention" hidden>
+            <span class="dash-attention-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>
+            <div class="dash-attention-body">
+              <div class="dash-attention-title">Needs your attention</div>
+              <div class="dash-attention-text" id="dash-attention-text">—</div>
+            </div>
+            <button class="dash-attention-btn" onclick="goTab('history')">View</button>
+          </div>
+
           <div class="dash-balance-card">
             <div class="dash-balance-top">
               <div class="dash-balance-label">Available balance</div>
@@ -3662,6 +3722,8 @@ function launchApp() {
   } catch(e) {}
   loadBalance();
   loadRecentTxns();
+  loadDashboardStats();
+  setGreeting();
   loadPlans().then(() => { loadDataPlans(); loadCablePlans(); });
   checkPendingOrders();
   loadPinStatus();
@@ -3709,8 +3771,10 @@ async function checkPendingOrders() {
         ? `One purchase of ${amt} is awaiting provider confirmation. Your wallet has not been debited — it resolves automatically.`
         : `${n} purchases (${amt} total) are awaiting provider confirmation. Your wallet has not been debited — they resolve automatically.`;
       widget.removeAttribute('hidden');
+      updateDashboardAttention(n, amt);
     } else {
       widget.setAttribute('hidden', '');
+      updateDashboardAttention(0, '');
     }
   } catch { /* silent — not critical */ }
 }
@@ -3724,6 +3788,12 @@ function updateUserUI() {
   document.getElementById('acct-name').textContent = user.fullName;
   document.getElementById('acct-email').textContent = user.email;
   document.getElementById('acct-phone').textContent = user.phone;
+  const sideName = document.getElementById('side-nav-name');
+  const sideEmail = document.getElementById('side-nav-email');
+  const sideAvatar = document.getElementById('side-nav-avatar');
+  if (sideName) sideName.textContent = user.fullName;
+  if (sideEmail) sideEmail.textContent = user.email;
+  if (sideAvatar) sideAvatar.textContent = av;
 }
 
 async function loadBalance() {
@@ -3766,6 +3836,67 @@ async function loadWalletData() {
       : '<div class="txn-empty">No wallet activity yet. Make your first purchase to get started.</div>';
   } catch {
     document.getElementById('wallet-balance').textContent = 'Unavailable';
+  }
+}
+
+// ── DASHBOARD GREETING + STAT CARDS ─────────────────────────────────────
+function setGreeting() {
+  const name = (user && (user.fullName || user.name || '').split(' ')[0]) || '';
+  const h = new Date().getHours();
+  const word = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const nameEl = document.getElementById('dash-greeting-name');
+  if (nameEl) nameEl.textContent = name;
+  const textEl = document.getElementById('dash-greeting-text');
+  if (textEl) textEl.firstChild.textContent = word + ', ';
+  const headerEl = document.getElementById('header-greeting-text');
+  if (headerEl) {
+    const span = headerEl.querySelector('.header-name');
+    headerEl.firstChild.textContent = word + ', ';
+    if (span) span.textContent = name;
+  }
+}
+
+async function loadDashboardStats() {
+  try {
+    const [balRes, txnRes] = await Promise.all([
+      api('GET', '/api/wallet/balance'),
+      api('GET', '/api/wallet/transactions?limit=500'),
+    ]);
+    const balance = Number(balRes.balance) || 0;
+    const txns = txnRes.transactions || [];
+    let credits = 0, spend = 0, ordersThisMonth = 0;
+    const now = new Date();
+    for (const t of txns) {
+      if (t.type === 'credit' && t.status === 'completed') credits += Number(t.amount) || 0;
+      if (t.type === 'debit' && t.status === 'completed') {
+        spend += Number(t.amount) || 0;
+        const d = new Date(t.created_at);
+        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) ordersThisMonth += 1;
+      }
+    }
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setText('stat-balance', fmt(balance));
+    setText('stat-credits', fmt(credits));
+    setText('stat-spend', fmt(spend));
+    setText('stat-orders', String(ordersThisMonth));
+    setText('stat-balance-hint', balance > 0 ? 'Ready to spend' : 'Fund your wallet to get started');
+    setText('stat-credits-hint', credits > 0 ? 'Wallet top-ups' : 'No top-ups yet');
+    setText('stat-spend-hint', spend > 0 ? 'All purchases' : 'No purchases yet');
+    setText('stat-orders-hint', ordersThisMonth > 0 ? 'Completed purchases' : 'No purchases this month');
+  } catch (e) { /* non-critical */ }
+}
+
+function updateDashboardAttention(n, amt) {
+  const card = document.getElementById('dash-attention');
+  if (!card) return;
+  if (n > 0) {
+    const text = document.getElementById('dash-attention-text');
+    if (text) text.textContent = n === 1
+      ? `One purchase of ${amt} is awaiting provider confirmation. Your wallet has not been debited — it resolves automatically.`
+      : `${n} purchases (${amt} total) are awaiting provider confirmation. Your wallet has not been debited — they resolve automatically.`;
+    card.removeAttribute('hidden');
+  } else {
+    card.setAttribute('hidden', '');
   }
 }
 
@@ -6183,6 +6314,78 @@ init();
 .referral-stat{border-radius:14px;padding:16px}
 .analytics-tile{border-radius:14px}
 .analytics-section-title{font-weight:700;letter-spacing:.8px}
+
+/* ── BizFlow-style dashboard (sidebar groups, greeting, stat cards) ─────── */
+.side-nav-group-label{font:700 10.5px/1 var(--display);color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:1.1px;padding:14px 16px 6px}
+.side-nav-user{display:flex;align-items:center;gap:10px;padding:12px 16px;margin:10px 12px 14px;
+  border:1px solid var(--border-subtle);border-radius:14px;background:var(--surface-muted)}
+.side-nav-user-avatar{width:36px;height:36px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font:800 13px/1 var(--display);
+  background:var(--grad);color:#fff}
+.side-nav-user-body{flex:1;min-width:0}
+.side-nav-user-name{font:700 13px/1.2 var(--font);color:var(--text-primary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-nav-user-email{font:400 11px/1.3 var(--font);color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.side-nav-logout{width:34px;height:34px;border-radius:10px;border:1px solid var(--border-subtle);
+  background:var(--surface);color:var(--text-secondary);cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.side-nav-logout:hover{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 35%,transparent);color:var(--danger)}
+.side-nav-logout svg{width:16px;height:16px}
+
+/* Dashboard greeting + stat cards (BizFlow-style) */
+.dash-greeting{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.dash-greeting h1{font:800 26px/1.1 var(--display);color:var(--text-primary);letter-spacing:-.5px;margin:0}
+.dash-greeting .dash-greeting-sub{font:500 13.5px/1.5 var(--font);color:var(--text-muted);margin-top:6px}
+.dash-greeting-actions{display:flex;gap:10px;flex-wrap:wrap}
+.dash-greeting-btn{display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:12px;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--text-primary);
+  font:700 13px/1 var(--font);cursor:pointer;transition:all var(--transition)}
+.dash-greeting-btn svg{width:15px;height:15px;color:var(--brand)}
+.dash-greeting-btn:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.dash-greeting-btn--primary{border:none;background:var(--grad);color:#fff}
+.dash-greeting-btn--primary svg{color:#fff}
+.dash-greeting-btn--primary:hover{background:linear-gradient(135deg,var(--brand-hover),var(--brand));color:#fff}
+.dash-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+@media(min-width:640px){.dash-stat-grid{grid-template-columns:repeat(4,1fr)}}
+.dash-stat{background:var(--surface);border:1px solid var(--border-subtle);border-radius:18px;padding:16px;
+  position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
+.dash-stat:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06);
+  border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
+.dash-stat-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.dash-stat-icon svg{width:17px;height:17px}
+.dash-stat-icon--teal{background:var(--brand-soft);color:var(--brand)}
+.dash-stat-icon--green{background:var(--success-soft);color:var(--success)}
+.dash-stat-icon--amber{background:var(--warn-soft);color:var(--warn)}
+.dash-stat-icon--red{background:var(--danger-soft);color:var(--danger)}
+.dash-stat-icon--purple{background:color-mix(in srgb,#7C3AED 12%,var(--surface));color:#7C3AED}
+.dash-stat-label{font:500 11px/1 var(--font);color:var(--text-muted);margin-bottom:6px;display:block}
+.dash-stat-value{font:800 20px/1 var(--display);color:var(--text-primary);letter-spacing:-.4px;display:block}
+.dash-stat-hint{font:500 11px/1.4 var(--font);color:var(--text-muted);margin-top:7px;display:block}
+.dash-stat-hint b{color:var(--text-secondary)}
+
+/* Needs attention card (BizFlow-style) */
+.dash-attention{background:var(--surface);border:1px solid var(--border-subtle);border-radius:18px;
+  padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.dash-attention-icon{width:38px;height:38px;border-radius:12px;background:var(--warn-soft);color:var(--warn);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dash-attention-icon svg{width:18px;height:18px}
+.dash-attention-body{flex:1;min-width:0}
+.dash-attention-title{font:700 13px/1.2 var(--font);color:var(--text-primary)}
+.dash-attention-text{font:500 12px/1.5 var(--font);color:var(--text-muted);margin-top:3px}
+.dash-attention-btn{border:1px solid var(--border-strong);background:var(--surface);color:var(--brand);
+  font:700 12.5px/1 var(--font);padding:9px 14px;border-radius:10px;cursor:pointer;
+  transition:all var(--transition);flex-shrink:0}
+.dash-attention-btn:hover{border-color:var(--brand);background:var(--brand-soft)}
+
+@media(max-width:639px){
+  .dash-greeting h1{font-size:22px}
+  .dash-stat-value{font-size:17px}
+}
+@media(min-width:900px){
+  .dash-stat-value{font-size:22px}
+}
 </style>
 
 <!-- ══════════════ QUICK PAY LAUNCHER ══════════════ -->
