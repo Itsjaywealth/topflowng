@@ -19,7 +19,7 @@
 const config = require('../config');
 const db = require('../database');
 const logger = require('../lib/logger');
-const { chatCompletion } = require('./openrouter');
+const { chatCompletion } = require('./ai-dispatcher');
 
 const ROUND2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const clampInt = (n, lo, hi) => Math.min(Math.max(Math.trunc(Number(n) || lo), lo), hi);
@@ -31,6 +31,7 @@ function offensiveRedact(text) {
   // but a final guard.
   const secrets = [
     config.ai.openRouterApiKey,
+    config.ai.openAiApiKey,
     config.jwt && config.jwt.secret,
     config.paystack && config.paystack.secretKey,
     config.vtpass && config.vtpass.secretKey,
@@ -304,6 +305,8 @@ function resolveModels(requestedModel) {
   const allowed = new Set();
   if (config.ai.primaryModel) allowed.add(config.ai.primaryModel);
   if (config.ai.fallbackModel) allowed.add(config.ai.fallbackModel);
+  if (config.ai.openAiPrimaryModel) allowed.add(config.ai.openAiPrimaryModel);
+  if (config.ai.openAiFallbackModel) allowed.add(config.ai.openAiFallbackModel);
   for (const m of config.ai.modelAllowlist) allowed.add(m);
 
   if (requestedModel) {

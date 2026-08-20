@@ -139,14 +139,20 @@ const config = {
     secureMode: str(process.env.TAWK_SECURE_MODE, '1') === '1',
   },
 
-  // Secure, read-only AI assistant (OpenRouter). Model IDs come from the
-  // environment, never hardcoded below the defaults; the allow-list is derived
-  // from these variables so operators control which models are reachable.
+  // Secure, read-only AI assistant (OpenRouter + OpenAI). Model IDs come from
+  // the environment, never hardcoded below the defaults; the allow-list is
+  // derived from these variables so operators control which models are
+  // reachable. providerOrder controls failover (e.g. "openai,openrouter").
   ai: {
     openRouterApiKey: str(process.env.OPENROUTER_API_KEY, null),
     baseUrl: str(process.env.OPENROUTER_BASE_URL, 'https://openrouter.ai/api/v1'),
     primaryModel: str(process.env.OPENROUTER_PRIMARY_MODEL, 'deepseek/deepseek-v4-flash'),
     fallbackModel: str(process.env.OPENROUTER_FALLBACK_MODEL, 'hermes'),
+    openAiApiKey: str(process.env.OPENAI_API_KEY, null),
+    openAiBaseUrl: str(process.env.OPENAI_BASE_URL, 'https://api.openai.com/v1'),
+    openAiPrimaryModel: str(process.env.OPENAI_PRIMARY_MODEL, 'gpt-4o-mini'),
+    openAiFallbackModel: str(process.env.OPENAI_FALLBACK_MODEL, 'gpt-4o-mini'),
+    providerOrder: str(process.env.AI_PROVIDER_ORDER, 'openrouter'),
     appUrl: str(process.env.OPENROUTER_APP_URL, str(process.env.APP_URL, 'https://topflowng.com')),
     appName: str(process.env.OPENROUTER_APP_NAME, 'TopFlowNG'),
     timeoutMs: num(process.env.AI_TIMEOUT_MS, 30_000),
@@ -321,6 +327,7 @@ const OPTIONAL_PRODUCTION = [
   'PAYSTACK_WEBHOOK_SECRET', // falls back to PAYSTACK_SECRET_KEY when absent
   'RESEND_API_KEY',          // email delivery; without it reset/purchase emails fail
   'OPENROUTER_API_KEY',      // AI assistant (read-only, advisory) — degraded when absent
+  'OPENAI_API_KEY',          // AI assistant (read-only, advisory) — degraded when absent
   'SENTRY_DSN',              // observability — disabled when absent
 ];
 
