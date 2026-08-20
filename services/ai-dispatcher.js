@@ -53,7 +53,7 @@ function providerForModel(model) {
   return null; // allow-listed extra model: try providers in order
 }
 
-async function chatCompletion({ model, messages, tools, maxTokens, timeoutMs }) {
+async function chatCompletion({ model, messages, tools, maxTokens, timeoutMs, toolChoice }) {
   const providers = activeProviders();
   if (!providers.length) {
     throw openrouter.createUpstreamError('unconfigured', model);
@@ -71,7 +71,7 @@ async function chatCompletion({ model, messages, tools, maxTokens, timeoutMs }) 
       continue;
     }
     try {
-      return await provider.client.chatCompletion({ model, messages, tools, maxTokens, timeoutMs });
+      return await provider.client.chatCompletion({ model, messages, tools, maxTokens, timeoutMs, toolChoice });
     } catch (err) {
       lastError = err;
       // Timeouts and upstream failures move on to the next provider; an

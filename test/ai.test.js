@@ -281,3 +281,46 @@ test('zero real OpenRouter calls (mocked client is the endpoint)', async () => {
     assert.ok([h.PRIMARY_MODEL, h.FALLBACK_MODEL, 'extra/allowed-model'].includes(c.model));
   }
 });
+
+test('account-data intent forces the tool when the model replies without calling it', async () => {
+  // Script the mock: the FIRST call returns a fake "let me check" text without a
+  // tool call; the forced second call must include tool_choice for the wallet
+  // tool and produce real tool_calls that resolve to the actual balance.
+  const u = await registerUser('ai-forced@example.com');
+  await db.creditWallet(u.id, 4200, 'Test top-up', 'REF-FORCED');
+  let forcedSeen = 0;
+  h.aiState.onCall = async (ctx) => {
+    const last = ctx.messages[ctx.messages.length - 1];
+    if (last && last.role === 'tool') {
+      let text = String(last.content || '');
+      try { text = JSON.stringify(JSON.parse(last.content)); } catch { /* raw */ }
+      return { content: { kind: 'text', text }, model: h.PRIMARY_MODEL, usage: {} };
+    }
+    if (ctx.toolChoice && ctx.toolChoice.type === 'function') {
+      forcedSeen += 1;
+      assert.strictEqual(ctx.toolChoice.function.name, 'getUserWalletSummary');
+      return {
+        content: { kind: 'tool_calls', toolCalls: [{ id: 'f1', name: 'getUserWalletSummary', arguments: {} }] },
+        model: h.PRIMARY_MODEL,
+        usage: {},
+      };
+    }
+    return { content: { kind: 'text', text: 'Sure! Let me check your wallet balance for you.' }, model: h.PRIMARY_MODEL, usage: {} };
+  };
+  const r = await chat(u.token, { message: 'check my balance' });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.data.toolUsed, true);
+  assert.ok(String(r.data.text).includes('4200'), 'balance missing: ' + r.data.text);
+  // The plain-text first call + one forced tool_choice retry.
+  assert.strictEqual(forcedSeen, 1);
+});
+
+test('non-account messages never force a tool call', async () => {
+  const u = await registerUser('ai-noforce@example.com');
+  h.aiState.onCall = async () => ({ content: { kind: 'text', text: 'A friendly hello.' }, model: h.PRIMARY_MODEL, usage: {} });
+  const r = await chat(u.token, { message: 'hello there' });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.data.toolUsed, false);
+  // Exactly one call — no forced retry for casual messages.
+  assert.strictEqual(h.aiState.calls.length, 1);
+});

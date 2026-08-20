@@ -356,6 +356,29 @@ async function resolveToolCalls(model, history, toolCalls, userId) {
 }
 
 // ── Main entrypoint ─────────────────────────────────────────────────────────
+// ── Forced tool fallback ────────────────────────────────────────────────────
+// Tool-calling models occasionally answer conversationally ("Sure, let me check
+// your balance...") without actually invoking the matching tool. When the user
+// clearly asks for account data, detect the intent from the message and re-run
+// the completion with tool_choice forced to that tool so the answer is real.
+const INTENT_PATTERNS = [
+  { tool: 'getUserWalletSummary', re: /balance|wallet|(?:how|what).?(?:much|left|in).?(?:my|my account)/i },
+  { tool: 'getRecentTransactions', re: /recent|history|transactions?|last|latest|spending|activity/i },
+  { tool: 'getTransactionStatus', re: /order status|order details|request ?id|status of (?:my |the )?order|where is (?:my )?order/i },
+];
+
+function detectToolIntent(message) {
+  const text = String(message || '').toLowerCase();
+  for (const { tool, re } of INTENT_PATTERNS) {
+    if (re.test(text)) return tool;
+  }
+  return null;
+}
+
+function forcedToolChoice(toolName) {
+  return { type: 'function', function: { name: toolName } };
+}
+
 async function runChat({ userId, message, requestedModel }) {
   checkDailyCeilings();
 
@@ -376,6 +399,29 @@ async function runChat({ userId, message, requestedModel }) {
       recordUsage(out.usage);
       if (out.content && out.content.kind === 'tool_calls') {
         return resolveToolCalls(model, history, out.content.toolCalls, userId);
+      }
+      // The model replied with plain text but the user clearly asked for account
+      // data. Force the matching tool so we never return a fake "let me check".
+      const forced = detectToolIntent(message);
+      if (forced && out.content && out.content.text) {
+        const forcedOut = await chatCompletion({
+          model,
+          messages: [...history, { role: 'assistant', content: out.content.text }],
+          tools: TOOL_DEFINITIONS,
+          toolChoice: forcedToolChoice(forced),
+        });
+        recordUsage(forcedOut.usage);
+        if (forcedOut.content && forcedOut.content.kind === 'tool_calls') {
+          return resolveToolCalls(model, history, forcedOut.content.toolCalls, userId);
+        }
+        if (forcedOut.content && forcedOut.content.text) {
+          return {
+            text: offensiveRedact(forcedOut.content.text),
+            model: forcedOut.model,
+            usage: forcedOut.usage,
+            toolUsed: false,
+          };
+        }
       }
       return {
         text: offensiveRedact(out.content && out.content.text ? out.content.text : ''),

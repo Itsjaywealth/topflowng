@@ -29,7 +29,7 @@ const config = require('../config');
  *   Resolves with normalized safe output. Rejects with an AiUpstreamError whose
  *   message is a generic description — the upstream body is never surfaced.
  */
-async function chatCompletion({ model, messages, tools, maxTokens, timeoutMs }) {
+async function chatCompletion({ model, messages, tools, maxTokens, timeoutMs, toolChoice }) {
   const cfg = config.ai;
   if (!cfg.openAiApiKey) {
     throw createUpstreamError('unconfigured', model);
@@ -40,6 +40,7 @@ async function chatCompletion({ model, messages, tools, maxTokens, timeoutMs }) 
     max_tokens: maxTokens != null ? maxTokens : cfg.maxOutputTokens,
   };
   if (tools && tools.length) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
 
   let response;
   try {
