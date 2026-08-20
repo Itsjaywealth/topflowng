@@ -1,7 +1,7 @@
 'use strict';
 
 const config = require('../config');
-const logger = require('./logger');
+const logger = require('../lib/logger');
 
 const TERMII_BASE = 'https://api.termii.com/api';
 
