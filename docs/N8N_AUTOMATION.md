@@ -24,20 +24,21 @@ x-internal-key: <INTERNAL_API_KEY>
    ```bash
    openssl rand -hex 32
    ```
-2. Import the workflow `n8n-topflowng-pending-orders.json` into n8n (Workflows →
-   New → ⋯ → Import from File).
+2. Import the workflow `n8n-workflow-topflowng-pending-orders.json` into n8n
+   (Workflows → New → ⋯ → Import from File).
 3. Configure n8n variables / credentials:
-   - `TOPFLOWNG_API_URL` = `https://topflowng.com/api/internal/pending-orders`
+   - `TOPFLOWNG_API_URL` = `https://topflowng.com`
    - `TOPFLOWNG_INTERNAL_KEY` = the `INTERNAL_API_KEY` value
    - `ALERT_RECIPIENT` = the ops mailbox to receive pending-order alerts
      (e.g. `ops@topflowng.com` or `josephegbedi@gmail.com`)
-   - Create a Gmail OAuth2 credential in n8n for the sender and set it on the
-     **Email Pending Alert** node.
+   - The **Email Pending Alert** node uses an existing Gmail OAuth2 credential
+     (`gmailOAuth2`). Point it at the Gmail credential already present in the
+     n8n instance.
 4. Activate the workflow.
 
 ## Workflow: Pending Order Alert
 
-`n8n-topflowng-pending-orders.json` — every 15 minutes:
+`n8n-workflow-topflowng-pending-orders.json` — every 15 minutes:
 
 1. **Schedule trigger** (every 15 min)
 2. **Fetch Pending Orders** — `GET /api/internal/pending-orders` with the

@@ -1,0 +1,168 @@
+{
+  "name": "TopFlowNG - Pending Order Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "cron",
+      "name": "Check Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TOPFLOWNG_API_URL }}/api/internal/pending-orders",
+        "options": {
+          "headers": {
+            "x-internal-key": "={{ $env.TOPFLOWNG_INTERNAL_KEY }}"
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "http",
+      "name": "Fetch Pending Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only continue when there are actually pending orders to report.\nconst data = $input.first().json;\nconst orders = data.orders || [];\nif (!Array.isArray(orders) || orders.length === 0) {\n  return [];\n}\nreturn orders.map((o) => ({\n  json: {\n    requestId: o.request_id || o.requestId,\n    service: o.service_type || o.serviceType,\n    amount: 'NGN ' + Number(o.amount || 0).toLocaleString('en-NG'),\n    description: o.description,\n    user: o.user_name || o.userEmail,\n    email: o.user_email || o.userEmail,\n    created: o.created_at || o.createdAt,\n    providerOrderId: o.provider_order_id || o.providerOrderId || '-',\n    reconcileAttempts: o.reconcile_attempts ?? o.reconcileAttempts ?? 0\n  }\n}));"
+      },
+      "id": "map",
+      "name": "Map Pending Orders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "conditionType": "boolean",
+        "options": {
+          "message": "No pending orders — skip Gmail."
+        },
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-orders",
+              "leftValue": "={{ $json.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if",
+      "name": "Has Pending Orders",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Batch the pending orders into a single readable alert body.\nconst items = $input.all();\nconst orders = items.map((i) => i.json);\nconst lines = orders.map((o) => {\n  return `- ${o.requestId} | ${o.service} | ${o.amount} | ${o.description} | user: ${o.user || o.email} | created: ${new Date(o.created).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })} | reconcile attempts: ${o.reconcileAttempts}`;\n});\nconst body = [\n  `TopFlowNG has ${orders.length} pending VTU order(s) awaiting provider confirmation/reconciliation.`,\n  '',\n  ...lines\n].join('\\n');\nreturn [{ json: { count: orders.length, body } }];"
+      },
+      "id": "format",
+      "name": "Format Alert Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.ALERT_RECIPIENT }}",
+        "subject": "=TopFlowNG: {{ $json.count }} pending order(s) need attention",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "gmail",
+      "name": "Email Pending Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [1000, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ClSZ5NB7SriM0ko4",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true, message: 'No pending orders to report.' } }];"
+      },
+      "id": "none",
+      "name": "Nothing to Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 420]
+    }
+  ],
+  "connections": {
+    "Check Every 15 Minutes": {
+      "main": [
+        [
+          { "node": "Fetch Pending Orders", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Pending Orders": {
+      "main": [
+        [
+          { "node": "Map Pending Orders", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Map Pending Orders": {
+      "main": [
+        [
+          { "node": "Has Pending Orders", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Pending Orders": {
+      "main": [
+        [
+          { "node": "Format Alert Body", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Nothing to Report", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Alert Body": {
+      "main": [
+        [
+          { "node": "Email Pending Alert", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "",
+    "timezone": "Africa/Lagos"
+  }
+}
