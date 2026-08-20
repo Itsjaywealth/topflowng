@@ -3217,7 +3217,7 @@ html.dark .btn-wa-share{color:#25D366!important}
 <div id="fund-modal" hidden aria-hidden="true">
   <div id="fund-modal-error"></div>
   <input type="number" id="fund-amount" tabindex="-1">
-  <button id="btn-fund-pay" tabindex="-1"></button>
+  <button id="btn-fund-pay" tabindex="-1" aria-hidden="true"></button>
 </div>
 
 
@@ -4730,6 +4730,7 @@ function openSupport(txn) {
   }
   panel.classList.add('open');
   setSupportLauncherState(true);
+  document.body.style.overflow = 'hidden';
   var inp = document.getElementById('chat-input');
   if (inp) { try { inp.focus(); } catch (e) {} }
 }
@@ -4738,6 +4739,7 @@ function closeSupport() {
   var panel = document.getElementById('support-overlay');
   if (panel) panel.classList.remove('open');
   setSupportLauncherState(false);
+  document.body.style.overflow = '';
   var fab = document.getElementById('support-fab');
   if (fab) { try { fab.focus(); } catch (e) {} }
 }
@@ -5582,12 +5584,23 @@ async function loadAllTxns(reset) {
     const el = document.getElementById('all-txns');
     if (reset) el.innerHTML = '';
     if (!txns.length && reset) {
-      el.innerHTML = txnEmptyHTML(
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.4-4.4"/></svg>',
-        'No results found',
-        'Try adjusting your filters or search term',
-        '', ''
-      );
+      const filtering = Boolean(search) || activeTxnFilter !== 'all' || activeTxnStatus !== 'all' || txnDateRange(activeTxnDate).from;
+      if (filtering) {
+        el.innerHTML = txnEmptyHTML(
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.4-4.4"/></svg>',
+          'No results found',
+          'Try adjusting your filters or search term',
+          '', ''
+        );
+      } else {
+        el.innerHTML = txnEmptyHTML(
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><path d="M12 5v14M5 12l7-7 7 7"/></svg>',
+          'No transactions yet',
+          'Make your first purchase below',
+          'Buy airtime now',
+          "openService('airtime')"
+        );
+      }
     } else {
       let lastGroup = null;
       txns.forEach(t => {

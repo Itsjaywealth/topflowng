@@ -227,7 +227,7 @@ test.describe('logged-in app shell', () => {
     await login(request, page);
     await page.goto('/');
     await expect(page.locator('#main-app')).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Buy a service' })).toHaveCount(1);
+    await expect(page.locator('h2', { hasText: 'All services' })).toHaveCount(1);
     await expect(page.locator('.service-grid')).toHaveCount(1);
     await expect(page.locator('#quickpay-grid')).toHaveCount(0);
     for (const active of ['Airtime', 'Data', 'Electricity', 'Cable TV', 'Exam PINs']) {
@@ -309,30 +309,27 @@ test.describe('logged-in app shell', () => {
     await expect(page.locator('#svc-airtime')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  test('support overlay has searchable categorized FAQ and chat/email actions', async ({ page, request }) => {
+  test('support chat panel opens with quick topics and responds', async ({ page, request }) => {
     await login(request, page);
     await page.goto('/');
     await page.evaluate(() => openSupport());
     await expect(page.locator('#support-overlay')).toHaveClass(/open/);
-    await expect(page.locator('#support-search')).toBeVisible();
-    await expect(page.locator('.support-faq .faq-item')).toHaveCount(16);
-    await expect(page.locator('.support-faq .support-faq-cat').first()).toBeVisible();
-    // search filters items and hides empty category headers
-    await page.locator('#support-search').fill('wallet');
-    await expect(page.locator('#faq-empty')).toBeHidden();
-    const visibleItems = await page.locator('#support-faq .faq-item:visible').count();
-    expect(visibleItems).toBeGreaterThan(0);
-    expect(visibleItems).toBeLessThan(16);
-    // chat action present and wired to tawk
-    await expect(page.locator('.chat-action')).toContainText('Chat with Support');
-    // quick help chips present and filter the FAQ
-    await expect(page.locator('.support-quick .quick-help')).toHaveCount(8);
-    await page.locator('.support-quick .quick-help').first().click();
-    await expect(page.locator('#support-search')).toHaveValue(/pending|Transaction/i);
-    await expect(page.locator('.support-actions button').nth(1)).toContainText('Email support');
-    // clear search restores all items
-    await page.locator('#support-search').fill('');
-    await expect(page.locator('#support-faq .faq-item:visible')).toHaveCount(16);
+    await expect(page.locator('#chat-body')).toBeVisible();
+    // Quick-topic chips present
+    const chips = page.locator('#chat-quick .chat-qr');
+    await expect(chips.first()).toBeVisible();
+    await expect(chips).toHaveCount(6);
+    // Picking a topic produces a bot response in the conversation
+    await chips.first().click();
+    await expect(page.locator('#chat-body .chat-bubble.user')).toHaveCount(1);
+    await expect(page.locator('#chat-body .chat-bubble.agent')).toHaveCount(2);
+    // Typing a message and pressing Enter also gets a reply
+    await page.locator('#chat-input').fill('What is your refund policy?');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#chat-body .chat-bubble.user')).toHaveCount(2);
+    await expect(page.locator('#chat-body .chat-bubble.agent')).toHaveCount(3);
+    // Footer surfaces the human email
+    await expect(page.locator('.chat-foot')).toContainText('hello@topflowng.com');
     await page.evaluate(() => closeSupport());
     await expect(page.locator('#support-overlay')).not.toHaveClass(/open/);
     // launcher opens the overlay and toggles aria-expanded
@@ -350,7 +347,7 @@ test.describe('logged-in app shell', () => {
     // Header close X is always visible and closes the panel
     await fab.click();
     await expect(page.locator('#support-overlay')).toHaveClass(/open/);
-    const closeBtn = page.locator('#support-close');
+    const closeBtn = page.locator('.chat-head-btn[aria-label="Close support"]').first();
     await expect(closeBtn).toBeVisible();
     await expect(closeBtn).toHaveAttribute('aria-label', 'Close support');
     // body scroll is locked while open
