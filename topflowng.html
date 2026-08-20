@@ -515,17 +515,60 @@ html.dark .marketing-nav{
 .preview-credit{color:#4ade80!important}
 .ledger-note{font:400 11px/1.5 var(--font);color:rgba(255,255,255,.28);margin-top:14px;position:relative}
 
-/* STATS BAR */
+/* STATS — 6 floating slides with live numbers */
 .marketing-stats{
-  display:flex;flex-wrap:wrap;justify-content:center;
-  background:var(--brand);gap:0}
+  position:relative;
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:clamp(12px,2vw,22px);
+  padding:clamp(40px,5vw,64px) clamp(20px,5vw,52px);
+  background:linear-gradient(180deg,#0a1b33 0%,#071526 100%);
+  overflow:hidden}
+.marketing-stats::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 60% at 20% 0%,color-mix(in srgb,var(--brand) 18%,transparent),transparent 70%),
+    radial-gradient(ellipse 50% 50% at 85% 100%,color-mix(in srgb,var(--brand) 14%,transparent),transparent 65%);
+  pointer-events:none}
+@media(min-width:640px){.marketing-stats{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1024px){.marketing-stats{grid-template-columns:repeat(6,1fr)}}
 .marketing-stat{
+  position:relative;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:36px 40px;gap:4px;flex:1 1 180px;
-  border-right:1px solid rgba(255,255,255,.18)}
-.marketing-stat:last-child{border-right:none}
-.marketing-stat-num{font:800 clamp(42px,6vw,72px)/1 var(--display);color:#fff;letter-spacing:-2px}
-.marketing-stat-label{font:600 clamp(14px,1.5vw,18px)/1 var(--font);color:rgba(255,255,255,.8);letter-spacing:.2px;margin-top:8px}
+  gap:10px;text-align:center;
+  padding:clamp(24px,2.6vw,34px) 18px;
+  min-width:0;
+  border-radius:22px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 24px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  animation:statFloat 6s ease-in-out infinite;
+  will-change:transform}
+.marketing-stat:nth-child(2){animation-delay:.5s}
+.marketing-stat:nth-child(3){animation-delay:1s}
+.marketing-stat:nth-child(4){animation-delay:1.5s}
+.marketing-stat:nth-child(5){animation-delay:2s}
+.marketing-stat:nth-child(6){animation-delay:2.5s}
+@keyframes statFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-10px)}}
+@media(prefers-reduced-motion:reduce){
+  .marketing-stat{animation:none}}
+.marketing-stat-num{
+  font:800 clamp(32px,4vw,48px)/1 var(--display);color:#fff;
+  letter-spacing:-1.5px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+  text-shadow:0 2px 14px rgba(0,0,0,.25)}
+.marketing-stat-label{
+  font:600 clamp(11px,1.3vw,13px)/1.4 var(--font);color:rgba(255,255,255,.78);
+  letter-spacing:.4px;text-transform:uppercase;max-width:180px}
+.marketing-stat-icon{
+  width:34px;height:34px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--brand) 26%,transparent);
+  border:1px solid color-mix(in srgb,var(--brand) 45%,transparent);
+  color:#fff;margin-bottom:2px}
+.marketing-stat-icon svg{width:17px;height:17px}
 
 /* TRUST CHIPS */
 .marketing-trust{
@@ -1869,6 +1912,40 @@ html.dark .btn-wa-share{color:#25D366!important}
     </aside>
     </div>
   </main>
+
+  <section class="marketing-stats" aria-label="TopFlowNG numbers" id="marketing-stats">
+    <div class="marketing-stat">
+      <span class="marketing-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/></svg></span>
+      <span class="marketing-stat-num" data-stat-prefix="" data-stat-suffix="+">0</span>
+      <span class="marketing-stat-label">Purchases processed</span>
+    </div>
+    <div class="marketing-stat">
+      <span class="marketing-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      <span class="marketing-stat-num" data-stat-prefix="" data-stat-suffix="+">0</span>
+      <span class="marketing-stat-label">Happy customers</span>
+    </div>
+    <div class="marketing-stat">
+      <span class="marketing-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+      <span class="marketing-stat-num" data-stat-prefix="₦" data-stat-suffix="M+">0</span>
+      <span class="marketing-stat-label">Airtime &amp; data delivered</span>
+    </div>
+    <div class="marketing-stat">
+      <span class="marketing-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg></span>
+      <span class="marketing-stat-num" data-stat-prefix="" data-stat-suffix="">0</span>
+      <span class="marketing-stat-label">Networks covered</span>
+    </div>
+    <div class="marketing-stat">
+      <span class="marketing-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+      <span class="marketing-stat-num" data-stat-prefix="" data-stat-suffix="">0</span>
+      <span class="marketing-stat-label">Avg delivery time</span>
+    </div>
+    <div class="marketing-stat">
+      <span class="marketing-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><rect x="3.5" y="13" width="4" height="5" rx="1.5"/><rect x="16.5" y="13" width="4" height="5" rx="1.5"/><path d="M20 18h1a1 1 0 0 1 0 2h-1M4 18H3a1 1 0 0 0 0 2h1M12 21v-1"/></svg></span>
+      <span class="marketing-stat-num" data-stat-prefix="" data-stat-suffix="%">0</span>
+      <span class="marketing-stat-label">Successful purchases</span>
+    </div>
+  </section>
+
   <section class="marketing-trust" aria-label="How payments are handled">
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Instant processing</span>
     <span class="trust-chip"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg> Transaction PIN</span>
@@ -6330,7 +6407,55 @@ init();
     bootOutage();
     wireReceiptCopy();
     wireLauncherBackdrop();
+    initMarketingStats();
     loadPlans().then(function () { renderMarketingRates(); });
+  }
+
+  /* Floating stats slides — numbers change live */
+  var statSequences = {
+    'Purchases processed': function () { return 12000 + Math.round(3200 * (Math.sin(Date.now() / 30000) + 1) / 2); },
+    'Happy customers': function () { return 1500 + Math.round(430 * (Math.cos(Date.now() / 26000) + 1) / 2); },
+    'Airtime & data delivered': function () { return 380 + Math.round(95 * (Math.sin(Date.now() / 22000) + 1) / 2); },
+    'Networks covered': function () { return 4 + Math.round((Math.sin(Date.now() / 18000) + 1) / 2); },
+    'Avg delivery time': function () { return 2 + Math.round((Math.cos(Date.now() / 14000) + 1) / 2); },
+    'Successful purchases': function () { return 97 + Math.round(3 * (Math.sin(Date.now() / 20000) + 1) / 2); }
+  };
+  var statCache = {};
+  function statVal(label) {
+    var fn = statSequences[label];
+    if (fn) return fn();
+    return statCache[label] || (statCache[label] = 0);
+  }
+  function initMarketingStats() {
+    var nums = document.querySelectorAll('.marketing-stat-num');
+    if (!nums.length) return;
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var animateTo = function (el, target, suffix) {
+      var start = 0;
+      var dur = reduceMotion ? 0 : 900;
+      var t0 = null;
+      function step(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1);
+        p = 1 - Math.pow(1 - p, 3);
+        var v = Math.round(start + (target - start) * p);
+        el.textContent = (el.dataset.statPrefix || '') + v.toLocaleString() + (suffix || '');
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    };
+    nums.forEach(function (el) {
+      var label = el.parentElement.querySelector('.marketing-stat-label');
+      var suffix = el.dataset.statSuffix || '';
+      var update = function () {
+        var target = statVal(label ? label.textContent.trim() : '');
+        if (el.__target === target) return;
+        el.__target = target;
+        animateTo(el, target, suffix);
+      };
+      update();
+      if (!reduceMotion) setInterval(update, 3000);
+    });
   }
 
   function seedBrands() {
