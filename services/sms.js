@@ -1,6 +1,5 @@
 'use strict';
 
-const axios = require('axios');
 const config = require('../config');
 const logger = require('./logger');
 
@@ -16,6 +15,7 @@ async function sendSms(to, message) {
     return { sent: false, reason: 'not_configured' };
   }
   try {
+    const axios = require('axios');
     const response = await axios.post(`${TERMII_BASE}/sms/send`, {
       api_key: config.sms.termiiApiKey,
       to,
