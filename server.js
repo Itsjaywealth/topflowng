@@ -1599,6 +1599,15 @@ app.get(['/terms', '/privacy', '/refund-policy', '/contact', '/about'], (req, re
   });
 });
 
+// ── Blog article routes ────────────────────────────────────────────────────
+const blogPaths = Array.from(BLOG_ARTICLES.keys());
+app.get(blogPaths, (req, res) => {
+  const file = BLOG_ARTICLES.get(req.path);
+  res.sendFile(path.join(__dirname, file), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'topflowng.html'));
 });
