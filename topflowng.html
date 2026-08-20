@@ -1851,7 +1851,7 @@ html.dark .btn-wa-share{color:#25D366!important}
     <div class="marketing-stat"><span class="marketing-stat-num">50K+</span><span class="marketing-stat-label">Transactions processed</span></div>
     <div class="marketing-stat"><span class="marketing-stat-num">12</span><span class="marketing-stat-label">Electricity DISCOs</span></div>
     <div class="marketing-stat"><span class="marketing-stat-num">4</span><span class="marketing-stat-label">Mobile networks</span></div>
-    <div class="marketing-stat"><span class="marketing-stat-num">&lt;5s</span><span class="marketing-stat-label">Average delivery</span></div>
+    <div class="marketing-stat"><span class="marketing-stat-num">&lt;5s</span><span class="marketing-stat-label">Lightning fast</span></div>
   </div>
 
   <section class="marketing-trust" aria-label="How payments are handled">
@@ -2230,12 +2230,12 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="hero-dots" id="hero-dots"></div>
     </div>
     <nav class="sidebar-nav" aria-label="Primary">
-      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg><span data-i18n="nav_home">Home</span></button>
-      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg><span data-i18n="nav_wallet">Wallet</span></button>
+      <button class="sidebar-nav-item active" id="side-nav-home" onclick="goTab('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.7V21h14V9.7"/><path d="M10 21v-6h4v6"/></svg>Home</button>
+      <button class="sidebar-nav-item" id="side-nav-wallet" onclick="goTab('wallet')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg>Wallet</button>
       <button class="sidebar-nav-item" id="side-nav-notifications" onclick="goTab('notifications')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Updates</button>
       <button class="sidebar-nav-item" id="side-nav-services" onclick="openService('airtime')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Services</button>
-      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span data-i18n="nav_history">History</span></button>
-      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span data-i18n="nav_account">Account</span></button>
+      <button class="sidebar-nav-item" id="side-nav-history" onclick="goTab('history')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>History</button>
+      <button class="sidebar-nav-item" id="side-nav-account" onclick="goTab('account')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>Account</button>
     </nav>
   </header>
 
@@ -2511,16 +2511,7 @@ html.dark .btn-wa-share{color:#25D366!important}
         </div>
       </div>
 
-      <div class="appearance-block">
-        <div class="appearance-label">Language</div>
-        <select onchange="setLanguage(this.value)" style="width:100%;min-height:40px;border:1px solid var(--border-subtle);border-radius:10px;padding:0 12px;font:500 13px/1 var(--font);">
-          <option value="en">🇬🇧 English</option>
-          <option value="ha">🇳🇬 Hausa</option>
-          <option value="yo">🇳🇬 Yoruba</option>
-          <option value="ig">🇳🇬 Igbo</option>
-          <option value="pcm">🇳🇬 Pidgin</option>
-        </select>
-      </div>
+      
 
       <!-- Notification preferences -->
       <div class="pin-section" id="notif-prefs-section">
@@ -2880,7 +2871,7 @@ html.dark .btn-wa-share{color:#25D366!important}
     <button type="button" class="chat-head-btn" onclick="closeSupport()" aria-label="Close support">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
-    <div class="chat-agent-avatar">TF</div>
+    <div class="chat-agent-avatar">TopFlow</div>
     <div class="chat-agent-info">
       <div class="chat-agent-name">TopFlowNG Support</div>
       <div class="chat-agent-status">Online · replies in minutes</div>
@@ -2893,8 +2884,8 @@ html.dark .btn-wa-share{color:#25D366!important}
   <!-- Messages -->
   <div class="chat-body" id="chat-body">
     <div class="chat-bubble-wrap">
-      <div class="bubble-avatar-sm">TF</div>
-      <div class="chat-bubble agent">👋 Hi! How can we help you today?</div>
+      <div class="bubble-avatar-sm">TopFlow</div>
+      <div class="chat-bubble agent">👋 Hey! What can I help you with today?</div>
     </div>
     <div class="chat-quick-wrap" id="chat-quick">
       <button class="chat-qr" onclick="chatPick('Transaction pending or failed')">Transaction issue</button>
@@ -2908,7 +2899,7 @@ html.dark .btn-wa-share{color:#25D366!important}
 
   <!-- Input -->
   <div class="chat-input-row">
-    <textarea class="chat-textarea" id="chat-input" placeholder="Type a message…" rows="1"
+    <textarea class="chat-textarea" id="chat-input" placeholder="Type a message..." rows="1"
       onkeydown="chatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
     <button class="chat-send" onclick="chatSend()" aria-label="Send message">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-11 11M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
@@ -2927,7 +2918,7 @@ html.dark .btn-wa-share{color:#25D366!important}
        </button>
      </div>
     <div class="support-title" id="support-title">Customer Support</div>
-    <div class="support-sub" id="support-sub">Hi 👋 How can we help you today?</div>
+    <div class="support-sub" id="support-sub">Hey 👋 What can I help you with today?</div>
 
     <div class="support-search">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -3456,40 +3447,6 @@ async function payInvoiceNow() {
   }
 }
 
-// ── MULTI-LANGUAGE ──────────────────────────────────────────────────────────
-let translations = {};
-let currentLang = localStorage.getItem('topflowng-lang') || 'en';
-
-async function loadTranslations() {
-  try {
-    const r = await fetch('/lang/translations.json');
-    translations = await r.json();
-    applyLanguage(currentLang);
-  } catch (e) { /* fall through to English */ }
-}
-
-function applyLanguage(lang) {
-  const t = translations[lang] || translations.en;
-  if (!t) return;
-  document.documentElement.lang = lang === 'en' ? 'en' : lang === 'ha' ? 'ha' : lang === 'yo' ? 'yo' : lang === 'ig' ? 'ig' : 'en';
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (t[key]) el.textContent = t[key];
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    if (t[key]) el.placeholder = t[key];
-  });
-  // Update switchers
-  document.querySelectorAll('.lang-switcher, select[onchange*="setLanguage"]').forEach(s => s.value = lang);
-}
-
-function setLanguage(lang) {
-  currentLang = lang;
-  localStorage.setItem('topflowng-lang', lang);
-  applyLanguage(lang);
-}
-
 // ── APP INIT ─────────────────────────────────────────────────────────────
 async function init() {
   // Check URL for password reset token
@@ -3826,16 +3783,12 @@ function txnHTML(t) {
   const amountText = failed ? fmt(t.amount) : `${t.type === 'credit' ? '+' : pending ? '' : '-'}${fmt(t.amount)}`;
   const maskedPhone = rawPhone ? rawPhone.slice(0, 4) + '•••' + rawPhone.slice(-4) : '';
   const time = fmtTime(t.created_at);
-  const date = new Date(t.created_at);
-  const isToday = new Date().toDateString() === date.toDateString();
-  const isYesterday = new Date(Date.now() - 86400000).toDateString() === date.toDateString();
-  const dateLabel = isToday ? 'Today' : isYesterday ? 'Yesterday' : `${date.getDate()} ${date.toLocaleString('en', { month: 'short' })}`;
   return `<div class="txn-item">
     <div class="txn-icon ${failed ? 'failed' : t.type}${providerLogo ? ' has-provider' : ''}">${providerLogo || (t.type === 'credit' ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5 12l7 7 7-7"/></svg>' : failed ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7M15.5 8.5l-7 7"/></svg>' : pending ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>' : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4M5 12l7-7 7 7"/></svg>')}</div>
     <div class="txn-info">
       <div class="txn-title">${escHtml(t.description.replace(/ — .*/, ''))}</div>
       ${maskedPhone ? `<div class="txn-recipient">${maskedPhone}</div>` : recipient ? `<div class="txn-recipient">${escHtml(recipient)}</div>` : ''}
-      <div class="txn-meta"><span class="txn-date">${dateLabel}, ${time}</span> ${transactionStatusPill(status)}</div>
+      <div class="txn-meta"><span class="txn-date">${time}</span> ${transactionStatusPill(status)}</div>
     </div>
     <div class="txn-amount ${failed ? 'failed' : t.type}">${amountText}</div>
   </div>`;
@@ -4427,12 +4380,12 @@ function openSupportFromTxn() {
 var _chatReady = false; // whether the greeting has already been rendered
 
 var _chatResponses = {
-  'Transaction pending or failed': 'If a transaction shows "Pending", please wait — it resolves automatically and your wallet is only debited after the provider confirms. If it shows "Failed", you were not charged. Check your transaction history for details, or email <strong>hello@topflowng.com</strong> with the reference number.',
-  'Airtime & Data': 'Airtime and data are delivered instantly after a successful payment. Make sure the recipient number is active and correct. If delivery is delayed beyond a few minutes, email <strong>hello@topflowng.com</strong> with the reference and we will investigate.',
-  'Electricity token': 'Your electricity token is shown immediately after a successful purchase — you can find it by tapping the transaction in your History. Tokens are also included in your downloadable receipt.',
-  'Cable TV subscription': 'Cable TV renewals are processed within seconds. Ensure your IUC/smart card number is entered correctly. For issues, email <strong>hello@topflowng.com</strong> with your IUC and the transaction reference.',
-  'Account or security issue': 'For password resets, go to the login screen and tap "Forgot password". For PIN setup, visit Account → Security. If you suspect unauthorised access, change your password immediately and email <strong>hello@topflowng.com</strong>.',
-  'Something else': 'No problem — please describe your issue below and we will get back to you as soon as possible. You can also reach us directly at <strong>hello@topflowng.com</strong>.'
+  'Transaction pending or failed': 'Hey! No need to worry — if a transaction shows "Pending", it means we are still waiting for the provider to confirm. Your wallet will not be debited until it goes through. If it shows "Failed", you were not charged at all. Check your transaction history for the full story, or send me your reference number and I will look into it for you.',
+  'Airtime & Data': 'Airtime and data usually arrive within seconds after payment. Double-check that the recipient number is correct and active. If it has been more than a few minutes, drop your reference number here and I will get it sorted.',
+  'Electricity token': 'Your token pops up right after a successful purchase — just tap the transaction in your History to see it. It is also in your downloadable receipt. Need help finding it? Let me know!',
+  'Cable TV subscription': 'Cable TV renewals go through in seconds. Make sure your IUC or smart card number is correct. If something is off, send me your IUC number and reference and I will help sort it out.',
+  'Account or security issue': 'No problem! For password resets, head to the login screen and tap "Forgot password". To set up your transaction PIN, go to Account → Security. If you think someone else accessed your account, change your password right away and email <strong>hello@topflowng.com</strong> so we can secure things.',
+  'Something else': "Sure, just tell me what is going on below and I will help as best I can. You can also reach us directly at <strong>hello@topflowng.com</strong> - we are here for you."
 };
 
 function _chatEsc(s) {
@@ -4446,7 +4399,7 @@ function _chatAppend(role, html, isHtml) {
   wrap.className = 'chat-bubble-wrap' + (role === 'user' ? ' user' : '');
   var content = isHtml ? html : _chatEsc(html);
   if (role === 'agent') {
-    wrap.innerHTML = '<div class="bubble-avatar-sm">TF</div><div class="chat-bubble agent">' + content + '</div>';
+    wrap.innerHTML = '<div class="bubble-avatar-sm">TopFlow</div><div class="chat-bubble agent">' + content + '</div>';
   } else {
     wrap.innerHTML = '<div class="chat-bubble user">' + content + '</div>';
   }
@@ -4459,7 +4412,7 @@ function _chatTyping() {
   if (!body) return null;
   var wrap = document.createElement('div');
   wrap.className = 'chat-bubble-wrap chat-typing-wrap';
-  wrap.innerHTML = '<div class="bubble-avatar-sm">TF</div><div class="chat-typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  wrap.innerHTML = '<div class="bubble-avatar-sm">TopFlow</div><div class="chat-typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
   body.appendChild(wrap);
   body.scrollTop = body.scrollHeight;
   return wrap;
@@ -4475,11 +4428,11 @@ function chatPick(topic) {
   var typer = _chatTyping();
   setTimeout(function () {
     if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
-    var resp = _chatResponses[topic] || 'We are here to help! Please describe your issue and our team will respond shortly. Email <strong>hello@topflowng.com</strong> for urgent matters.';
+    var resp = _chatResponses[topic] || "No worries - just tell me what is up and I will do my best to help. You can also reach us at <strong>hello@topflowng.com</strong>.";
     _chatAppend('agent', resp, true);
     // Follow-up
     setTimeout(function () {
-      _chatAppend('agent', 'Is there anything else I can help you with? Type your message below or email <strong>hello@topflowng.com</strong>.', true);
+      _chatAppend('agent', 'Anything else I can help with? Just type below or email <strong>hello@topflowng.com</strong> anytime.', true);
       var body = document.getElementById('chat-body');
       if (body) body.scrollTop = body.scrollHeight;
       // Focus input
@@ -4500,7 +4453,7 @@ function chatSend() {
   var typer = _chatTyping();
   setTimeout(function () {
     if (typer && typer.parentNode) typer.parentNode.removeChild(typer);
-    _chatAppend('agent', 'Thanks for your message! Our team will get back to you shortly. For the fastest response, you can also email us at <strong>hello@topflowng.com</strong>.', true);
+    _chatAppend('agent', "Got it! Someone from the team will get back to you soon. If it is urgent, ping us at <strong>hello@topflowng.com</strong> and we will jump on it.", true);
     var body = document.getElementById('chat-body');
     if (body) body.scrollTop = body.scrollHeight;
   }, 1000);
@@ -6231,7 +6184,6 @@ init();
     wireReceiptCopy();
     wireLauncherBackdrop();
     loadPlans().then(function () { renderMarketingRates(); });
-    loadTranslations();
   }
 
   function seedBrands() {

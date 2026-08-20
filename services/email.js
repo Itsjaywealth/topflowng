@@ -59,8 +59,12 @@ async function sendViaSmtp({ to, subject, html, replyTo }) {
 
 async function sendEmail({ to, subject, html, replyTo }) {
   if (isSmtpConfigured()) {
-    await sendViaSmtp({ to, subject, html, replyTo });
-    return;
+    try {
+      await sendViaSmtp({ to, subject, html, replyTo });
+      return;
+    } catch (err) {
+      logger.warn("SMTP delivery failed, falling back to API", { message: err.message });
+    }
   }
 
   const apiKey = config.resend.apiKey;
