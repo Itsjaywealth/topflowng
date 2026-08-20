@@ -3589,16 +3589,8 @@ function setupHeroSlider() {
   show(0);
   timer = setTimeout(advance, 4000);
   document.getElementById('preview-slides')?.addEventListener('mouseenter', () => clearTimeout(timer));
-  document.getElementById('preview-slides')?.addEventListener('mouseleave', () => { timer = setTimeout(advance, 2000); });
-}
-    dotsWrap.appendChild(dot);
-  });
-  const advance = () => show(current + 1);
-  const restart = () => { if (timer) clearInterval(timer); timer = setInterval(advance, 7000); };
-  dotsWrap.addEventListener('mouseenter', () => { if (timer) clearInterval(timer); });
-  dotsWrap.addEventListener('mouseleave', restart);
-  restart();
-}
+document.getElementById('preview-slides')?.addEventListener('mouseleave', () => { timer = setTimeout(advance, 2000); });
+  }
 
 async function checkPendingOrders() {
   try {
