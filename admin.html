@@ -553,6 +553,42 @@ tbody tr:hover td{background:var(--mist)}
         <div class="chart-container" id="chart-growth" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px"></div>
       </div>
 
+      <!-- Revenue trend (30 days) -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Revenue trend (30 days)</div>
+          <div class="section-meta">Daily credited vs debited</div>
+        </div>
+        <div class="chart-container" id="chart-revenue-trend" style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Top products -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Top products (90 days)</div>
+          <div class="section-meta">Best-selling services</div>
+        </div>
+        <div class="chart-container" id="chart-top-products" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+
+      <!-- User growth -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">New users (30 days)</div>
+          <div class="section-meta" id="stat-total-users">Total: —</div>
+        </div>
+        <div class="chart-container" id="chart-user-growth" style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Hourly activity today -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Hourly activity today</div>
+          <div class="section-meta">Transactions per hour</div>
+        </div>
+        <div class="chart-container" id="chart-hourly" style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;max-height:250px;overflow-y:auto"></div>
+      </div>
+
       <!-- Financial reconciliation -->
       <div class="section">
         <div class="section-header">
@@ -865,6 +901,7 @@ function initApp() {
   loadTransactions();
   loadUsers();
   loadVtuOrders();
+  loadAnalytics();
 }
 
 // ── OVERVIEW ───────────────────────────────────────────────────────────────
@@ -937,6 +974,82 @@ function renderGrowthChart(stats) {
       <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(today/maxVal*100).toFixed(1)}%;background:var(--amber)"></div></div>
       <div class="chart-bar-value">${num(today)}</div>
     </div>`;
+}
+
+// ── ANALYTICS ─────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  loadRevenueTrend();
+  loadTopProducts();
+  loadUserGrowth();
+  loadHourlyActivity();
+}
+
+async function loadRevenueTrend() {
+  try {
+    const r = await apiFetch('/api/admin/analytics/revenue-trend');
+    const el = document.getElementById('chart-revenue-trend');
+    if (!el) return;
+    const days = r.days || [];
+    el.innerHTML = days.length ? days.map(d => `
+      <div class="chart-bar-group" style="grid-template-columns:90px 1fr 90px">
+        <div class="chart-bar-label">${d.day.slice(5)}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.min((parseFloat(d.debited||0) / Math.max(...days.map(x=>parseFloat(x.debited||0)),1)) * 100, 100)}%;background:var(--green-2)"></div></div>
+        <div class="chart-bar-value">₦${fmt(d.debited||0)}</div>
+      </div>`).join('') : '<div style="text-align:center;color:var(--text-3);padding:20px">No data yet</div>';
+  } catch(e) { console.error('Revenue trend error:', e.message); }
+}
+
+async function loadTopProducts() {
+  try {
+    const r = await apiFetch('/api/admin/analytics/top-products');
+    const el = document.getElementById('chart-top-products');
+    if (!el) return;
+    const prods = r.products || [];
+    const maxCount = Math.max(...prods.map(p=>parseInt(p.count)), 1);
+    el.innerHTML = prods.length ? prods.map(p => `
+      <div class="chart-bar-group" style="grid-template-columns:110px 1fr 80px">
+        <div class="chart-bar-label" style="text-transform:capitalize">${p.service_type}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(parseInt(p.count)/maxCount*100).toFixed(1)}%;background:${p.service_type==='airtime'?'var(--green-strong)':p.service_type==='data'?'var(--green-2)':p.service_type==='electricity'?'var(--amber)':'var(--blue)'}"></div></div>
+        <div class="chart-bar-value">${num(p.count)}</div>
+      </div>`).join('') : '<div style="text-align:center;color:var(--text-3);padding:20px">No orders yet</div>';
+  } catch(e) { console.error('Top products error:', e.message); }
+}
+
+async function loadUserGrowth() {
+  try {
+    const r = await apiFetch('/api/admin/analytics/user-growth');
+    document.getElementById('stat-total-users').textContent = 'Total: ' + num(r.total || 0);
+    const el = document.getElementById('chart-user-growth');
+    if (!el) return;
+    const days = r.days || [];
+    const maxNew = Math.max(...days.map(d=>parseInt(d.new_users)), 1);
+    el.innerHTML = days.length ? days.map(d => `
+      <div class="chart-bar-group" style="grid-template-columns:90px 1fr 60px">
+        <div class="chart-bar-label">${d.day.slice(5)}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(parseInt(d.new_users)/maxNew*100).toFixed(1)}%;background:var(--green-strong)"></div></div>
+        <div class="chart-bar-value">${num(d.new_users)}</div>
+      </div>`).join('') : '<div style="text-align:center;color:var(--text-3);padding:20px">No data yet</div>';
+  } catch(e) { console.error('User growth error:', e.message); }
+}
+
+async function loadHourlyActivity() {
+  try {
+    const r = await apiFetch('/api/admin/analytics/hourly-activity');
+    const el = document.getElementById('chart-hourly');
+    if (!el) return;
+    const hours = r.hours || [];
+    const maxH = Math.max(...hours.map(h=>parseInt(h.transactions)), 1);
+    const full = Array.from({length:24}, (_,i) => {
+      const h = hours.find(x => parseInt(x.hour) === i);
+      return { hour: i, transactions: h ? parseInt(h.transactions) : 0, completed: h ? parseInt(h.completed) : 0 };
+    });
+    el.innerHTML = full.map(h => `
+      <div class="chart-bar-group" style="grid-template-columns:50px 1fr 40px">
+        <div class="chart-bar-label" style="font-size:11px">${String(h.hour).padStart(2,'0')}:00</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(h.transactions/maxH*100).toFixed(1)}%;background:${h.transactions > 0 ? 'var(--green-2)' : 'var(--surface-muted)'}"></div></div>
+        <div class="chart-bar-value" style="font-size:11px">${h.transactions||''}</div>
+      </div>`).join('');
+  } catch(e) { console.error('Hourly activity error:', e.message); }
 }
 
 async function loadReconciliation() {

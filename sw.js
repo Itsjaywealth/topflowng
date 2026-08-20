@@ -1,10 +1,8 @@
-// TopFlowNG Service Worker v8
-// Network-first for every /api/ request (never cached — tokens and private
-// responses are never stored). Navigations are network-only so a previously
-// cached app shell can never hide a deployment.
-// Cache-first for immutable static assets only. skipWaiting + clients.claim
-// mean a new version takes over on the next load — no stale-asset trap.
-const CACHE = 'topflowng-v9';
+// TopFlowNG Service Worker v10
+// Network-first for every /api/ request (never cached). Navigations are
+// network-only. Cache-first for immutable static assets. Push notifications
+// for purchase confirmations. skipWaiting + clients.claim for instant updates.
+const CACHE = 'topflowng-v10';
 const STATIC = [
   '/icons/icon-192.png?v=2',
   '/icons/icon-512.png?v=2',
@@ -34,6 +32,8 @@ const STATIC = [
   '/assets/providers/gotv.png',
   '/assets/providers/startimes.png',
   '/assets/providers/waec.png',
+  '/public/blog/index.html',
+  '/public/blog/how-to-buy-mtn-data.html',
 ];
 
 self.addEventListener('install', e => {
@@ -52,19 +52,13 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-
-  // Only same-origin requests are managed here; cross-origin (fonts, Paystack,
-  // AdSense) are passed straight through so we never touch third-party data.
   if (url.origin !== self.location.origin) return;
 
-  // Always network-first for API calls. NEVER cache — responses may contain
-  // wallet balances, tokens, or private data.
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(fetch(e.request).catch(() => new Response('{"error":"Offline"}', { headers: { 'Content-Type': 'application/json' }, status: 503 })));
     return;
   }
 
-  // Private/developer routes are never served from cache.
   if (
     url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml' ||
     url.pathname === '/admin.html' || url.pathname === '/bizflow.html'
@@ -73,14 +67,11 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Never cache or fall back for page navigations. An installed PWA must show
-  // the current server-rendered shell on every successful load.
   if (e.request.mode === 'navigate') {
     e.respondWith(fetch(e.request));
     return;
   }
 
-  // Cache-first for static assets
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request).then(res => {
       if (res && res.ok) {
@@ -90,4 +81,26 @@ self.addEventListener('fetch', e => {
       return res;
     }))
   );
+});
+
+// Push notification support
+self.addEventListener('push', e => {
+  if (!e.data) return;
+  try {
+    const data = e.data.json();
+    const title = data.title || 'TopFlowNG';
+    const options = {
+      body: data.body || '',
+      icon: '/icons/icon-192.png?v=2',
+      badge: '/icons/favicon-32.png',
+      data: { url: data.url || '/' },
+    };
+    e.waitUntil(self.registration.showNotification(title, options));
+  } catch {}
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/';
+  e.waitUntil(clients.openWindow(url));
 });
