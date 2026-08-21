@@ -28,6 +28,35 @@ const { sendError } = require('../lib/errors');
 const { normalizeNigerianPhone } = require('../lib/validate');
 const { validate, airtimeSchema, dataSchema, cableSchema, electricitySchema, examPinSchema, rechargePinSchema } = require('../lib/schemas');
 const Sentry = require('@sentry/node');
+
+// ── Renewal reminder metadata ────────────────────────────────────────────────
+// Derives validity days STRICTLY from the catalogue plan name (e.g.
+// "1GB — 30 days"). When the catalogue does not state a validity window the
+// value stays null and no renewal date is assumed. Fire-and-forget: renewal
+// bookkeeping must never affect a purchase response.
+function parseValidityDaysFromPlanName(planName) {
+  const m = /(\d+)\s*days?\b/i.exec(String(planName || ''));
+  const n = m ? parseInt(m[1], 10) : NaN;
+  return Number.isFinite(n) && n > 0 && n <= 365 ? n : null;
+}
+
+function recordRenewalMetaSafe({ userId, reference, serviceType, provider = null, planCode = null, planName = null }) {
+  try {
+    setImmediate(() => {
+      db.recordRenewalMeta({
+        userId,
+        reference,
+        serviceType,
+        provider,
+        planLabel: planName,
+        planCode,
+        // Cable catalogues do not state a cycle length — leave null (never guess).
+        validityDays: serviceType === 'data' ? parseValidityDaysFromPlanName(planName) : null,
+      }).catch(() => {});
+    });
+  } catch { /* never propagate */ }
+}
+
 const cache = require('../lib/cache');
 
 const router = express.Router();
@@ -224,6 +253,10 @@ router.post('/data', authMiddleware, apiLimiter, purchasesGuard, validate(dataSc
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Data', description: desc, amount: finalDebit, reference: requestId, newBalance: result.balance });
+      recordRenewalMetaSafe({
+        userId: req.user.id, reference: requestId, serviceType: 'data',
+        provider: network, planCode, planName: product?.plan?.name || planCode,
+      });
       const body = { success: true, message: `Data bundle activated for ${phone}`, balance: result.balance, reference: requestId, orderId: result.orderId };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);
@@ -289,6 +322,10 @@ router.post('/cable', authMiddleware, apiLimiter, purchasesGuard, validate(cable
     if (result.outcome === 'success') {
       const user = await db.findUserById(req.user.id);
       sendPurchaseEmail(user.email, user.full_name, { service: 'Cable TV', description: desc, amount: cost, reference: requestId, newBalance: result.balance });
+      recordRenewalMetaSafe({
+        userId: req.user.id, reference: requestId, serviceType: 'cable',
+        provider, planCode, planName: product?.plan?.name || planCode,
+      });
       const body = { success: true, message: `${provider} subscription activated`, balance: result.balance, reference: requestId, orderId: result.orderId };
       await recordRequest({ requestId, statusCode: 200, body, isIdempotent });
       return res.json(body);

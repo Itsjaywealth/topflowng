@@ -10,6 +10,8 @@
 
 require('dotenv').config();
 
+const crypto = require('crypto');
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProduction = NODE_ENV === 'production';
 
@@ -49,6 +51,31 @@ const config = {
     secret: requireSecret('JWT_SECRET') || 'dev-insecure-jwt-secret-change-me',
     expiresIn: str(process.env.JWT_EXPIRES_IN, '7d'),
   },
+
+  // Outbound automation event bus (n8n webhooks, BizFlowNG sync).
+  events: {
+    timeoutMs: num(process.env.EVENT_TIMEOUT_MS, 10000),
+    deliverySweepMs: num(process.env.EVENT_DELIVERY_SWEEP_MS, 60 * 1000),
+    dormantDays: num(process.env.DORMANT_DAYS, 30),
+    dormantBatchLimit: num(process.env.DORMANT_BATCH_LIMIT, 100),
+    renewalWindowDays: num(process.env.RENEWAL_WINDOW_DAYS, 3),
+  },
+
+  // BizFlowNG cross-app integration (expense sync). The API key each customer
+  // links is encrypted at rest with a key derived from ENCRYPTION_KEY.
+  bizflow: {
+    apiUrl: str(process.env.BIZFLOWNG_API_URL, ''),
+    verifyPath: str(process.env.BIZFLOWNG_VERIFY_PATH, '/api/integration/verify'),
+    syncPath: str(process.env.BIZFLOWNG_SYNC_PATH, '/api/integration/expenses'),
+    encryptionKey: (() => {
+      const raw = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || '';
+      return crypto.createHash('sha256').update(`topflowng:bizflow-link:${raw}`).digest();
+    })(),
+  },
+
+  // Approved TopFlowNG categories that may sync into BizFlowNG as expenses.
+  bizflowSyncCategories: ['electricity', 'airtime', 'data', 'cable', 'exam-pin', 'other'],
+
 
   rateLimit: {
     authWindowMs: num(process.env.AUTH_RATE_WINDOW_MS, 15 * 60 * 1000),

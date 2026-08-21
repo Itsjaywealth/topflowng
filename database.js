@@ -27,6 +27,18 @@ const pool = new Pool({
 
 const SALT_ROUNDS = 12;
 
+// ── Automation event emission (safe hook) ────────────────────────────────────
+// Fire-and-forget bridge to the outbound event bus. Lazy-requires the events
+// service (avoids a require cycle) and swallows all errors: automation must
+// never break a customer flow or a financial transaction.
+function emitSafe(type, payload, opts) {
+  try {
+    setImmediate(() => {
+      require('./services/events').emit(type, payload, opts || {}).catch(() => {});
+    });
+  } catch { /* never propagate */ }
+}
+
 // ── Schema Init ───────────────────────────────────────────────────────────────
 async function initDB() {
   const client = await pool.connect();
@@ -374,6 +386,14 @@ async function createVtuAttempt({ requestId, userId, serviceType, amount, descri
      RETURNING *`,
     [requestId, userId, serviceType, amount, description]
   );
+  emitSafe('topflow.transaction.created', {
+    reference: rows[0].request_id,
+    user_id: userId,
+    service_type: serviceType,
+    amount: Number(amount),
+    description,
+    mode: 'wallet',
+  }, { entityType: 'transaction', entityId: rows[0].request_id });
   return rows[0];
 }
 
@@ -393,6 +413,14 @@ async function createDirectOrder({ requestId, userId, serviceType, amount, descr
      RETURNING *`,
     [requestId, userId, serviceType, amount, description, paymentReference, requestPayload ? JSON.stringify(requestPayload) : null]
   );
+  emitSafe('topflow.transaction.created', {
+    reference: rows[0].request_id,
+    user_id: userId,
+    service_type: serviceType,
+    amount: Number(amount),
+    description,
+    mode: 'direct',
+  }, { entityType: 'transaction', entityId: rows[0].request_id });
   return rows[0];
 }
 
@@ -586,6 +614,22 @@ async function completeVtuOrder(requestId, { allowPending = false } = {}) {
       [order.id, transactionId]
     );
     await client.query('COMMIT');
+    emitSafe('topflow.transaction.success', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      description: order.description,
+      provider_order_id: order.provider_order_id,
+    }, { entityType: 'transaction', entityId: order.request_id });
+    emitSafe('topflow.receipt.ready', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      receipt_available: true,
+      has_token: Boolean(order.provider_order_id) && /electricity|exam/i.test(order.service_type || ''),
+    }, { entityType: 'transaction', entityId: order.request_id });
     return { alreadyCompleted: false, balance: parseFloat(wallet.rows[0].wallet), order };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -625,6 +669,14 @@ async function markVtuOrderPending(requestId) {
       [order.id, transactionId]
     );
     await client.query('COMMIT');
+    emitSafe('topflow.transaction.pending', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      description: order.description,
+      provider_order_id: order.provider_order_id,
+    }, { entityType: 'transaction', entityId: order.request_id });
     return order;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -676,6 +728,15 @@ async function markVtuOrderFailed(requestId, { allowPending = false, failureSuff
       [order.id, transactionId]
     );
     await client.query('COMMIT');
+    emitSafe('topflow.transaction.failed', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      description: order.description,
+      provider_order_id: order.provider_order_id,
+      reason: failureSuffix.replace(/^[^a-z]*/, ''),
+    }, { entityType: 'transaction', entityId: order.request_id });
     return order;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -732,6 +793,23 @@ async function completeDirectOrder(requestId, { paymentReference = null } = {}) 
       [order.id, transactionId, paymentReference ? 'paid' : null]
     );
     await client.query('COMMIT');
+    emitSafe('topflow.transaction.success', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      description: order.description,
+      provider_order_id: order.provider_order_id,
+      mode: 'direct',
+    }, { entityType: 'transaction', entityId: order.request_id });
+    emitSafe('topflow.receipt.ready', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      receipt_available: true,
+      has_token: Boolean(order.provider_order_id) && /electricity|exam/i.test(order.service_type || ''),
+    }, { entityType: 'transaction', entityId: order.request_id });
     return { alreadyCompleted: false, order };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -1152,6 +1230,12 @@ async function createNotification({ userId, category = 'transaction', title, mes
      RETURNING id, user_id, category, title, message, link, read_at, created_at`,
     [userId, category, title, message, link]
   );
+  emitSafe('topflow.customer.notified', {
+    user_id: userId,
+    notification_id: rows[0].id,
+    category,
+    title,
+  }, { entityType: 'notification', entityId: String(rows[0].id) });
   return rows[0];
 }
 
@@ -1630,10 +1714,205 @@ async function getFinancialReconciliation() {
   };
 }
 
+// ── Automation: dormant customers, renewals, BizFlowNG sync, RAG, support ────
+
+// Customers with no completed purchase in the last `days` days (account older
+// than the same window). Used for reactivation campaigns via n8n.
+async function getDormantCustomers({ days = 30, limit = 100 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT u.id, u.full_name, u.email, u.phone,
+            MAX(t.created_at) AS last_purchase_at, u.created_at AS registered_at
+     FROM users u
+     LEFT JOIN transactions t ON t.user_id = u.id AND t.type = 'debit' AND t.status = 'completed'
+     WHERE u.created_at <= NOW() - ($1 || ' days')::interval
+     GROUP BY u.id
+     HAVING COALESCE(MAX(t.created_at), u.created_at) <= NOW() - ($1 || ' days')::interval
+     ORDER BY COALESCE(MAX(t.created_at), u.created_at)
+     LIMIT $2`,
+    [String(days), limit]
+  );
+  return rows;
+}
+
+// Renewal metadata. validityDays may be null — never guess a renewal date.
+async function recordRenewalMeta({ userId, reference, serviceType, provider = null, planLabel = null, planCode = null, validityDays = null }) {
+  const due = validityDays ? `NOW() + (${Number(validityDays)} || ' days')::interval` : 'NULL';
+  const { rows } = await pool.query(
+    `INSERT INTO renewal_meta (user_id, reference, service_type, provider, plan_label, plan_code, validity_days, renewal_due_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, ${due})
+     ON CONFLICT (reference) DO NOTHING
+     RETURNING id`,
+    [userId, reference, serviceType, provider, planLabel, planCode, validityDays]
+  );
+  return rows[0] || null;
+}
+
+async function getDueRenewals({ windowDays = 3, limit = 100 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT r.*, u.email, u.full_name
+     FROM renewal_meta r JOIN users u ON u.id = r.user_id
+     WHERE r.renewal_due_at IS NOT NULL
+       AND r.reminded_at IS NULL
+       AND r.renewal_due_at <= NOW() + ($1 || ' days')::interval
+     ORDER BY r.renewal_due_at
+     LIMIT $2`,
+    [String(windowDays), limit]
+  );
+  return rows;
+}
+
+async function markRenewalReminded(reference) {
+  await pool.query('UPDATE renewal_meta SET reminded_at = NOW() WHERE reference = $1', [reference]);
+}
+
+// ── BizFlowNG link + expense sync queue ──────────────────────────────────────
+async function getBizflowLink(userId) {
+  const { rows } = await pool.query(
+    'SELECT id, user_id, bizflow_business_id, bizflow_base_url, key_fingerprint, status, linked_at, verified_at FROM bizflow_links WHERE user_id = $1',
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+async function upsertBizflowLink({ userId, businessId, baseUrl = null, apiKeyEnc, keyFingerprint, status = 'unverified' }) {
+  const { rows } = await pool.query(
+    `INSERT INTO bizflow_links (user_id, bizflow_business_id, bizflow_base_url, api_key_enc, key_fingerprint, status)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (user_id) DO UPDATE SET
+       bizflow_business_id = EXCLUDED.bizflow_business_id,
+       bizflow_base_url = EXCLUDED.bizflow_base_url,
+       api_key_enc = EXCLUDED.api_key_enc,
+       key_fingerprint = EXCLUDED.key_fingerprint,
+       status = EXCLUDED.status,
+       verified_at = NULL,
+       linked_at = NOW()
+     RETURNING id, user_id, bizflow_business_id, bizflow_base_url, key_fingerprint, status, linked_at, verified_at`,
+    [userId, businessId, baseUrl, apiKeyEnc, keyFingerprint, status]
+  );
+  return rows[0];
+}
+
+async function updateBizflowLinkStatus(userId, status) {
+  const { rows } = await pool.query(
+    `UPDATE bizflow_links SET status = $2, verified_at = CASE WHEN $2 = 'active' THEN NOW() ELSE verified_at END
+     WHERE user_id = $1 RETURNING *`,
+    [userId, status]
+  );
+  return rows[0] || null;
+}
+
+async function getBizflowLinkSecret(userId) {
+  const { rows } = await pool.query('SELECT api_key_enc, bizflow_base_url, bizflow_business_id, status FROM bizflow_links WHERE user_id = $1', [userId]);
+  return rows[0] || null;
+}
+
+async function deleteBizflowLink(userId) {
+  await pool.query('DELETE FROM bizflow_links WHERE user_id = $1', [userId]);
+}
+
+// Enqueue an approved transaction for BizFlowNG expense sync. The UNIQUE
+// reference constraint makes this idempotent — double submits are no-ops.
+async function enqueueBizflowSync({ userId, reference, category, amount, description = null }) {
+  const { rows } = await pool.query(
+    `INSERT INTO bizflow_syncs (user_id, reference, category, amount, description)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (reference) DO NOTHING
+     RETURNING id, reference, category, amount, description, status, created_at`,
+    [userId, reference, category, amount, description]
+  );
+  return rows[0] || null; // null → already queued/synced
+}
+
+async function getBizflowSyncsForDelivery({ limit = 25 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT s.id, s.user_id, s.reference, s.category, s.amount, s.description, s.attempts,
+            l.bizflow_business_id, l.bizflow_base_url, l.api_key_enc
+     FROM bizflow_syncs s
+     JOIN bizflow_links l ON l.user_id = s.user_id AND l.status = 'active'
+     WHERE s.status = 'queued' AND (s.next_retry_at IS NULL OR s.next_retry_at <= NOW())
+     ORDER BY s.created_at
+     LIMIT $1`,
+    [limit]
+  );
+  return rows;
+}
+
+async function markBizflowSyncResult(id, { synced = false, bizflowExpenseId = null, error = null, dead = false } = {}) {
+  if (synced) {
+    await pool.query(
+      `UPDATE bizflow_syncs SET status = 'synced', bizflow_expense_id = $2, synced_at = NOW(),
+             next_retry_at = NULL, last_error = NULL, attempts = attempts + 1 WHERE id = $1`,
+      [id, bizflowExpenseId]
+    );
+  } else {
+    await pool.query(
+      `UPDATE bizflow_syncs SET status = $2, attempts = attempts + 1, last_error = $3,
+             next_retry_at = CASE WHEN $2 = 'failed' THEN NOW() + ('5 minutes'::interval * LEAST(attempts + 1, 12)) ELSE NULL END
+       WHERE id = $1`,
+      [id, dead ? 'failed' : 'queued', (error || '').slice(0, 400)]
+    );
+  }
+}
+
+async function getBizflowSyncsByUser(userId, { limit = 50 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT reference, category, amount, description, status, bizflow_expense_id, created_at, synced_at
+     FROM bizflow_syncs WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit]
+  );
+  return rows;
+}
+
+// ── RAG-safe customer-scoped retrieval ───────────────────────────────────────
+// Deliberately narrow column list: never tokens, PINs, credentials or other
+// customers' rows. Token values stay behind the receipt flow only.
+async function getRagTransactions(userId, { limit = 20, offset = 0, status = null, serviceType = null } = {}) {
+  const clauses = ['user_id = $1'];
+  const params = [userId];
+  if (status) { params.push(status); clauses.push(`status = $${params.length}`); }
+  if (serviceType) { params.push(serviceType); clauses.push(`service_type ILIKE $${params.length}`); }
+  params.push(Math.min(limit, 50));
+  params.push(Number(offset) || 0);
+  const { rows } = await pool.query(
+    `SELECT request_id AS reference, service_type, amount, description, status,
+            provider_order_id IS NOT NULL AS has_provider_reference,
+            created_at, updated_at
+     FROM vtu_orders WHERE ${clauses.join(' AND ')}
+     ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+  return rows;
+}
+
+async function getRagTransactionByReference(userId, reference) {
+  const { rows } = await pool.query(
+    `SELECT request_id AS reference, service_type, amount, description, status,
+            provider_order_id, reconcile_attempts,
+            provider_order_id IS NOT NULL AS has_provider_reference,
+            created_at, updated_at
+     FROM vtu_orders WHERE user_id = $1 AND request_id = $2`,
+    [userId, reference]
+  );
+  return rows[0] || null;
+}
+
+// ── Support escalations ──────────────────────────────────────────────────────
+async function createSupportTicket({ userId, subject, message = null, txnReference = null }) {
+  const { rows } = await pool.query(
+    `INSERT INTO support_tickets (user_id, subject, message, txn_reference)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, user_id, subject, message, txn_reference, status, created_at`,
+    [userId, subject, message, txnReference]
+  );
+  return rows[0];
+}
+
 module.exports = {
+  pool,
   initDB,
   closePool,
   ping,
+
   findUserByEmail,
   findUserByPhone,
   findUserById,
@@ -1712,4 +1991,20 @@ module.exports = {
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,
+  getDormantCustomers,
+  recordRenewalMeta,
+  getDueRenewals,
+  markRenewalReminded,
+  getBizflowLink,
+  upsertBizflowLink,
+  updateBizflowLinkStatus,
+  getBizflowLinkSecret,
+  deleteBizflowLink,
+  enqueueBizflowSync,
+  getBizflowSyncsForDelivery,
+  markBizflowSyncResult,
+  getBizflowSyncsByUser,
+  getRagTransactions,
+  getRagTransactionByReference,
+  createSupportTicket,
 };

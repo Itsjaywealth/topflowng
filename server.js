@@ -915,6 +915,59 @@ const notificationsRouter = require('./routes/notifications');
 const push = require('./services/push');
 app.use('/api/notifications', notificationsRouter);
 
+// ── Automation & integration APIs ────────────────────────────────────────────
+// /api/internal/automation surface: event log, webhook endpoints, renewals,
+// dormant customers, BizFlowNG sync queue, audit tail — all read-only or
+// subscription management, guarded by INTERNAL_API_KEY.
+app.use('/api/internal', require('./routes/automation').router);
+// RAG-safe customer-scoped support data (customer JWT).
+app.use('/api/rag', require('./routes/rag'));
+// BizFlowNG account linking + explicit expense sync opt-in (customer JWT).
+app.use('/api/bizflow', require('./routes/bizflow'));
+
+// ── Support escalation (chat → human handoff) ───────────────────────────────
+// Creates a ticket for the ops team and notifies the customer. The chatbot
+// stays authoritative for instant answers; this is the explicit escape hatch.
+app.post('/api/support/escalate', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const subject = String((req.body || {}).subject || '').trim();
+    const message = String((req.body || {}).message || '').trim();
+    const txnReference = String((req.body || {}).reference || '').trim() || null;
+    if (subject.length < 3) return sendError(res, 400, 'Please describe your issue in a few words');
+    if (message.length > 4000) return sendError(res, 400, 'Message too long');
+    const events = require('./services/events');
+    const ticket = await db.createSupportTicket({
+      userId: req.user.id,
+      subject: subject.slice(0, 200),
+      message: message ? message.slice(0, 4000) : null,
+      txnReference,
+    });
+    await events.emit('topflow.support.escalated', {
+      ticket_id: ticket.id,
+      user_id: req.user.id,
+      subject: ticket.subject,
+      txn_reference: txnReference,
+    }, { entityType: 'support_ticket', entityId: ticket.id });
+    await db.createNotification({
+      userId: req.user.id,
+      category: 'security',
+      title: 'Support request received',
+      message: `Our team has your request "${ticket.subject}" and will reply by email shortly.`,
+      link: null,
+    });
+    await events.audit('support.ticket.created', {
+      actorType: 'customer', actorId: req.user.id,
+      entityType: 'support_ticket', entityId: ticket.id,
+      metadata: { subject: ticket.subject, txn_reference: txnReference },
+      ip: req.ip,
+    });
+    res.status(201).json({ ok: true, ticket_id: ticket.id, status: ticket.status });
+  } catch (err) {
+    logger.error('support escalation failed', { message: err.message });
+    sendError(res, 500, 'Failed to create support request');
+  }
+});
+
 // ── Push Notification Subscription ─────────────────────────────────────────
 app.post('/api/push/subscribe', authMiddleware, async (req, res) => {
   try {
@@ -977,6 +1030,16 @@ async function reconcileVtuOrder(requestId) {
     logger.warn('VTPass pending order failed on reconciliation', { requestId });
   } else {
     logger.info('VTPass pending order remains pending', { requestId });
+  }
+
+  if (provider.outcome === 'success' || provider.outcome === 'failed') {
+    require('./services/events').emit('topflow.transaction.reconciled', {
+      reference: order.request_id,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      outcome: provider.outcome,
+    }, { entityType: 'transaction', entityId: order.request_id }).catch(() => {});
   }
 
   const updated = await db.getVtuOrderByRequestId(requestId);
@@ -2056,6 +2119,80 @@ async function start() {
   opsTimer.unref();
   const opsFirst = setTimeout(() => { opsWatchdog(); }, 5000);
   opsFirst.unref();
+
+  // ── Automation sweeps ──────────────────────────────────────────────────
+  // Webhook delivery retries (n8n) + BizFlowNG expense sync queue.
+  const events = require('./services/events');
+  const bizflowSync = require('./services/bizflow-sync');
+  events.startDeliverySweep(config.events.deliverySweepMs);
+  bizflowSync.startSyncSweep(5 * 60 * 1000);
+
+  // Renewal reminders: emit topflow.renewal.due for subscriptions whose
+  // catalogue-derived renewal date falls inside the reminder window.
+  async function renewalSweep() {
+    try {
+      const due = await db.getDueRenewals({ windowDays: config.events.renewalWindowDays, limit: 100 });
+      for (const r of due) {
+        await events.emit('topflow.renewal.due', {
+          user_id: r.user_id,
+          email: r.email,
+          reference: r.reference,
+          service_type: r.service_type,
+          provider: r.provider,
+          plan_label: r.plan_label,
+          renewal_due_at: r.renewal_due_at,
+        }, { entityType: 'renewal', entityId: r.reference });
+        await db.markRenewalReminded(r.reference);
+      }
+      if (due.length) logger.info('Renewal sweep emitted reminders', { count: due.length });
+    } catch (err) {
+      logger.warn('Renewal sweep failed', { message: err.message });
+    }
+  }
+  const renewalTimer = setInterval(renewalSweep, 6 * 60 * 60 * 1000);
+  renewalTimer.unref();
+  const renewalFirst = setTimeout(renewalSweep, 90 * 1000);
+  renewalFirst.unref();
+
+  // Dormant customers: emit topflow.customer.dormant for reactivation flows.
+  async function dormantSweep() {
+    try {
+      const customers = await db.getDormantCustomers({
+        days: config.events.dormantDays,
+        limit: config.events.dormantBatchLimit,
+      });
+      let emitted = 0;
+      for (const c of customers) {
+        // Re-emission guard: at most one dormant ping per user per 14 days.
+        const { rows } = await db.pool.query(
+          `SELECT 1 FROM automation_events
+           WHERE type = 'topflow.customer.dormant'
+             AND payload->>'user_id' = $1
+             AND created_at > NOW() - INTERVAL '14 days'
+           LIMIT 1`,
+          [String(c.id)]
+        );
+        if (rows.length) continue;
+        await events.emit('topflow.customer.dormant', {
+          user_id: c.id,
+          email: c.email,
+          full_name: c.full_name,
+          last_purchase_at: c.last_purchase_at,
+          registered_at: c.registered_at,
+          inactive_days: config.events.dormantDays,
+        }, { entityType: 'customer', entityId: String(c.id) });
+        emitted += 1;
+      }
+      if (emitted) logger.info('Dormant sweep emitted events', { count: emitted });
+    } catch (err) {
+      logger.warn('Dormant sweep failed', { message: err.message });
+    }
+  }
+  // Daily at most; the event log dedupes on the receiver side via event ids.
+  const dormantTimer = setInterval(dormantSweep, 24 * 60 * 60 * 1000);
+  dormantTimer.unref();
+  const dormantFirst = setTimeout(dormantSweep, 2 * 60 * 1000);
+  dormantFirst.unref();
 
   let shuttingDown = false;
   async function shutdown(signal) {
