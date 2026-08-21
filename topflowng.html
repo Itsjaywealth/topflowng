@@ -3408,6 +3408,10 @@ html.dark .btn-wa-share{color:#25D366!important}
       </div>
     </div>
     <button class="btn-primary" id="btn-cp" onclick="handleChangePassword()">Update password</button>
+    <div class="field" style="margin-top:14px;display:flex;align-items:flex-start;gap:10px">
+      <input type="checkbox" id="pref-marketing" style="margin-top:3px;width:16px;height:16px;accent-color:var(--brand,#0a7)" onchange="handleMarketingPref(this.checked)">
+      <label for="pref-marketing" style="font-size:13px;line-height:1.45;margin:0">Email me occasional product updates and offers from TopFlowNG. You can turn this off anytime.</label>
+    </div>
     <button class="btn-cancel" onclick="closeChangePassword()">Cancel</button>
   </div>
 </div>
@@ -5372,6 +5376,17 @@ function openChangePassword() {
   document.getElementById('cp-new').value = '';
   hideErr('cp-error');
   document.getElementById('cp-success').classList.remove('show');
+  api('GET', '/api/user/profile').then(p => {
+    document.getElementById('pref-marketing').checked = Boolean(p.marketingOptIn);
+  }).catch(() => {});
+}
+
+async function handleMarketingPref(optIn) {
+  try {
+    await api('PATCH', '/api/user/marketing-preferences', { marketing_opt_in: Boolean(optIn) });
+  } catch (e) {
+    document.getElementById('pref-marketing').checked = !optIn;
+  }
 }
 
 function closeChangePassword() {

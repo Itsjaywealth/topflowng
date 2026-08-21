@@ -450,10 +450,26 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
   try {
     const user = await db.findUserById(req.user.id);
     if (!user) return sendError(res, 404, 'User not found');
-    res.json({ id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin, paymentMode: config.paymentMode });
+    res.json({ id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin, paymentMode: config.paymentMode, marketingOptIn: Boolean(user.marketing_opt_in) });
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch profile');
+  }
+});
+
+// Marketing preferences (powers consent-gated reactivation campaigns)
+app.patch('/api/user/marketing-preferences', authMiddleware, express.json({ limit: '10kb' }), async (req, res) => {
+  try {
+    const optIn = Boolean((req.body || {}).marketing_opt_in);
+    await db.pool.query('UPDATE users SET marketing_opt_in = $1 WHERE id = $2', [optIn, req.user.id]);
+    await events.audit('user.marketing_preferences', {
+      actorType: 'customer', actorId: req.user.id, entityType: 'user', entityId: String(req.user.id),
+      metadata: { marketing_opt_in: optIn }, ip: req.ip,
+    });
+    res.json({ ok: true, marketing_opt_in: optIn });
+  } catch (err) {
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, 500, 'Failed to update preferences');
   }
 });
 
@@ -941,6 +957,9 @@ app.use('/api/notifications', notificationsRouter);
 // dormant customers, BizFlowNG sync queue, audit tail — all read-only or
 // subscription management, guarded by INTERNAL_API_KEY.
 app.use('/api/internal', require('./routes/automation').router);
+
+// Referral campaign feed for the growth messaging layer (x-internal-key).
+app.use('/api/internal/referrals', require('./routes/referrals'));
 // RAG-safe customer-scoped support data (customer JWT).
 app.use('/api/rag', require('./routes/rag'));
 // BizFlowNG account linking + explicit expense sync opt-in (customer JWT).
