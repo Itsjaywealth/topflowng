@@ -2159,6 +2159,30 @@ function scheduleProviderBalanceWatch() {
   return setInterval(check, intervalMs);
 }
 
+// ── Provider catalogue sync ─────────────────────────────────────────────────
+// Reconciles every offered plan against VTPass's live service-variations so a
+// delisted bundle or a price below provider cost is caught before customers
+// hit it. Read-only: reports + alerts, never mutates pricing.
+function scheduleCatalogSync() {
+  const catalogSync = require('./services/catalog-sync');
+  const intervalMs = Math.max(30, config.vtpass.catalogSyncMinutes || 360) * 60_000;
+
+  async function run() {
+    try {
+      const report = await catalogSync.syncCatalog();
+      if (report.ok && report.issues.length === 0) {
+        logger.info('Catalog sync clean', { plansChecked: report.counts });
+      }
+    } catch (err) {
+      logger.warn('Catalog sync crashed', { detail: err.message });
+    }
+  }
+
+  // First run shortly after boot so the owner surface has data quickly.
+  setTimeout(run, 45_000).unref();
+  return setInterval(run, intervalMs);
+}
+
 async function start() {
   await db.initDB();
 
@@ -2220,6 +2244,7 @@ async function start() {
 
   const sweepTimer = schedulePendingOrderSweep();
   const balanceWatchTimer = scheduleProviderBalanceWatch();
+  const catalogSyncTimer = scheduleCatalogSync();
 
   // ── Ops-health watchdog ─────────────────────────────────────────────────
   // Periodically evaluates the conditions the alerting module tracks and emits

@@ -91,6 +91,9 @@ router.get('/overview', async (req, res) => {
         eventsLast24h: eventCounts,
         webhookDeliveries: pendingDeliveries,
       },
+      catalogueSync: (() => {
+        try { return require('../services/catalog-sync').getLastReport(); } catch { return null; }
+      })(),
       reconciliation: {
         storedBalanceAccounts: balanceHolders[0]?.accounts || 0,
         storedBalanceTotalNgn: balanceHolders[0]?.total || 0,

@@ -232,6 +232,8 @@ const config = {
     // (0 disables). Checks run every VTPASS_BALANCE_CHECK_MINUTES.
     minBalanceAlertNgn: num(process.env.VTPASS_MIN_BALANCE_ALERT_NGN, 5_000),
     balanceCheckMinutes: num(process.env.VTPASS_BALANCE_CHECK_MINUTES, 15),
+    // Catalogue reconciliation against live service-variations (minutes).
+    catalogSyncMinutes: num(process.env.VTPASS_CATALOG_SYNC_MINUTES, 360),
   },
 
 // ── Markup / service fees ───────────────────────────────────────────────────
