@@ -442,7 +442,9 @@ async function getWalletBalance() {
     ...authConfig('get'),
     timeout: config.vtpass.timeoutMs,
   });
-  const raw = response.data && response.data.balance;
+  // VTPass returns {"balance":"..."} on some integrations and
+  // {"code":1,"contents":{"balance":"..."}} on others.
+  const raw = response.data && (response.data.balance ?? response.data.contents?.balance);
   const balance = parseFloat(raw);
   if (!Number.isFinite(balance)) {
     throw new Error(`Unparseable VTPass balance response: ${JSON.stringify(response.data || {}).slice(0, 200)}`);
