@@ -959,7 +959,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/internal', require('./routes/automation').router);
 
 // Referral campaign feed for the growth messaging layer (x-internal-key).
-app.use('/api/internal/referrals', require('./routes/referrals'));
+app.use('/api/internal/referrals', require('./routes/referrals').router);
 // RAG-safe customer-scoped support data (customer JWT).
 app.use('/api/rag', require('./routes/rag'));
 // BizFlowNG account linking + explicit expense sync opt-in (customer JWT).
