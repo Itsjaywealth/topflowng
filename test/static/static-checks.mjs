@@ -228,16 +228,16 @@ await checkInlineSyntax('bizflow.html');
   check('dashboard service search opens launcher', /onclick="openLauncher\(\)"/.test(app));
   check('quickpay renders active services only', /activeQuickPay\(\)/.test(app) && /filter\(function\s*\(\s*s\s*\)\s*\{\s*return\s*!s\.disabled/.test(app));
   check('disabled Recharge Cards excluded from quickpay rendering', /recharge.*disabled: true/.test(app) && !/svc\.disabled \? .*Recharge Cards/.test(app.replace(/activeQuickPay/g, 'x')));
-  check('favicon uses TopFlowNG brand SVG', /rel="icon" href="\/assets\/brand\/topflowng-mark\.svg"/.test(app));
+  check('favicon uses TopFlowNG brand SVG', /rel="icon" href="\/assets\/brand\/topflowng-mark\.svg\?v=\d+"/.test(app));
   check('favicon PNG fallbacks present', /favicon-32\.png/.test(app) && /favicon-16\.png/.test(app));
-  check('apple-touch icon points to branded icon', /rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png"/.test(app));
+  check('apple-touch icon points to branded icon', /rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=\d+"/.test(app));
   check('favicon.ico exists (legacy browsers)', fs.existsSync(path.join(ROOT, 'icons', 'favicon.ico')));
   check('brand mark uses teal gradient', /stop-color="#0B7E8E"/.test(read('assets/brand/topflowng-mark.svg'))
     && /stop-color="#0E9BAE"/.test(read('assets/brand/topflowng-mark.svg')));
   for (const p of ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png', '/icons/favicon-16.png']) {
     check(`brand icon file exists ${p}`, fs.existsSync(path.join(ROOT, p.slice(1))));
   }
-  check('service worker precaches branded icons', ['icon-192.png?v=3', 'icon-512.png?v=3', 'apple-touch-icon.png', 'favicon-32.png', 'favicon-16.png'].every((p) => read('sw.js').includes(p)));
+  check('service worker precaches branded icons', ['icon-192.png?v=4', 'icon-512.png?v=4', 'apple-touch-icon.png?v=4', 'favicon-32.png?v=4', 'favicon-16.png?v=4'].every((p) => read('sw.js').includes(p)));
 }
 
 // ── 10. Dual-palette + theme persistence ────────────────────────────────────
