@@ -116,7 +116,7 @@ async function emit(type, payload = {}, { entityType = null, entityId = null } =
     );
     const endpoints = await db.pool.query(
       `SELECT id, url, secret FROM webhook_endpoints
-       WHERE active = TRUE AND (events = '{}' OR $1 = ANY(events))`,
+       WHERE active = TRUE AND (events = '{}' OR '*' = ANY(events) OR $1 = ANY(events))`,
       [type]
     );
     for (const ep of endpoints.rows) {
