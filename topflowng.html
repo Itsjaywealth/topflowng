@@ -3860,6 +3860,7 @@ async function init() {
     const nx = safeNextPath();
     if (nx) { window.location.href = nx; return; }
     launchApp();
+    loadBizflowLink().catch(() => {});
     await completePendingPayment();
   } catch {
     localStorage.removeItem('tf_token');

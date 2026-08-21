@@ -1,5 +1,10 @@
 # TopFlowNG — n8n Automation
 
+> **Preferred:** TopFlowNG now pushes signed events straight to your n8n
+> webhooks (transaction lifecycle, receipts, renewals, dormancy, support).
+> See [INTEGRATIONS.md](./INTEGRATIONS.md) for the event contract and endpoint
+> registration. The pull-based endpoints below still work for polling setups.
+
 Machine-to-machine endpoints that n8n (or any automation tool) can call to
 check platform health and surface orders that need a human. All `/api/internal/*`
 endpoints are guarded by the `INTERNAL_API_KEY` secret sent as the
