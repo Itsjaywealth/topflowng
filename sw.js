@@ -2,14 +2,14 @@
 // Network-first for every /api/ request (never cached). Navigations are
 // network-only. Cache-first for immutable static assets. Push notifications
 // for purchase confirmations. skipWaiting + clients.claim for instant updates.
-const CACHE = 'topflowng-v10';
+const CACHE = 'topflowng-v11';
 const STATIC = [
-  '/icons/icon-192.png?v=3',
-  '/icons/icon-512.png?v=3',
-  '/icons/apple-touch-icon.png',
-  '/icons/favicon-32.png',
-  '/icons/favicon-16.png',
-  '/assets/brand/topflowng-mark.svg',
+  '/icons/icon-192.png?v=4',
+  '/icons/icon-512.png?v=4',
+  '/icons/apple-touch-icon.png?v=4',
+  '/icons/favicon-32.png?v=4',
+  '/icons/favicon-16.png?v=4',
+  '/assets/brand/topflowng-mark.svg?v=4',
   '/assets/provider-logos.js',
   '/assets/providers/mtn.svg',
   '/assets/providers/glo.png',
