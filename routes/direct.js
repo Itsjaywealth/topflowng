@@ -132,7 +132,7 @@ router.post('/orders', authMiddleware, apiLimiter, directModeGuard, validate(req
     // Catalog validation errors (unknown plan/bouquet, price mismatch) are
     // client errors, not server faults.
     if (err.statusCode === 400) return sendError(res, 400, err.message);
-    logger.error('Direct order creation error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
+    logger.error('Direct order creation error', { detail: err.response?.data ? JSON.stringify(err.response.data) : err.message, code: err.code || null, name: err.name });
     if (config.sentry.dsn) require('@sentry/node').captureException(err);
     sendError(res, 500, 'Could not create order');
   }
