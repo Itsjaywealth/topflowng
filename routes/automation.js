@@ -156,10 +156,58 @@ router.get('/customers/dormant', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || config.events.dormantDays, 365);
     const limit = Math.min(parseInt(req.query.limit) || config.events.dormantBatchLimit, 500);
-    const customers = await db.getDormantCustomers({ days, limit });
+    const optInOnly = req.query.opt_in_only === 'true';
+    const customers = await db.getDormantCustomers({ days, limit, optInOnly });
     res.json({ ok: true, count: customers.length, dormant_after_days: days, customers });
   } catch {
     sendError(res, 500, 'Failed to load dormant customers');
+  }
+});
+
+// ── Transaction lookup (read-only, for automation status checks) ────────────
+router.get('/transactions/:reference', async (req, res) => {
+  try {
+    const { rows } = await db.pool.query(
+      `SELECT o.request_id, o.user_id, o.service_type, o.amount, o.description,
+              o.status, o.provider_order_id, o.created_at, o.updated_at,
+              u.email AS user_email, u.full_name AS user_name
+       FROM vtu_orders o JOIN users u ON u.id = o.user_id
+       WHERE o.request_id = $1 LIMIT 1`,
+      [String(req.params.reference).slice(0, 120)]
+    );
+    if (!rows.length) return sendError(res, 404, 'Transaction not found');
+    const row = rows[0];
+    res.json({
+      ok: true,
+      transaction: {
+        reference: row.request_id,
+        user_id: row.user_id,
+        user_email: row.user_email,
+        user_name: row.user_name,
+        service_type: row.service_type,
+        amount: Number(row.amount),
+        description: row.description,
+        status: row.status,
+        provider_order_id: row.provider_order_id,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+    });
+  } catch {
+    sendError(res, 500, 'Failed to load transaction');
+  }
+});
+
+// ── Renewal reminder bookkeeping ─────────────────────────────────────────────
+router.post('/renewals/:reference/reminded', async (req, res) => {
+  try {
+    await db.markRenewalReminded(String(req.params.reference).slice(0, 120));
+    await events.audit('renewal.reminder_sent', {
+      actorType: 'automation', entityType: 'renewal_meta', entityId: String(req.params.reference).slice(0, 120),
+    });
+    res.json({ ok: true, reference: req.params.reference, reminded_at: new Date().toISOString() });
+  } catch {
+    sendError(res, 500, 'Failed to mark renewal reminded');
   }
 });
 

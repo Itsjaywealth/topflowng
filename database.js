@@ -1718,13 +1718,15 @@ async function getFinancialReconciliation() {
 
 // Customers with no completed purchase in the last `days` days (account older
 // than the same window). Used for reactivation campaigns via n8n.
-async function getDormantCustomers({ days = 30, limit = 100 } = {}) {
+async function getDormantCustomers({ days = 30, limit = 100, optInOnly = false } = {}) {
   const { rows } = await pool.query(
-    `SELECT u.id, u.full_name, u.email, u.phone,
+    `SELECT u.id, u.full_name, u.email, u.phone, u.marketing_opt_in,
             MAX(t.created_at) AS last_purchase_at, u.created_at AS registered_at
      FROM users u
      LEFT JOIN transactions t ON t.user_id = u.id AND t.type = 'debit' AND t.status = 'completed'
      WHERE u.created_at <= NOW() - ($1 || ' days')::interval
+       ${optInOnly ? 'AND u.marketing_opt_in = TRUE' : ''}
+       AND u.email IS NOT NULL
      GROUP BY u.id
      HAVING COALESCE(MAX(t.created_at), u.created_at) <= NOW() - ($1 || ' days')::interval
      ORDER BY COALESCE(MAX(t.created_at), u.created_at)
