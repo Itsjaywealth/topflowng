@@ -843,6 +843,7 @@ html[data-palette="teal"] .marketing-footer{background:#050d1a}
 .wordmark span{color:var(--brand)}
 .workspace-profile{display:flex;align-items:center;gap:8px;margin-left:auto}
 .header-greeting{font:500 13px/1 var(--font);color:var(--text-secondary)}
+@media (min-width:1024px){.header-greeting{display:none}}
 .header-name{font-weight:700;color:var(--text-primary)}
 
 .theme-toggle{display:flex;align-items:center;justify-content:center;
@@ -2561,6 +2562,21 @@ html.dark .btn-wa-share{color:#25D366!important}
             </button>
             <button class="glance-shortcut" type="button" onclick="openService('data')">
               <span>Buy data</span><span aria-hidden="true">→</span>
+            </button>
+            <button class="glance-shortcut" type="button" onclick="openService('electricity')">
+              <span>Pay electricity</span><span aria-hidden="true">→</span>
+            </button>
+            <button class="glance-shortcut" type="button" onclick="goTab('services')">
+              <span>All services</span><span aria-hidden="true">→</span>
+            </button>
+          </section>
+          <section class="glance-block">
+            <span class="glance-label">Shortcuts</span>
+            <button class="glance-shortcut" type="button" onclick="goTab('notifications')">
+              <span>Notifications</span><span aria-hidden="true">→</span>
+            </button>
+            <button class="glance-shortcut" type="button" onclick="openSupport()">
+              <span>Get help</span><span aria-hidden="true">→</span>
             </button>
           </section>
           <section class="glance-pending" id="glance-pending" hidden>
