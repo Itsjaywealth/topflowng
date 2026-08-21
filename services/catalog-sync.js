@@ -18,8 +18,9 @@
  */
 
 const logger = require('../lib/logger');
-const { DATA_SERVICE, CABLE_SERVICE, PRODUCT_MAP, fetchVariations } = require('./vtpass');
-const { DATA_PLANS, CABLE_PLANS, EXAM_PRICES } = require('./pricing');
+const vtpass = require('./vtpass');
+const { DATA_SERVICE = {}, CABLE_SERVICE = {}, PRODUCT_MAP = {}, fetchVariations } = vtpass;
+const { DATA_PLANS = {}, CABLE_PLANS = {}, EXAM_PRICES = {} } = require('./pricing');
 
 const SYNCED_AT_PROVIDER = '2026-08-18';
 
