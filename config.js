@@ -65,8 +65,8 @@ const config = {
   // links is encrypted at rest with a key derived from ENCRYPTION_KEY.
   bizflow: {
     apiUrl: str(process.env.BIZFLOWNG_API_URL, ''),
-    verifyPath: str(process.env.BIZFLOWNG_VERIFY_PATH, '/api/integration/verify'),
-    syncPath: str(process.env.BIZFLOWNG_SYNC_PATH, '/api/integration/expenses'),
+    verifyPath: str(process.env.BIZFLOWNG_VERIFY_PATH, '/api/integrations/topflowng/link/verify'),
+    syncPath: str(process.env.BIZFLOWNG_SYNC_PATH, '/api/integrations/topflowng/expenses'),
     encryptionKey: (() => {
       const raw = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || '';
       return crypto.createHash('sha256').update(`topflowng:bizflow-link:${raw}`).digest();
