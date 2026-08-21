@@ -2778,6 +2778,13 @@ html.dark .btn-wa-share{color:#25D366!important}
         <div id="ben-manage-list"><div class="txn-empty" style="padding:14px 0">Loading…</div></div>
       </div>
 
+      <!-- BizFlowNG expense sync -->
+      <div class="acct-group-label">Integrations</div>
+      <div class="pin-section" id="bizflow-card">
+        <h4>BizFlowNG expenses</h4>
+        <p>Loading…</p>
+      </div>
+
       <!-- Scheduled purchases -->
       <div class="acct-group-label">Purchases</div>
       <div class="pin-section" id="scheduled-section">
@@ -3188,6 +3195,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       <button type="button" class="btn-copy-ref" id="btn-share-receipt" onclick="shareTransactionReceipt()">Share receipt</button>
       <button type="button" class="btn-copy-ref" onclick="emailDetailReceipt()">Email me this receipt</button>
       <button type="button" class="btn-copy-ref" id="btn-print-receipt" onclick="printTransactionReceipt()">Download / print</button>
+      <button type="button" class="btn-copy-ref" id="btn-bizflow-sync" onclick="syncDetailToBizflow()" style="display:none">Sync to BizFlowNG</button>
       <button type="button" class="btn-copy-ref" id="btn-get-help" onclick="openSupportFromTxn()">Get help</button>
     </div>
     <button class="btn-close-receipt" onclick="closeTxnDetail()">Close</button>
@@ -4794,6 +4802,9 @@ function openTransactionDetail(t) {
   document.getElementById('btn-get-help').style.display = 'block';
   document.getElementById('txn-detail-actions').querySelector('.btn-copy-ref').style.display = 'block';
   document.getElementById('txn-detail-actions').querySelector('#btn-print-receipt').style.display = 'block';
+  // BizFlowNG expense sync: completed debits only, when an account is linked.
+  const syncBtn = document.getElementById('btn-bizflow-sync');
+  syncBtn.style.display = (!failed && !pending && t.type !== 'credit' && _bizflowLinked && t.reference) ? 'block' : 'none';
   // Electricity purchases may carry a durable token — recover it from the order.
   if (!failed && /electricity/i.test(t.description || '') && t.reference) {
     (async () => {
@@ -5689,6 +5700,7 @@ function goTab(tab) {
     loadAllBeneficiaries();
     loadAutoRecharge();
     loadScheduledPurchases();
+    loadBizflowLink();
     showAppearanceSection();
   }
 }
@@ -6189,6 +6201,86 @@ function renderAccountBeneficiaries() {
 async function deleteBeneficiaryEverywhere(id, svc) {
   await deleteBeneficiary(id, svc);
   renderAccountBeneficiaries();
+}
+
+// ── BIZFLOWNG EXPENSE SYNC ───────────────────────────────────────────────────
+let _bizflowLinked = false;
+
+async function loadBizflowLink() {
+  try {
+    const d = await api('GET', '/api/bizflow/link');
+    _bizflowLinked = Boolean(d.linked);
+    const wrap = document.getElementById('bizflow-card');
+    if (!wrap) return;
+    if (d.linked) {
+      wrap.innerHTML = `
+        <h4>BizFlowNG expenses</h4>
+        <p>Linked to business <strong>${escHtml(d.business_id || '')}</strong> · key ${escHtml(d.key_fingerprint || '')} · status ${escHtml(d.status || '')}.</p>
+        <p style="font:400 12px/1.6 var(--font);color:var(--text-muted)">Open a completed purchase in Activity and choose “Sync to BizFlowNG” to file it as a business expense.</p>
+        <button class="btn-confirm" onclick="unlinkBizflow()" style="min-height:44px;padding:0 18px;font-size:13px;width:100%">Unlink BizFlowNG</button>`;
+    } else {
+      wrap.innerHTML = `
+        <h4>BizFlowNG expenses</h4>
+        <p>Run a business? Link your BizFlowNG account to file TopFlowNG purchases as expenses — you choose which transactions to sync.</p>
+        <div class="field"><label for="bizflow-business-id">BizFlowNG business ID</label>
+          <input type="text" id="bizflow-business-id" placeholder="Paste from BizFlowNG → Settings" autocomplete="off"></div>
+        <div class="field"><label for="bizflow-api-key">Integration key</label>
+          <div class="pw-field"><input type="password" id="bizflow-api-key" placeholder="bfk_…" autocomplete="off">
+            <button type="button" class="pw-toggle" aria-label="Show key" aria-pressed="false" onclick="togglePasswordVisibility('bizflow-api-key', this)">
+              <svg class="pw-eye-open" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="pw-eye-closed" style="display:none" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path d="m4 4 16 16"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="btn-confirm" onclick="linkBizflow()" style="min-height:44px;padding:0 18px;font-size:13px;width:100%">Link BizFlowNG</button>`;
+    }
+  } catch { /* non-critical */ }
+}
+
+async function linkBizflow() {
+  const businessId = (document.getElementById('bizflow-business-id')?.value || '').trim();
+  const apiKey = (document.getElementById('bizflow-api-key')?.value || '').trim();
+  if (!businessId || !apiKey) return showToast('Enter both your business ID and integration key', 'info');
+  try {
+    const d = await api('POST', '/api/bizflow/link', { businessId, apiKey });
+    if (d.verified) {
+      _bizflowLinked = true;
+      showToast('BizFlowNG account linked and verified', 'success');
+    } else {
+      _bizflowLinked = true;
+      showToast('Key saved — will verify against BizFlowNG automatically', 'info');
+    }
+    loadBizflowLink();
+  } catch (e) {
+    showToast(e.message || 'Could not link BizFlowNG account', 'error');
+  }
+}
+
+async function unlinkBizflow() {
+  try {
+    await api('DELETE', '/api/bizflow/link');
+    _bizflowLinked = false;
+    showToast('BizFlowNG account unlinked', 'success');
+    loadBizflowLink();
+  } catch (e) {
+    showToast(e.message || 'Could not unlink', 'error');
+  }
+}
+
+async function syncDetailToBizflow() {
+  if (!detailTxn?.reference) return;
+  try {
+    const d = await api('POST', '/api/bizflow/sync', { reference: detailTxn.reference });
+    if (d.already_queued) {
+      showToast('This transaction is already queued for BizFlowNG', 'info');
+    } else {
+      showToast('Queued — it will appear in your BizFlowNG expenses shortly', 'success');
+      const btn = document.getElementById('btn-bizflow-sync');
+      if (btn) btn.style.display = 'none';
+    }
+  } catch (e) {
+    showToast(e.message || 'Sync failed', 'error');
+  }
 }
 
 // Per-service reload (used after save/delete)
