@@ -2818,7 +2818,7 @@ html.dark .btn-wa-share{color:#25D366!important}
     <button class="nav-item" id="nav-history" onclick="goTab('history')">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>Activity
     </button>
-    <button class="nav-item" id="nav-support" onclick="toggleSupportLauncher()">
+    <button class="nav-item" id="nav-support" onclick="toggleSupportLauncher()" aria-expanded="false" aria-controls="support-overlay">
       <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 0 0-8.5-8.5A8.5 8.5 0 0 0 4 12"/><path d="M3.5 12v-1.5A2 2 0 0 1 5.5 8.5h.5"/><path d="M20.5 12v-1.5a2 2 0 0 0-2-2h-.5"/><rect x="3.5" y="12" width="4" height="5.5" rx="2"/><rect x="16.5" y="12" width="4" height="5.5" rx="2"/><path d="M18 17.5V19a2 2 0 0 1-2 2h-4"/></svg></span>Support
     </button>
     <button class="nav-item" id="nav-account" onclick="goTab('account')">
@@ -4176,13 +4176,19 @@ let txnFilter = 'all';
 // ── NAVIGATION ────────────────────────────────────────────────────────────
 function _goTab(tab) {
    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-   document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
+   document.querySelectorAll('.nav-item').forEach(n => {
+     n.classList.remove('active');
+     n.removeAttribute('aria-current');
+   });
+   document.querySelectorAll('.sidebar-nav-item').forEach(n => {
+     n.classList.remove('active');
+     n.removeAttribute('aria-current');
+   });
    document.getElementById('screen-'+tab).classList.add('active');
    const navItem = document.getElementById('nav-'+tab);
-   if (navItem) navItem.classList.add('active');
+   if (navItem) { navItem.classList.add('active'); navItem.setAttribute('aria-current', 'page'); }
    const side = document.getElementById('side-nav-'+tab);
-   if (side) side.classList.add('active');
+   if (side) { side.classList.add('active'); side.setAttribute('aria-current', 'page'); }
    const header = document.getElementById('app-header');
    if (header) header.classList.toggle('hide-balance', tab === 'home');
    if (tab === 'history') loadAllTxns(true);
@@ -4908,7 +4914,10 @@ function setSupportLauncherState(open) {
   var fab = document.getElementById('support-fab');
   if (fab) fab.setAttribute('aria-expanded', open ? 'true' : 'false');
   var navSupport = document.getElementById('nav-support');
-  if (navSupport) navSupport.classList.toggle('active', open);
+  if (navSupport) {
+    navSupport.classList.toggle('active', open);
+    navSupport.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
 }
 
 function toggleSupportLauncher() {
