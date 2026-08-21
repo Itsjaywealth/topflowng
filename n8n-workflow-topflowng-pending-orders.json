@@ -16,24 +16,36 @@
       "name": "Check Every 15 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 300]
+      "position": [
+        0,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "GET",
         "url": "={{ $env.TOPFLOWNG_API_URL }}/api/internal/pending-orders",
         "options": {
-          "headers": {
-            "x-internal-key": "={{ $env.TOPFLOWNG_INTERNAL_KEY }}"
-          },
           "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-key",
+              "value": "={{ $env.TOPFLOWNG_INTERNAL_KEY }}"
+            }
+          ]
         }
       },
       "id": "http",
       "name": "Fetch Pending Orders",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -43,13 +55,16 @@
       "name": "Map Pending Orders",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     },
     {
       "parameters": {
         "conditionType": "boolean",
         "options": {
-          "message": "No pending orders — skip Gmail."
+          "message": "No pending orders \u2014 skip Gmail."
         },
         "conditions": {
           "options": {
@@ -76,7 +91,10 @@
       "name": "Has Pending Orders",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [600, 300]
+      "position": [
+        600,
+        300
+      ]
     },
     {
       "parameters": {
@@ -86,7 +104,10 @@
       "name": "Format Alert Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 200]
+      "position": [
+        800,
+        200
+      ]
     },
     {
       "parameters": {
@@ -101,7 +122,10 @@
       "name": "Email Pending Alert",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [1000, 200],
+      "position": [
+        1000,
+        200
+      ],
       "credentials": {
         "gmailOAuth2": {
           "id": "ClSZ5NB7SriM0ko4",
@@ -117,45 +141,72 @@
       "name": "Nothing to Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 420]
+      "position": [
+        800,
+        420
+      ]
     }
   ],
   "connections": {
     "Check Every 15 Minutes": {
       "main": [
         [
-          { "node": "Fetch Pending Orders", "type": "main", "index": 0 }
+          {
+            "node": "Fetch Pending Orders",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch Pending Orders": {
       "main": [
         [
-          { "node": "Map Pending Orders", "type": "main", "index": 0 }
+          {
+            "node": "Map Pending Orders",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Map Pending Orders": {
       "main": [
         [
-          { "node": "Has Pending Orders", "type": "main", "index": 0 }
+          {
+            "node": "Has Pending Orders",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Pending Orders": {
       "main": [
         [
-          { "node": "Format Alert Body", "type": "main", "index": 0 }
+          {
+            "node": "Format Alert Body",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Nothing to Report", "type": "main", "index": 0 }
+          {
+            "node": "Nothing to Report",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Format Alert Body": {
       "main": [
         [
-          { "node": "Email Pending Alert", "type": "main", "index": 0 }
+          {
+            "node": "Email Pending Alert",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }

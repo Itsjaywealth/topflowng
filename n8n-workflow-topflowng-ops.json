@@ -7,23 +7,33 @@
       "name": "Daily Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": null
     },
     {
       "parameters": {
         "url": "={{ $env.TOPFLOWNG_API_URL }}/api/internal/ops-summary",
-        "options": {
-          "headers": {
-            "x-internal-key": "={{ $env.TOPFLOWNG_INTERNAL_KEY }}"
-          }
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-key",
+              "value": "={{ $env.TOPFLOWNG_INTERNAL_KEY }}"
+            }
+          ]
         }
       },
       "id": "http-ops",
       "name": "Fetch Ops Summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [500, 300]
+      "position": [
+        500,
+        300
+      ]
     },
     {
       "parameters": {
@@ -41,13 +51,16 @@
       "name": "Has Stale Orders?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [750, 300]
+      "position": [
+        750,
+        300
+      ]
     },
     {
       "parameters": {
         "message": {
-          "subject": "TopFlowNG Ops Summary — {{ $json.stats.transactions_today }} transactions today",
-          "text": "Daily Operations Summary\n\nTransactions today: {{ $json.stats.transactions_today }}\nCompleted today: {{ $json.stats.completed_today }}\nFailed today: {{ $json.stats.failed_today }}\nSuccess rate: {{ $json.stats.success_rate_today }}%\nPending orders: {{ $json.stats.pending_orders }}\nStale pending: {{ $json.stats.stale_pending }}\nNew users today: {{ $json.stats.new_users_today }}\nTotal users: {{ $json.stats.total_users }}\nTotal transactions: {{ $json.stats.total_transactions }}\nTotal credited: ₦{{ $json.stats.total_credited }}\nTotal debited: ₦{{ $json.stats.total_debited }}\n\n⚠️ ALERT: {{ $json.stats.stale_pending }} stale pending order(s) need review"
+          "subject": "TopFlowNG Ops Summary \u2014 {{ $json.stats.transactions_today }} transactions today",
+          "text": "Daily Operations Summary\n\nTransactions today: {{ $json.stats.transactions_today }}\nCompleted today: {{ $json.stats.completed_today }}\nFailed today: {{ $json.stats.failed_today }}\nSuccess rate: {{ $json.stats.success_rate_today }}%\nPending orders: {{ $json.stats.pending_orders }}\nStale pending: {{ $json.stats.stale_pending }}\nNew users today: {{ $json.stats.new_users_today }}\nTotal users: {{ $json.stats.total_users }}\nTotal transactions: {{ $json.stats.total_transactions }}\nTotal credited: \u20a6{{ $json.stats.total_credited }}\nTotal debited: \u20a6{{ $json.stats.total_debited }}\n\n\u26a0\ufe0f ALERT: {{ $json.stats.stale_pending }} stale pending order(s) need review"
         },
         "options": {}
       },
@@ -55,12 +68,15 @@
       "name": "Alert Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 1,
-      "position": [1000, 200]
+      "position": [
+        1000,
+        200
+      ]
     },
     {
       "parameters": {
         "message": {
-          "subject": "TopFlowNG Ops Summary — All clear",
+          "subject": "TopFlowNG Ops Summary \u2014 All clear",
           "text": "All systems operational.\n\nTransactions today: {{ $json.stats.transactions_today }}\nCompleted today: {{ $json.stats.completed_today }}\nSuccess rate: {{ $json.stats.success_rate_today }}%\nNew users today: {{ $json.stats.new_users_today }}\nTotal users: {{ $json.stats.total_users }}\n\nNo stale orders. No issues."
         }
       },
@@ -68,20 +84,51 @@
       "name": "All Clear Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 1,
-      "position": [1000, 400]
+      "position": [
+        1000,
+        400
+      ]
     }
   ],
   "connections": {
     "Daily Trigger": {
-      "main": [[{ "node": "Fetch Ops Summary", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Fetch Ops Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch Ops Summary": {
-      "main": [[{ "node": "Has Stale Orders?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Has Stale Orders?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Has Stale Orders?": {
       "main": [
-        [{ "node": "Alert Email", "type": "main", "index": 0 }],
-        [{ "node": "All Clear Email", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "All Clear Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   }
