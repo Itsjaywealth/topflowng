@@ -140,6 +140,81 @@ router.post('/webhook-endpoints/:id/test', async (req, res) => {
   }
 });
 
+// ── Transaction anomaly detection ────────────────────────────────────────────
+// Compares the last hour against the 7-day hourly baseline. Read-only.
+router.get('/anomalies', async (req, res) => {
+  try {
+    const { rows } = await db.pool.query(
+      `
+      WITH hourly AS (
+        SELECT
+          date_trunc('hour', updated_at) AS hr,
+          COUNT(*) FILTER (WHERE status = 'failed')::int          AS failures,
+          COUNT(*)::int                                            AS orders,
+          (SELECT COALESCE(SUM(amount), 0) FROM transactions td
+             JOIN vtu_orders o2 ON o2.transaction_id = td.id
+             WHERE td.type = 'debit' AND td.status = 'completed'
+               AND date_trunc('hour', td.created_at) = hr)         AS debit_volume
+        FROM vtu_orders
+        WHERE updated_at >= NOW() - interval '7 days'
+        GROUP BY hr
+      ),
+      baseline AS (
+        SELECT AVG(failures)::float AS avg_failures, AVG(orders)::float AS avg_orders,
+               AVG(debit_volume)::float AS avg_debit_volume
+        FROM hourly WHERE hr < date_trunc('hour', NOW())
+      ),
+      current_hour AS (
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'failed')::int AS failures,
+          COUNT(*)::int AS orders,
+          COUNT(*) FILTER (WHERE status IN ('submitted','pending'))::int AS stuck
+        FROM vtu_orders
+        WHERE updated_at >= date_trunc('hour', NOW())
+           OR (status IN ('submitted','pending') AND updated_at > NOW() - interval '30 minutes')
+      )
+      SELECT c.failures, c.orders, c.stuck,
+             COALESCE(b.avg_failures, 0) AS avg_failures,
+             COALESCE(b.avg_orders, 0) AS avg_orders,
+             COALESCE(b.avg_debit_volume, 0) AS avg_debit_volume
+      FROM current_hour c CROSS JOIN baseline b
+      `
+    );
+    const m = rows[0] || {};
+    const anomalies = [];
+    const failureThreshold = Math.max(Math.ceil((m.avg_failures || 0) * 3), 5);
+    if ((m.failures || 0) >= failureThreshold) {
+      anomalies.push({
+        type: 'failure_spike',
+        detail: `${m.failures} failed orders this hour (baseline avg ${Number(m.avg_failures || 0).toFixed(1)}/h, threshold ${failureThreshold})`,
+        severity: 'high',
+      });
+    }
+    if ((m.stuck || 0) >= 5) {
+      anomalies.push({
+        type: 'stuck_orders',
+        detail: `${m.stuck} orders stuck in submitted/pending (threshold 5)`,
+        severity: 'high',
+      });
+    }
+    return res.json({
+      ok: true,
+      healthy: anomalies.length === 0,
+      anomalies,
+      metrics: {
+        failures_this_hour: m.failures || 0,
+        orders_this_hour: m.orders || 0,
+        stuck_orders: m.stuck || 0,
+        baseline_avg_failures: Number(m.avg_failures || 0).toFixed(2),
+        baseline_avg_orders: Number(m.avg_orders || 0).toFixed(2),
+      },
+      generated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    return sendError(res, 500, 'Failed to run anomaly detection');
+  }
+});
+
 // ── Renewal reminders ────────────────────────────────────────────────────────
 router.get('/renewals/upcoming', async (req, res) => {
   try {
