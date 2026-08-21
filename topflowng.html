@@ -4374,12 +4374,13 @@ async function buyAirtime() {
       ['Fee', '₦0.00'],
     ],
     total: amount,
-    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
+    balanceNote: isDirectPay() ? 'Pay at secure checkout, or use your stored balance.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
     confirmLabel: `Buy ${fmt(amount)} airtime`,
+    balanceOption: isDirectPay() ? (user.wallet || 0) : null,
   });
   if (!confirmed) return;
 
-  if (isDirectPay()) return startDirectOrder('airtime', { network, phone, amount }, 'btn-buy-airtime');
+  if (isDirectPay() && confirmed !== 'balance') return startDirectOrder('airtime', { network, phone, amount }, 'btn-buy-airtime');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(amount)} ${network} airtime to ${phone}?` }); } catch { return; }
@@ -4443,12 +4444,13 @@ async function buyData() {
       ['Fee', '₦0.00'],
     ],
     total: selectedDataPlan.price,
-    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedDataPlan.price))}`,
+    balanceNote: isDirectPay() ? 'Pay at secure checkout, or use your stored balance.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedDataPlan.price))}`,
     confirmLabel: 'Confirm purchase',
+    balanceOption: isDirectPay() ? (user.wallet || 0) : null,
   });
   if (!confirmed) return;
 
-  if (isDirectPay()) return startDirectOrder('data', { network, phone, planCode: selectedDataPlan.code }, 'btn-buy-data');
+  if (isDirectPay() && confirmed !== 'balance') return startDirectOrder('data', { network, phone, planCode: selectedDataPlan.code }, 'btn-buy-data');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(selectedDataPlan.price)} ${network} data for ${phone}?` }); } catch { return; }
@@ -4497,12 +4499,13 @@ async function buyElectricity() {
       ['Fee', '₦0.00'],
     ],
     total: amount,
-    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
+    balanceNote: isDirectPay() ? 'Pay at secure checkout, or use your stored balance.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
     confirmLabel: `Pay ${fmt(amount)} electricity`,
+    balanceOption: isDirectPay() ? (user.wallet || 0) : null,
   });
   if (!confirmed) return;
 
-  if (isDirectPay()) return startDirectOrder('electricity', { disco, meterNumber, meterType: String(meterType || 'Prepaid').toLowerCase(), amount }, 'btn-pay-elec');
+  if (isDirectPay() && confirmed !== 'balance') return startDirectOrder('electricity', { disco, meterNumber, meterType: String(meterType || 'Prepaid').toLowerCase(), amount }, 'btn-pay-elec');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(amount)} ${disco} payment for meter ${meterNumber}?` }); } catch { return; }
@@ -4549,12 +4552,13 @@ async function buyCable() {
       ['Fee', '₦0.00'],
     ],
     total: selectedCablePlan.price,
-    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedCablePlan.price))}`,
+    balanceNote: isDirectPay() ? 'Pay at secure checkout, or use your stored balance.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedCablePlan.price))}`,
     confirmLabel: 'Confirm subscription',
+    balanceOption: isDirectPay() ? (user.wallet || 0) : null,
   });
   if (!confirmed) return;
 
-  if (isDirectPay()) return startDirectOrder('cable', { provider, smartCardNumber, planCode: selectedCablePlan.code }, 'btn-pay-cable');
+  if (isDirectPay() && confirmed !== 'balance') return startDirectOrder('cable', { provider, smartCardNumber, planCode: selectedCablePlan.code }, 'btn-pay-cable');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(selectedCablePlan.price)} ${provider} subscription for card ${smartCardNumber}?` }); } catch { return; }
@@ -5441,12 +5445,13 @@ async function buyExamPin() {
       ['Fee', '₦0.00'],
     ],
     total: amount,
-    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
+    balanceNote: isDirectPay() ? 'Pay at secure checkout, or use your stored balance.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
     confirmLabel: 'Buy exam PIN',
+    balanceOption: isDirectPay() ? (user.wallet || 0) : null,
   });
   if (!confirmed) return;
 
-  if (isDirectPay()) {
+  if (isDirectPay() && confirmed !== 'balance') {
     const examVarD = examBody === 'JAMB' ? _jambVariation : undefined;
     const payloadD = { examBody, quantity };
     if (examVarD) payloadD.examVariation = examVarD;
@@ -6024,7 +6029,7 @@ let _reviewResolve = null;
 
 // Shows a summary of the purchase before PIN entry. Resolves true when the
 // user confirms, false when they go back to edit the form.
-async function openReview({ providerKey, lines, total, balanceNote, confirmLabel }) {
+async function openReview({ providerKey, lines, total, balanceNote, confirmLabel, balanceOption }) {
   const providerEl = document.getElementById('review-provider');
   if (providerKey && window.TopFlowLogos?.image) {
     providerEl.innerHTML = `<span class="provider-logo-frame receipt">${window.TopFlowLogos.image(providerKey)}</span>`;
@@ -6038,6 +6043,16 @@ async function openReview({ providerKey, lines, total, balanceNote, confirmLabel
   document.getElementById('review-balance-note').textContent = balanceNote || '';
   const btn = document.getElementById('review-confirm-btn');
   btn.textContent = confirmLabel || 'Confirm & continue';
+  // Legacy stored balances stay spendable after the wallet retirement: holders
+  // see a one-tap "use stored balance" alternative to per-order checkout.
+  const balBtn = document.getElementById('review-balance-btn');
+  if (balanceOption && Number(balanceOption) > 0 && Number(balanceOption) >= Number(total)) {
+    balBtn.hidden = false;
+    balBtn.textContent = `Use stored balance (${fmt(balanceOption)})`;
+    balBtn.setAttribute('aria-label', balBtn.textContent);
+  } else {
+    balBtn.hidden = true;
+  }
   document.getElementById('review-overlay').classList.add('open');
 
   return new Promise((resolve) => {
@@ -6045,9 +6060,9 @@ async function openReview({ providerKey, lines, total, balanceNote, confirmLabel
   });
 }
 
-function confirmReview() {
+function confirmReview(method) {
   document.getElementById('review-overlay').classList.remove('open');
-  if (_reviewResolve) { _reviewResolve(true); _reviewResolve = null; }
+  if (_reviewResolve) { _reviewResolve(method === 'balance' ? 'balance' : true); _reviewResolve = null; }
 }
 
 function cancelReview() {
@@ -6553,6 +6568,7 @@ init();
   padding:12px 0 4px;font:700 14px/1 var(--display);color:var(--text-primary)}
 .review-total-row strong{font:800 18px/1 var(--display);color:var(--text-primary)}
 .review-balance-note{font:500 12px/1.5 var(--font);color:var(--text-muted);margin:6px 0 12px}
+#review-balance-btn:not([hidden]){background:transparent;color:var(--brand);border:1.5px solid var(--brand);margin-bottom:8px}
 .review-back{display:block;width:100%;padding:13px;margin-top:8px;border:1.5px solid var(--border-strong);
   border-radius:12px;background:var(--surface);color:var(--text-secondary);
   font:600 13px/1 var(--display);cursor:pointer;transition:border-color var(--transition),color var(--transition)}
@@ -7352,6 +7368,7 @@ html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--b
     </div>
     <p class="review-balance-note" id="review-balance-note"></p>
     <div id="review-error" class="pin-prompt-error"></div>
+    <button class="pin-prompt-confirm" id="review-balance-btn" onclick="confirmReview('balance')" aria-label="Use stored balance" hidden></button>
     <button class="pin-prompt-confirm" onclick="confirmReview()" id="review-confirm-btn">Confirm &amp; continue</button>
     <button class="review-back" onclick="cancelReview()">Edit details</button>
   </div>
