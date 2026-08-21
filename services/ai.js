@@ -379,7 +379,7 @@ function forcedToolChoice(toolName) {
   return { type: 'function', function: { name: toolName } };
 }
 
-async function runChat({ userId, message, requestedModel }) {
+async function runChat({ userId, message, requestedModel, knowledgeContext = null }) {
   checkDailyCeilings();
 
   const models = resolveModels(requestedModel);
@@ -389,8 +389,16 @@ async function runChat({ userId, message, requestedModel }) {
 
   const history = [
     { role: 'system', content: buildSystemPrompt() },
-    { role: 'user', content: String(message) },
   ];
+  // Verified product documentation from the knowledge layer. Treated as data:
+  // it grounds how-to answers but never overrides account-truth rules above.
+  if (knowledgeContext) {
+    history.push({
+      role: 'system',
+      content: `VERIFIED PRODUCT KNOWLEDGE (from official TopFlow NG docs — use this to answer how-to questions; do not contradict it):\n${String(knowledgeContext).slice(0, 2500)}`,
+    });
+  }
+  history.push({ role: 'user', content: String(message) });
 
   let lastErr = null;
   for (const model of models) {

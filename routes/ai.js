@@ -58,15 +58,38 @@ function validateChatBody(body) {
   return { message, model };
 }
 
+// Verified product knowledge for grounding how-to answers. Fails open:
+// if the knowledge layer is unavailable the assistant still runs ungrounded.
+async function fetchRagKnowledge(message) {
+  const base = process.env.RAG_API_URL;
+  const key = process.env.RAG_API_KEY;
+  if (!base || !key) return null;
+  try {
+    const { default: axios } = require('axios');
+    const res = await axios.post(
+      `${base.replace(/\/$/, '')}/rag/query`,
+      { question: String(message).slice(0, 500), platform: 'topflow', top_k: 4 },
+      { headers: { Authorization: `Bearer ${key}` }, timeout: 12000 }
+    );
+    const d = res.data || {};
+    if (d.answer && !d.requiresHuman && Array.isArray(d.sources) && d.sources.length > 0) {
+      return d.answer;
+    }
+  } catch (_) { /* knowledge optional */ }
+  return null;
+}
+
 router.post('/chat', authMiddleware, aiLimiter, async (req, res) => {
   const v = validateChatBody(req.body);
   if (v.error) return sendError(res, 400, v.error);
 
   try {
+    const knowledgeContext = await fetchRagKnowledge(v.message);
     const result = await ai.runChat({
       userId: req.user.id,
       message: v.message,
       requestedModel: v.model,
+      knowledgeContext,
     });
     // usage is only the safe token-count subset produced by the AI layer.
     return res.json({
