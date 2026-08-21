@@ -112,7 +112,9 @@ const config = {
   // configured, SMTP is preferred for transactional email; the Resend/Brevo
   // path above remains the automatic fallback.
   smtp: {
-    host: str(process.env.SMTP_HOST, 'smtp.titan.email'),
+    // Empty default: SMTP is an OPTIONAL transport. When unconfigured, email
+    // goes straight to the Resend/Brevo API path — no doomed SMTP attempts.
+    host: str(process.env.SMTP_HOST, ''),
     port: num(process.env.SMTP_PORT, 465),
     secure: str(process.env.SMTP_SECURE, '1') === '1',
     user: str(process.env.SMTP_USER, null),
