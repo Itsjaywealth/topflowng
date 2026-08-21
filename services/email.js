@@ -57,7 +57,40 @@ async function sendViaSmtp({ to, subject, html, replyTo }) {
   logger.info('Email accepted by SMTP', { id: info.messageId || 'unknown id' });
 }
 
+// Priority 0: branded relay (hello@topflowng.com via Titan on the AWS box).
+// Railway blocks direct SMTP egress, so transactional mail goes over HTTPS.
+// Returns { handled: true } when the relay delivered, { handled: false } when
+// the relay is not configured or failed (caller falls through to next provider).
+async function sendViaRelay({ to, subject, html }) {
+  const url = process.env.MAIL_RELAY_URL;
+  const token = process.env.MAIL_RELAY_TOKEN;
+  if (!url || !token) return { handled: false };
+  try {
+    const response = await axios.post(url, {
+      to,
+      from: 'hello@topflowng.com',
+      subject,
+      body: String(html || '').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+    }, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      timeout: config.resend.timeoutMs + 15000,
+    });
+    if (!response.data || response.data.ok !== true) {
+      throw new Error(response.data && response.data.error ? response.data.error : 'relay rejected');
+    }
+    logger.info('Email accepted by relay', { from: 'hello@topflowng.com' });
+    return { handled: true };
+  } catch (err) {
+    logger.warn('Relay delivery failed, falling back', { message: err.message });
+    return { handled: false };
+  }
+}
+
 async function sendEmail({ to, subject, html, replyTo }) {
+  const relay = await sendViaRelay({ to, subject, html });
+  if (relay.handled) return;
+
   if (isSmtpConfigured()) {
     try {
       await sendViaSmtp({ to, subject, html, replyTo });
