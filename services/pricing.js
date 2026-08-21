@@ -242,18 +242,34 @@ function findCablePlan(provider, planCode) {
  */
 function validatePlanAmount(network, planCode, clientAmount) {
   const plan = findDataPlan(network, planCode);
-  if (!plan) throw new Error(`Unknown plan: ${planCode} for ${network}`);
+  if (!plan) {
+    const err = new Error(`Unknown plan: ${planCode} for ${network}`);
+    err.statusCode = 400;
+    throw err;
+  }
+  // Direct (pay-per-order) lookups omit the client amount — the catalog price
+  // IS the authoritative price. Wallet-mode purchases must still match it.
+  if (clientAmount == null || clientAmount === '') return plan;
   if (Math.abs(plan.price - Number(clientAmount)) > 0.01) {
-    throw new Error(`Price mismatch for ${planCode}: expected ₦${plan.price}, got ₦${clientAmount}`);
+    const err = new Error(`Price mismatch for ${planCode}: expected ₦${plan.price}, got ₦${clientAmount}`);
+    err.statusCode = 400;
+    throw err;
   }
   return plan;
 }
 
 function validateCablePlanAmount(provider, planCode, clientAmount) {
   const plan = findCablePlan(provider, planCode);
-  if (!plan) throw new Error(`Unknown plan: ${planCode} for ${provider}`);
+  if (!plan) {
+    const err = new Error(`Unknown bouquet: ${planCode} for ${provider}`);
+    err.statusCode = 400;
+    throw err;
+  }
+  if (clientAmount == null || clientAmount === '') return plan;
   if (Math.abs(plan.price - Number(clientAmount)) > 0.01) {
-    throw new Error(`Price mismatch for ${planCode}: expected ₦${plan.price}, got ₦${clientAmount}`);
+    const err = new Error(`Price mismatch for ${planCode}: expected ₦${plan.price}, got ₦${clientAmount}`);
+    err.statusCode = 400;
+    throw err;
   }
   return plan;
 }

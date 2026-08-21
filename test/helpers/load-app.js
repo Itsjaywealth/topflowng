@@ -289,7 +289,7 @@ installMock('services/email.js', {
 });
 
 // ── Mock provider client (never dials VTPass) ──────────────────────────
-installMock('services/vtpass.js', {
+const vtpassMock = {
   getProductRegistry: () => [],
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (value) => {
@@ -308,7 +308,21 @@ installMock('services/vtpass.js', {
   normalizeVtpassResponse: (raw) => ({ ...raw, status: raw.code, remark: raw.response_description }),
   queryVtpassOrder: async () => ({ outcome: 'pending' }),
   processVtpassPurchase: async () => ({ outcome: 'pending' }),
-});
+  // Direct pay-per-order fulfilment stub. Tests can vary the outcome per test
+  // via `h.mockVtpass().processDirectPurchase.__outcome` / `.__message`.
+  async processDirectPurchase({ requestId }) {
+    const outcome = vtpassMock.processDirectPurchase.__outcome || 'pending';
+    return {
+      outcome,
+      message: vtpassMock.processDirectPurchase.__message
+        || (outcome === 'success' ? 'Order completed.' : 'Your order is pending provider confirmation.'),
+      requestId,
+      orderId: outcome === 'pending' ? null : 'PROV-' + requestId,
+    };
+  },
+};
+
+installMock('services/vtpass.js', vtpassMock);
 
 // ── Boot the real app ────────────────────────────────────────────────────────
 require(path.join(ROOT, 'server.js'));
@@ -379,6 +393,7 @@ module.exports = {
   register,
   login,
   mockDb,
+  mockVtpass: () => vtpassMock,
   sentEmails,
   bcrypt,
   createUserViaDb,

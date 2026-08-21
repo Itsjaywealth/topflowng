@@ -129,6 +129,9 @@ router.post('/orders', authMiddleware, apiLimiter, directModeGuard, validate(req
     res.json({ authorization_url: init.authorizationUrl, reference, order_request_id: requestId, amount });
   } catch (err) {
     if (err instanceof VtpassProductError) return sendError(res, 400, err.message);
+    // Catalog validation errors (unknown plan/bouquet, price mismatch) are
+    // client errors, not server faults.
+    if (err.statusCode === 400) return sendError(res, 400, err.message);
     logger.error('Direct order creation error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });
     if (config.sentry.dsn) require('@sentry/node').captureException(err);
     sendError(res, 500, 'Could not create order');

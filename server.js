@@ -450,7 +450,7 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
   try {
     const user = await db.findUserById(req.user.id);
     if (!user) return sendError(res, 404, 'User not found');
-    res.json({ id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin });
+    res.json({ id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin, paymentMode: config.paymentMode });
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch profile');
@@ -633,7 +633,7 @@ async function fulfilVerifiedDirectOrder(reference, payment) {
 
   // Idempotent: never fulfil the same order twice from a replayed webhook/verify.
   if (order.payment_status === 'paid' && order.status === 'completed') {
-    return { direct: true, alreadyCompleted: true, order };
+    return { direct: true, alreadyCompleted: true, order, result: { outcome: 'success', requestId: order.request_id, message: 'Order already fulfilled.' } };
   }
 
   const payload = order.request_payload || {};
@@ -752,6 +752,19 @@ async function verifyAndCreditPaystackPayment(reference, expectedUserId = null) 
 async function verifyWalletFunding(req, res) {
   try {
     const result = await verifyAndCreditPaystackPayment(req.params.reference, req.user.id);
+    if (result.direct) {
+      // Direct (pay-per-order) verification: the outcome reflects VTPass
+      // fulfilment, not a wallet credit. Additive fields — wallet-mode
+      // clients keep reading balance/credited as before.
+      return res.json({
+        success: true,
+        direct: true,
+        outcome: result.outcome || 'pending',
+        message: result.message || null,
+        requestId: result.requestId || result.order_request_id || null,
+        orderId: result.orderId || null,
+      });
+    }
     res.json({ success: true, balance: result.balance, credited: result.credited });
   } catch (err) {
     logger.error('Payment verify error', { message: err.response?.data ? JSON.stringify(err.response.data) : err.message });

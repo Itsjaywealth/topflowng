@@ -3446,6 +3446,7 @@ let selectedDataPlan = null;
 let selectedCablePlan = null;
 let resetToken = null;
 let pendingPaymentReference = null;
+let pendingDirectReference = null;
 let serviceReturnFocus = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -3738,6 +3739,7 @@ async function init() {
   const rst = params.get('reset');
   const ver = params.get('verified');
   pendingPaymentReference = ver;
+  pendingDirectReference = params.get('direct_verified');
 
   if (rst) {
     resetToken = rst;
@@ -3780,7 +3782,13 @@ async function init() {
     if (nx) { window.location.href = nx; return; }
     launchApp();
     loadBizflowLink().catch(() => {});
-    await completePendingPayment();
+    if (pendingDirectReference) {
+      const ref = pendingDirectReference; pendingDirectReference = null;
+      window.history.replaceState({}, '', '/');
+      await completeDirectPayment(ref);
+    } else {
+      await completePendingPayment();
+    }
   } catch {
     localStorage.removeItem('tf_token');
     token = null;
@@ -4343,7 +4351,7 @@ async function buyAirtime() {
   if (!network) return showErr('svc-airtime-error', 'Select a network.');
   if (!phone || phone.length < 10) return showErr('svc-airtime-error', 'Enter a valid phone number.');
   if (!amount || amount < 50) return showErr('svc-airtime-error', 'Minimum airtime is ₦50.');
-  if (amount > (user.wallet || 0)) return showErr('svc-airtime-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-airtime-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
   // Safety: never silently send an MTN number as Airtel/Glo/etc. If the number
   // maps to a different network than the one selected, auto-correct and warn.
@@ -4366,10 +4374,12 @@ async function buyAirtime() {
       ['Fee', '₦0.00'],
     ],
     total: amount,
-    balanceNote: `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
+    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
     confirmLabel: `Buy ${fmt(amount)} airtime`,
   });
   if (!confirmed) return;
+
+  if (isDirectPay()) return startDirectOrder('airtime', { network, phone, amount }, 'btn-buy-airtime');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(amount)} ${network} airtime to ${phone}?` }); } catch { return; }
@@ -4406,7 +4416,7 @@ async function buyData() {
   if (!network) return showErr('svc-data-error', 'Select a network.');
   if (!phone || phone.length < 10) return showErr('svc-data-error', 'Enter a valid phone number.');
   if (!selectedDataPlan) return showErr('svc-data-error', 'Choose a data plan.');
-  if (selectedDataPlan.price > (user.wallet || 0)) return showErr('svc-data-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && selectedDataPlan.price > (user.wallet || 0)) return showErr('svc-data-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
   // Safety: never silently send an MTN number as Glo/Airtel/etc. If the number
   // maps to a different network than the one selected, auto-correct and warn.
@@ -4433,10 +4443,12 @@ async function buyData() {
       ['Fee', '₦0.00'],
     ],
     total: selectedDataPlan.price,
-    balanceNote: `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedDataPlan.price))}`,
+    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedDataPlan.price))}`,
     confirmLabel: 'Confirm purchase',
   });
   if (!confirmed) return;
+
+  if (isDirectPay()) return startDirectOrder('data', { network, phone, planCode: selectedDataPlan.code }, 'btn-buy-data');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(selectedDataPlan.price)} ${network} data for ${phone}?` }); } catch { return; }
@@ -4472,7 +4484,7 @@ async function buyElectricity() {
   if (!disco) return showErr('svc-electricity-error', 'Select a disco.');
   if (!meterNumber) return showErr('svc-electricity-error', 'Enter meter number.');
   if (!amount || amount < 500) return showErr('svc-electricity-error', 'Minimum electricity payment is ₦500.');
-  if (amount > (user.wallet || 0)) return showErr('svc-electricity-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-electricity-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(disco) || null,
@@ -4485,10 +4497,12 @@ async function buyElectricity() {
       ['Fee', '₦0.00'],
     ],
     total: amount,
-    balanceNote: `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
+    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
     confirmLabel: `Pay ${fmt(amount)} electricity`,
   });
   if (!confirmed) return;
+
+  if (isDirectPay()) return startDirectOrder('electricity', { disco, meterNumber, meterType: String(meterType || 'Prepaid').toLowerCase(), amount }, 'btn-pay-elec');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(amount)} ${disco} payment for meter ${meterNumber}?` }); } catch { return; }
@@ -4522,7 +4536,7 @@ async function buyCable() {
   if (!provider) return showErr('svc-cable-error', 'Select a provider.');
   if (!smartCardNumber) return showErr('svc-cable-error', 'Enter smart card / IUC number.');
   if (!selectedCablePlan) return showErr('svc-cable-error', 'Choose a package.');
-  if (selectedCablePlan.price > (user.wallet || 0)) return showErr('svc-cable-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && selectedCablePlan.price > (user.wallet || 0)) return showErr('svc-cable-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(provider) || null,
@@ -4535,10 +4549,12 @@ async function buyCable() {
       ['Fee', '₦0.00'],
     ],
     total: selectedCablePlan.price,
-    balanceNote: `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedCablePlan.price))}`,
+    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - selectedCablePlan.price))}`,
     confirmLabel: 'Confirm subscription',
   });
   if (!confirmed) return;
+
+  if (isDirectPay()) return startDirectOrder('cable', { provider, smartCardNumber, planCode: selectedCablePlan.code }, 'btn-pay-cable');
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(selectedCablePlan.price)} ${provider} subscription for card ${smartCardNumber}?` }); } catch { return; }
@@ -5220,6 +5236,105 @@ async function verifyPayment(reference) {
   return api('GET', '/api/payment/verify/' + encodeURIComponent(reference));
 }
 
+// ── DIRECT PAY-PER-ORDER ───────────────────────────────────────────────────
+// In direct mode there is no stored-balance debit: confirming an order opens
+// a provider checkout for THAT order's server-calculated price. On return
+// (?direct_verified=<reference>) the order is verified server-side and the
+// receipt always reflects real fulfilment status — never a faked success.
+function isDirectPay() {
+  return typeof user !== 'undefined' && !!user && user.paymentMode === 'direct';
+}
+
+function _svcErrId(serviceType) {
+  return 'svc-' + (serviceType === 'exam-pin' ? 'exam' : serviceType) + '-error';
+}
+
+async function startDirectOrder(serviceType, details, btnId) {
+  hideErr(_svcErrId(serviceType));
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if (btn) { btn.dataset.label = btn.textContent; setLoading(btnId, true, 'Redirecting…'); }
+  try {
+    const res = await api('POST', '/api/direct/orders', Object.assign({ serviceType }, details));
+    try {
+      sessionStorage.setItem('tf_direct_order', JSON.stringify({
+        reference: res.reference, requestId: res.order_request_id,
+        amount: res.amount, serviceType, details,
+      }));
+    } catch (e) { /* handoff is best-effort */ }
+    window.location.href = res.authorization_url;
+    return true;
+  } catch (e) {
+    showErr(_svcErrId(serviceType), e.message || 'Could not start checkout. Please try again.');
+    if (btn) setLoading(btnId, false);
+    return false;
+  }
+}
+
+function _directReceiptLines(serviceType, d, amount, reference) {
+  switch (serviceType) {
+    case 'airtime':     return [['Network', d.network], ['Phone', d.phone], ['Amount', fmt(amount)], ['Reference', reference]];
+    case 'data':        return [['Network', d.network], ['Phone', d.phone], ['Plan', d.planCode], ['Amount', fmt(amount)], ['Reference', reference]];
+    case 'electricity': return [['Disco', d.disco], ['Meter', d.meterNumber], ['Amount', fmt(amount)], ['Reference', reference]];
+    case 'cable':       return [['Provider', d.provider], ['Card', d.smartCardNumber], ['Package', d.planCode], ['Amount', fmt(amount)], ['Reference', reference]];
+    case 'exam-pin':    return [['Exam body', d.examBody], ['Quantity', d.quantity || 1], ['Amount', fmt(amount)], ['Reference', reference]];
+    default:            return [['Reference', reference]];
+  }
+}
+
+async function completeDirectPayment(reference) {
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem('tf_direct_order') || 'null'); } catch (e) {}
+  if (saved && saved.reference === reference) sessionStorage.removeItem('tf_direct_order');
+  const d = (saved && saved.details) || {};
+  const serviceType = (saved && saved.serviceType) || '';
+  const amount = (saved && saved.amount) || null;
+
+  let res;
+  try {
+    res = await api('GET', '/api/payment/verify/' + encodeURIComponent(reference));
+  } catch (e) {
+    showToast(e.message || 'Payment verification failed. Contact support with reference ' + reference + '.', 'error', 6000);
+    return;
+  }
+
+  const lines = _directReceiptLines(serviceType, d, amount || '', reference);
+  const outcome = res.outcome || 'pending';
+
+  if (outcome === 'success') {
+    closeService(serviceType === 'exam-pin' ? 'exam' : serviceType);
+    showReceipt({
+      title: serviceType === 'exam-pin' ? 'Order complete!' : 'Purchase successful!',
+      sub: serviceType === 'exam-pin'
+        ? 'Your PIN(s) have been delivered to your email and are in your receipt history.'
+        : (res.message || 'Your order was completed successfully.'),
+      lines,
+    });
+  } else if (outcome === 'failed') {
+    showReceipt({
+      title: 'Order not confirmed',
+      sub: (res.message || 'The provider declined this order.') +
+        ' Your payment is secured and flagged for refund — support has been notified.',
+      lines, failed: true,
+    });
+  } else {
+    closeService(serviceType === 'exam-pin' ? 'exam' : serviceType);
+    showReceipt({
+      title: 'Payment confirmed — processing order',
+      sub: res.message || 'Your payment is confirmed and your order is being processed.',
+      pending: true, lines,
+    });
+    if (res.requestId) {
+      pollPendingOrder(res.requestId, (data) => flipPendingOrder(data, {
+        successTitle: 'Purchase successful!',
+        successSub: 'Your order was completed successfully.',
+        baseLines: lines.filter((([l]) => l !== 'Provider order')),
+      }));
+    }
+  }
+  loadRecentTxns();
+  checkPendingOrders();
+}
+
 // ── CHANGE PASSWORD ───────────────────────────────────────────────────────
 function openChangePassword() {
   document.getElementById('change-pass-panel').classList.add('open');
@@ -5314,7 +5429,7 @@ async function buyExamPin() {
     ? (priceEntry[_jambVariation] || 6200)
     : (priceEntry || 5350);
   const amount = unitPrice * quantity;
-  if (amount > (user.wallet || 0)) return showErr('svc-exam-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-exam-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(examBody) || null,
@@ -5326,10 +5441,17 @@ async function buyExamPin() {
       ['Fee', '₦0.00'],
     ],
     total: amount,
-    balanceNote: `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
+    balanceNote: isDirectPay() ? 'You will pay for this order at secure checkout.' : `New balance: ${fmt(Math.max(0, (user.wallet || 0) - amount))}`,
     confirmLabel: 'Buy exam PIN',
   });
   if (!confirmed) return;
+
+  if (isDirectPay()) {
+    const examVarD = examBody === 'JAMB' ? _jambVariation : undefined;
+    const payloadD = { examBody, quantity };
+    if (examVarD) payloadD.examVariation = examVarD;
+    return startDirectOrder('exam-pin', payloadD, 'btn-buy-exam');
+  }
 
   let pin;
   try { pin = await requestTransactionPin({ pinPromptText: `Authorise ${fmt(amount)} for ${quantity} × ${examBody} PIN?` }); } catch { return; }
