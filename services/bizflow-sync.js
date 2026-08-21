@@ -103,7 +103,7 @@ async function deliverSync(row) {
       maxRedirects: 0,
     });
     if (res.status >= 200 && res.status < 300) {
-      await db.markBizflowSyncResult(row.id, { synced: true, bizflowExpenseId: res.data?.expense?.id || res.data?.id || null });
+      await db.markBizflowSyncResult(row.id, { synced: true, bizflowExpenseId: res.data?.expenseId || res.data?.expense?.id || res.data?.id || null });
       await events.emit('topflow.bizflow.expense.synced', {
         reference: row.reference, category: row.category, amount: Number(row.amount),
         bizflow_expense_id: res.data?.expense?.id || res.data?.id || null,
