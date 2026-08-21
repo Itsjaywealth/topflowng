@@ -29,9 +29,13 @@ const router = express.Router();
 router.use(internalKeyMiddleware);
 
 // ── Event log (pull-based fallback for subscribers) ─────────────────────────
+// `?enrich=true` joins customer contact fields (email/full_name/phone) for
+// events carrying user_id, so messaging workflows can address recipients
+// without exposing any other customer data.
 router.get('/events', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const enrich = req.query.enrich === 'true';
     const params = [];
     let where = 'TRUE';
     if (req.query.type) { params.push(String(req.query.type)); where += ` AND type = $${params.length}`; }
@@ -42,9 +46,38 @@ router.get('/events', async (req, res) => {
        FROM automation_events WHERE ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
       params
     );
+    if (enrich && rows.length > 0) {
+      const userIds = [...new Set(rows.map((r) => r.payload && r.payload.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        const u = await db.pool.query(
+          'SELECT id, full_name, email, phone FROM users WHERE id = ANY($1::int[])',
+          [userIds]
+        );
+        const byId = new Map(u.rows.map((r) => [r.id, r]));
+        for (const row of rows) {
+          const cust = row.payload && row.payload.user_id ? byId.get(row.payload.user_id) : null;
+          row.customer = cust
+            ? { user_id: cust.id, name: cust.full_name, email: cust.email, phone: cust.phone }
+            : null;
+        }
+      }
+    }
     res.json({ ok: true, count: rows.length, events: rows });
   } catch {
     sendError(res, 500, 'Failed to load events');
+  }
+});
+
+// ── Renewal reminder bookkeeping ─────────────────────────────────────────────
+// Marks a renewal as reminded so the daily feed stays idempotent.
+router.post('/renewals/mark-reminded', async (req, res) => {
+  try {
+    const reference = String((req.body && req.body.reference) || '').slice(0, 64);
+    if (!reference) return sendError(res, 400, 'reference is required');
+    await db.markRenewalReminded(reference);
+    return res.json({ ok: true, reference });
+  } catch {
+    sendError(res, 500, 'Failed to mark renewal reminded');
   }
 });
 
