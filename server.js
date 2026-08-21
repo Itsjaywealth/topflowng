@@ -1062,7 +1062,8 @@ app.get('/api/internal/pending-orders', internalKeyMiddleware, async (req, res) 
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const orders = await db.getAdminVtuOrders({ limit, status: 'pending' });
-    res.json({ ok: true, count: orders.rows?.length || orders.total || 0, orders: orders.rows || orders, generatedAt: new Date().toISOString() });
+    const rows = Array.isArray(orders?.orders) ? orders.orders : (Array.isArray(orders?.rows) ? orders.rows : []);
+    res.json({ ok: true, count: rows.length, orders: rows, total: orders?.total ?? rows.length, generatedAt: new Date().toISOString() });
   } catch (err) {
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Failed to fetch pending orders');

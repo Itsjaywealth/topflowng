@@ -37,7 +37,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Only continue when there are actually pending orders to report.\nconst data = $input.first().json;\nconst orders = data.orders || [];\nif (!Array.isArray(orders) || orders.length === 0) {\n  return [];\n}\nreturn orders.map((o) => ({\n  json: {\n    requestId: o.request_id || o.requestId,\n    service: o.service_type || o.serviceType,\n    amount: 'NGN ' + Number(o.amount || 0).toLocaleString('en-NG'),\n    description: o.description,\n    user: o.user_name || o.userEmail,\n    email: o.user_email || o.userEmail,\n    created: o.created_at || o.createdAt,\n    providerOrderId: o.provider_order_id || o.providerOrderId || '-',\n    reconcileAttempts: o.reconcile_attempts ?? o.reconcileAttempts ?? 0\n  }\n}));"
+        "jsCode": "// Only continue when there are actually pending orders to report.\nconst data = $input.first().json;\nconst raw = data.orders;\nconst orders = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.orders)) ? raw.orders : [];\nif (orders.length === 0) {\n  return [];\n}\nreturn orders.map((o) => ({\n  json: {\n    requestId: o.request_id || o.requestId,\n    service: o.service_type || o.serviceType,\n    amount: 'NGN ' + Number(o.amount || 0).toLocaleString('en-NG'),\n    description: o.description,\n    user: o.user_name || o.userEmail,\n    email: o.user_email || o.userEmail,\n    created: o.created_at || o.createdAt,\n    providerOrderId: o.provider_order_id || o.providerOrderId || '-',\n    reconcileAttempts: o.reconcile_attempts ?? o.reconcileAttempts ?? 0\n  }\n}));"
       },
       "id": "map",
       "name": "Map Pending Orders",
