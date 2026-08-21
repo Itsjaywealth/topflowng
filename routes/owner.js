@@ -33,6 +33,15 @@ router.get('/overview', async (req, res) => {
       provider = { status: 'UNKNOWN', error: e.message };
     }
 
+    // Live provider float — the number that decides whether orders can fulfil.
+    let providerWallet = null;
+    try {
+      const { getWalletBalance } = require('../services/vtpass');
+      providerWallet = { balanceNgn: Number((await getWalletBalance()).toFixed(2)) };
+    } catch (e) {
+      providerWallet = { error: e.message };
+    }
+
     let redis = 'not configured';
     try {
       const cache = require('../lib/cache');
@@ -72,6 +81,7 @@ router.get('/overview', async (req, res) => {
       },
       integrations: {
         vtpass: provider ? provider.status || 'unknown' : 'unknown',
+        vtpassWallet: providerWallet,
         internalApi: Boolean(config.internalApiKey),
         emailConfigured: Boolean(config.resend.apiKey || process.env.SMTP_HOST),
         bizflowUrl: config.bizflow.apiUrl || null,

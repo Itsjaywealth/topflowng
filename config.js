@@ -228,6 +228,10 @@ const config = {
     // always safe and honest.
     reconcileMaxAttempts: num(process.env.PENDING_ORDER_RECONCILE_MAX_ATTEMPTS, 720),
     reconcilePollCooldownMs: num(process.env.PENDING_ORDER_RECONCILE_POLL_COOLDOWN_MS, 10_000),
+    // Provider wallet watchdog — alert when the VTPass float drops below this
+    // (0 disables). Checks run every VTPASS_BALANCE_CHECK_MINUTES.
+    minBalanceAlertNgn: num(process.env.VTPASS_MIN_BALANCE_ALERT_NGN, 5_000),
+    balanceCheckMinutes: num(process.env.VTPASS_BALANCE_CHECK_MINUTES, 15),
   },
 
 // ── Markup / service fees ───────────────────────────────────────────────────

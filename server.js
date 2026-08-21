@@ -40,7 +40,7 @@ const vtuRouter = require('./routes/vtu');
 const directRouter = require('./routes/direct');
 const aiRouter = require('./routes/ai').router;
 const adminAnalyticsRouter = require('./routes/admin-analytics');
-const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productFor, buildRequestId } = require('./services/vtpass');
+const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productFor, buildRequestId, getWalletBalance, evaluateProviderBalance } = require('./services/vtpass');
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const sms = require('./services/sms');
 const { sendError } = require('./lib/errors');
@@ -2116,6 +2116,49 @@ function schedulePendingOrderSweep() {
   return timer;
 }
 
+// ── Provider balance watchdog ───────────────────────────────────────────────
+// A dry VTPass wallet fails EVERY customer order. This sweep checks the
+// provider wallet balance on a fixed interval and raises exactly one alert per
+// low-crossing (re-armed after recovery) via the signed event bus → n8n →
+// Telegram/email, plus an audit entry. Read-only: it never mutates balances.
+const providerBalanceState = { wasLow: false, lastBalance: null, lastCheckedAt: null, lastError: null };
+
+function scheduleProviderBalanceWatch() {
+  const minBalance = config.vtpass.minBalanceAlertNgn;
+  if (!minBalance || typeof getWalletBalance !== 'function') return null;
+  const intervalMs = Math.max(5, config.vtpass.balanceCheckMinutes) * 60_000;
+
+  async function check() {
+    try {
+      const balance = await vtpassService.getWalletBalance();
+      providerBalanceState.lastBalance = balance;
+      providerBalanceState.lastCheckedAt = new Date().toISOString();
+      providerBalanceState.lastError = null;
+      const verdict = evaluateProviderBalance(balance, { minBalance, wasLow: providerBalanceState.wasLow });
+      providerBalanceState.wasLow = verdict.low;
+      if (verdict.alert) {
+        logger.error('PROVIDER BALANCE LOW — orders will fail until topped up', { balanceNgn: balance, thresholdNgn: minBalance });
+        require('./services/events').emit('topflow.provider.balance_low', {
+          balance: Number(balance.toFixed(2)),
+          threshold: minBalance,
+        }, { entityType: 'provider', entityId: 'vtpass' }).catch(() => {});
+        require('./services/events').audit('provider.balance.low', {
+          actorType: 'system', entityType: 'provider', entityId: 'vtpass',
+          metadata: { balanceNgn: Number(balance.toFixed(2)), thresholdNgn: minBalance },
+        }).catch(() => {});
+      } else if (verdict.recover) {
+        logger.info('Provider wallet balance recovered above threshold', { balanceNgn: balance });
+      }
+    } catch (err) {
+      providerBalanceState.lastError = err.message;
+      logger.warn('Provider balance check failed', { detail: err.message });
+    }
+  }
+
+  void check();
+  return setInterval(check, intervalMs);
+}
+
 async function start() {
   await db.initDB();
 
@@ -2176,6 +2219,7 @@ async function start() {
   });
 
   const sweepTimer = schedulePendingOrderSweep();
+  const balanceWatchTimer = scheduleProviderBalanceWatch();
 
   // ── Ops-health watchdog ─────────────────────────────────────────────────
   // Periodically evaluates the conditions the alerting module tracks and emits

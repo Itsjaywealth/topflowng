@@ -434,6 +434,22 @@ function authHeaders(kind) {
   return authConfig(kind).headers;
 }
 
+// ── Provider wallet balance ──────────────────────────────────────────────────
+// GET /api/balance — used by the provider-balance watchdog so a dry VTPass
+// wallet is caught BEFORE customers hit failed orders.
+async function getWalletBalance() {
+  const response = await axios.get(`${config.vtpass.baseUrl}/balance`, {
+    ...authConfig('get'),
+    timeout: config.vtpass.timeoutMs,
+  });
+  const raw = response.data && response.data.balance;
+  const balance = parseFloat(raw);
+  if (!Number.isFinite(balance)) {
+    throw new Error(`Unparseable VTPass balance response: ${JSON.stringify(response.data || {}).slice(0, 200)}`);
+  }
+  return balance;
+}
+
 function assertConfigured() {
   const isBasic = config.vtpass.authType === 'basic';
   if (isBasic) {
@@ -705,7 +721,21 @@ async function processDirectPurchase({ userId, requestId, serviceType, amount, d
   return { outcome: 'pending', message: 'Your order is pending provider confirmation.', requestId, orderId: provider.orderId, provider };
 }
 
+// Pure threshold logic for the provider-balance watchdog. Hysteresis: alert
+// fires on the crossing below `minBalance`; it re-arms only when the balance
+// recovers to `minBalance + recoverMargin`, so one low balance produces one
+// alert, not one per sweep.
+function evaluateProviderBalance(balance, { minBalance, wasLow, recoverMargin = 1000 }) {
+  if (!Number.isFinite(balance)) return { alert: false, recover: false, low: Boolean(wasLow) };
+  const low = balance < minBalance;
+  if (low && !wasLow) return { alert: true, recover: false, low: true };
+  if (!low && wasLow && balance >= minBalance + recoverMargin) return { alert: false, recover: true, low: false };
+  return { alert: false, recover: false, low: low || Boolean(wasLow) };
+}
+
 module.exports = {
+  getWalletBalance,
+  evaluateProviderBalance,
   MAX_PURCHASE_AMOUNT,
   parseValidatedAmount,
   buildRequestId,
