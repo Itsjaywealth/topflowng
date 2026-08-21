@@ -210,7 +210,9 @@ test.describe('logged-in app shell', () => {
     // Inactive products are not presented in the primary grid.
     await expect(page.locator('.service-tile', { hasText: 'Recharge Cards' })).toHaveCount(0);
     for (const active of ['Airtime', 'Data', 'Electricity', 'Cable TV', 'Exam PINs']) {
-      await expect(page.locator('.service-tile', { hasText: active })).toHaveCount(1);
+      await expect(page.locator('#screen-home .service-tile', { hasText: active })).toHaveCount(1);
+      // The Services hub presents the same active set.
+      await expect(page.locator('#screen-services .service-tile', { hasText: active })).toHaveCount(1);
     }
     await page.evaluate(() => openService('electricity'));
     // All 12 DISCOs verified live on the active provider are selectable.
@@ -229,10 +231,11 @@ test.describe('logged-in app shell', () => {
     await page.goto('/');
     await expect(page.locator('#main-app')).toBeVisible();
     await expect(page.locator('h2', { hasText: 'All services' })).toHaveCount(1);
-    await expect(page.locator('.service-grid')).toHaveCount(1);
+    await expect(page.locator('#screen-home .service-grid')).toHaveCount(1);
+    await expect(page.locator('#screen-services .service-grid')).toHaveCount(1);
     await expect(page.locator('#quickpay-grid')).toHaveCount(0);
     for (const active of ['Airtime', 'Data', 'Electricity', 'Cable TV', 'Exam PINs']) {
-      await expect(page.locator('.service-tile', { hasText: active })).toHaveCount(1);
+      await expect(page.locator('#screen-home .service-tile', { hasText: active })).toHaveCount(1);
     }
     await expect(page.locator('.service-tile', { hasText: 'Recharge Cards' })).toHaveCount(0);
     await page.locator('.quickpay-bar .quickpay-search').click();
