@@ -1783,6 +1783,11 @@ function schedulePendingOrderSweep() {
   let timer = null;
 
   async function processDueAutoRecharges() {
+    // Wallet-product retirement: auto-recharge IS a low-balance funding
+    // prompt. Gated behind the same server-controlled kill switch as manual
+    // funding so both move together; existing sessions/verifications are
+    // unaffected (in-flight payments still credit via /verify).
+    if (!config.safety.fundingEnabled) return;
     try {
       const due = await db.getDueAutoRecharges(10);
       for (const row of due) {
