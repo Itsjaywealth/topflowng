@@ -125,13 +125,19 @@ test.describe('transaction history', () => {
 });
 
 test.describe('wallet + branding', () => {
-  test('wallet screen shows balance hero and TopFlowNG mark', async ({ page, request }) => {
+  test('wallet-centric UI is removed; balance lives on Account; brand mark present', async ({ page, request }) => {
     await login(request, page);
     await page.goto('/');
     await expect(page.locator('#main-app')).toBeVisible();
-    await page.evaluate(() => goTab('wallet'));
-    await expect(page.locator('#screen-wallet')).toBeVisible();
-    await expect(page.locator('#wallet-balance')).toBeVisible();
+    // The wallet screen and fund-wallet entry points are fully removed.
+    await expect(page.locator('#screen-wallet')).toHaveCount(0);
+    await expect(page.locator('#fund-modal')).toHaveCount(0);
+    await expect(page.getByText('Fund wallet')).toHaveCount(0);
+    // Dashboard hero is services-focused, not a balance hero.
+    await expect(page.locator('.dash-balance-card')).toContainText('TopFlowNG services');
+    // Balance remains visible as quiet accounting on the Account tab.
+    await page.evaluate(() => goTab('account'));
+    await expect(page.locator('#acct-balance')).toContainText('Available balance');
     await expect(page.locator('.wordmark img')).toBeVisible();
   });
 });

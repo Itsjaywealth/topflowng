@@ -78,7 +78,9 @@ installMock('services/email.js', {
   async sendEmail() {},
   async sendPurchaseEmail() {},
   async sendOrderStatusEmail() {},
+  async sendAutoRechargeEmail() {},
   async sendInvoiceEmail() {},
+  async sendWelcomeEmail() {},
 });
 
 installMock('services/openrouter.js', {

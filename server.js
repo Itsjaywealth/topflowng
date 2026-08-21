@@ -321,6 +321,14 @@ app.post('/api/auth/register', authLimiter, validate(registerSchema), async (req
 
     const user  = await db.createUser({ fullName, email, phone: phone.trim(), password, referredBy });
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    // Welcome email — fire-and-forget; only reachable on a fresh insert (the
+    // unique-email 409 above makes duplicate sends impossible).
+    const { sendWelcomeEmail } = require('./services/email');
+    if (typeof sendWelcomeEmail === 'function') {
+      Promise.resolve()
+        .then(() => sendWelcomeEmail(user.email, user.full_name))
+        .catch((err) => logger.warn('Welcome email failed', { email: user.email, message: err.message }));
+    }
     res.status(201).json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
   } catch (err) {
     logger.error('Register error', { message: err.message });
@@ -993,6 +1001,9 @@ app.use('/api/ai', aiRouter);
 // ── Admin Analytics (mounted /api/admin/analytics/*) ──────────────────────
 app.use('/api/admin/analytics', adminAnalyticsRouter);
 
+// ── Owner / super-admin surface (JWT + DB admin + OWNER_EMAILS allow-list) ──
+app.use('/api/owner', require('./routes/owner'));
+
 // ── VTPass VTU Reconciliation ───────────────────────────────────────────────
 // VTPass identifies a transaction solely by the request_id we sent, so every
 // captured pending order is queryable via /requery — no provider-side order id
@@ -1054,6 +1065,27 @@ async function reconcileVtuOrder(requestId) {
         : 'VTPass confirmed failure. No wallet debit was made.',
   };
 }
+
+// Admin-only controlled refund. Idempotent: the deterministic reference
+// 'refund-<requestId>' makes double refunds impossible at the data layer.
+app.post('/api/admin/vtu-orders/:requestId/refund', adminMiddleware, async (req, res) => {
+  const requestId = String(req.params.requestId || '').trim();
+  try {
+    const result = await db.refundVtuOrder(requestId, { adminEmail: req.user.email });
+    const events = require('./services/events');
+    await events.audit('transaction.refunded', {
+      actorType: 'admin', actorId: req.user.email,
+      entityType: 'transaction', entityId: requestId,
+      metadata: { alreadyRefunded: Boolean(result.alreadyRefunded), amount: result.refundedAmount ?? null },
+      ip: req.ip,
+    });
+    res.json({ ok: true, ...result, order: undefined });
+  } catch (err) {
+    logger.error(`Refund failed for ${requestId}`, { message: err.message });
+    if (config.sentry.dsn) Sentry.captureException(err);
+    sendError(res, err.message === 'Order not found' ? 404 : 409, err.message);
+  }
+});
 
 // Admin-only manual reconciliation.
 app.post('/api/admin/vtu-orders/:requestId/reconcile', adminMiddleware, async (req, res) => {
@@ -2068,6 +2100,55 @@ function schedulePendingOrderSweep() {
 
 async function start() {
   await db.initDB();
+
+  // Owner promotion — idempotent, server-side only. Emails in OWNER_EMAILS
+  // are granted admin on boot so owners always retain administrative access.
+  for (const email of config.ownerEmails) {
+    try {
+      const existing = await db.findUserByEmail(email);
+      if (existing && !existing.is_admin) {
+        await db.promoteToAdmin(existing.id);
+        logger.info('Owner account promoted to admin', { email });
+      }
+    } catch (err) {
+      logger.warn('Owner promotion check failed', { email, message: err.message });
+    }
+  }
+
+  // Wallet-product retirement — flag non-zero stored balances for
+  // reconciliation. Balances are NEVER erased or mutated here; this only
+  // records who holds stored value so it can be refunded/migrated by an
+  // authorised operator decision.
+  try {
+    const { rows: holders } = await db.pool.query(
+      `SELECT id, email, wallet FROM users WHERE wallet > 0 ORDER BY wallet DESC LIMIT 500`
+    );
+    if (holders.length > 0) {
+      const total = holders.reduce((sum, u) => sum + Number(u.wallet || 0), 0);
+      logger.warn('RECONCILIATION_REQUIRED: non-zero stored balances detected', {
+        accounts: holders.length,
+        totalNgn: total,
+      });
+      const { audit } = require('./services/events');
+      await audit('wallet.balance.reconciliation_required', {
+        actorType: 'system',
+        entityType: 'platform',
+        entityId: 'stored_balances',
+        metadata: { accounts: holders.length, totalNgn: total },
+      });
+      for (const u of holders.slice(0, 100)) {
+        await audit('wallet.balance.holder_flagged', {
+          actorType: 'system',
+          actorId: String(u.id),
+          entityType: 'user',
+          entityId: String(u.id),
+          metadata: { email: u.email, balanceNgn: Number(u.wallet) },
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn('Stored-balance reconciliation check failed', { message: err.message });
+  }
   await require('./lib/cache').connect().catch(() => {});
   const server = app.listen(PORT, '0.0.0.0', () => {
     logger.info('TopFlowNG server started', { port: PORT, env: config.env });

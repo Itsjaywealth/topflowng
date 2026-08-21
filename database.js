@@ -2007,6 +2007,76 @@ module.exports = {
   markBizflowSyncResult,
   getBizflowSyncsByUser,
   getRagTransactions,
+  refundVtuOrder,
   getRagTransactionByReference,
   createSupportTicket,
 };
+
+// ── Admin refund (controlled, idempotent) ────────────────────────────────────
+// Credits back a customer for a specific VTU order. Idempotent via the
+// deterministic reference 'refund-<requestId>': a second call never
+// double-credits. Only orders that actually took customer money are
+// refundable: wallet-mode completed orders, or direct-mode paid orders.
+async function refundVtuOrder(requestId, { adminEmail = 'admin' } = {}) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT * FROM vtu_orders WHERE request_id = $1 FOR UPDATE',
+      [requestId]
+    );
+    const order = rows[0];
+    if (!order) throw new Error('Order not found');
+
+    const refundReference = `refund-${requestId}`;
+    const existing = await client.query(
+      `SELECT id FROM transactions WHERE type = 'credit' AND reference = $1 LIMIT 1`,
+      [refundReference]
+    );
+    if (existing.rows.length) {
+      await client.query('COMMIT');
+      return { alreadyRefunded: true, order };
+    }
+
+    const debited =
+      order.status === 'completed' ||
+      (order.payment_status === 'paid');
+    if (!debited) {
+      throw new Error('Order has no customer debit to refund');
+    }
+
+    const credited = await client.query(
+      'UPDATE users SET wallet = wallet + $1 WHERE id = $2 RETURNING wallet',
+      [order.amount, order.user_id]
+    );
+    if (!credited.rows.length) throw new Error('Customer not found');
+
+    await client.query(
+      `INSERT INTO transactions (user_id, type, amount, description, reference)
+       VALUES ($1, 'credit', $2, $3, $4)`,
+      [order.user_id, order.amount, `Refund for ${order.description}`, refundReference]
+    );
+
+    if (order.payment_status === 'paid') {
+      await client.query(
+        `UPDATE vtu_orders SET payment_status = 'refunded', updated_at = NOW() WHERE id = $1`,
+        [order.id]
+      );
+    }
+
+    await client.query('COMMIT');
+    emitSafe('topflow.transaction.refunded', {
+      reference: requestId,
+      user_id: order.user_id,
+      service_type: order.service_type,
+      amount: Number(order.amount),
+      refunded_by: adminEmail,
+    }, { entityType: 'transaction', entityId: requestId });
+    return { alreadyRefunded: false, refundedAmount: Number(order.amount), order };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}

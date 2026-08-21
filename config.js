@@ -44,6 +44,8 @@ const config = {
   corsOrigin: str(process.env.APP_URL, '*'),
   supportEmail: str(process.env.SUPPORT_EMAIL, 'hello@topflowng.com'),
   internalApiKey: str(process.env.INTERNAL_API_KEY, ''),
+  ownerEmails: (process.env.OWNER_EMAILS || 'josephegbedi@gmail.com,admin@brandverseventures.com')
+    .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
   trustProxy: str(process.env.TRUST_PROXY, '1') === '1',
   bodyLimit: str(process.env.BODY_LIMIT, '10kb'),
 

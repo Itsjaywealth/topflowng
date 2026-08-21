@@ -71,4 +71,38 @@ async function checkTransactionPin(userId, pin) {
   }
 }
 
-module.exports = { authMiddleware, adminMiddleware, checkTransactionPin };
+module.exports = { authMiddleware, adminMiddleware, ownerMiddleware, checkTransactionPin };
+
+/**
+ * Owner / super-admin guard. Requires ALL of:
+ *   - a valid, non-revoked JWT,
+ *   - the account loaded from the DB with is_admin = true (no token-only trust),
+ *   - the account email present in the server-side OWNER_EMAILS allow-list.
+ * Ordinary users and ordinary admins can never pass. There is intentionally
+ * no frontend path that grants ownership — the allow-list lives in env only.
+ */
+async function ownerMiddleware(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) {
+    return sendError(res, 401, 'No token provided');
+  }
+  if (security.isTokenRevoked(token)) {
+    return sendError(res, 401, 'Invalid or expired token');
+  }
+  try {
+    const payload = jwt.verify(token, config.jwt.secret);
+    const user = await db.findUserById(payload.id);
+    if (!user || !user.is_admin) {
+      return sendError(res, 403, 'Owner access required');
+    }
+    if (!config.ownerEmails.includes(String(user.email).toLowerCase())) {
+      return sendError(res, 403, 'Owner access required');
+    }
+    req.user = payload;
+    req.isOwner = true;
+    return next();
+  } catch {
+    return sendError(res, 401, 'Invalid or expired token');
+  }
+}

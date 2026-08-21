@@ -255,4 +255,43 @@ function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authori
   }).catch(e => logger.error('Auto-recharge email error', { message: e.message }));
 }
 
-module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail, isSmtpConfigured };
+
+// Welcome email for brand-new accounts. Never includes credentials, PINs or
+// secrets — only orientation and support links.
+function sendWelcomeEmail(userEmail, userName) {
+  const firstName = String(userName || 'there').trim().split(/\s+/)[0];
+  const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#f4f7f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
+    <div style="background:#0d7c4f;border-radius:16px 16px 0 0;padding:24px 28px;">
+      <span style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-.3px;">TopFlow<span style="opacity:.85">NG</span></span>
+    </div>
+    <div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px;border:1px solid #e5eae8;border-top:none;">
+      <h1 style="margin:0 0 12px;font-size:21px;color:#12241f;">Welcome aboard, ${escapeHtml(firstName)}! 🎉</h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d4f49;">
+        Your TopFlowNG account is ready. You can now buy airtime and data, pay electricity bills,
+        subscribe to Cable TV, and get exam PINs — all in one place, with instant receipts.
+      </p>
+      <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#3d4f49;font-weight:600;">Getting started takes under a minute:</p>
+      <ol style="margin:0 0 20px;padding-left:20px;font-size:14px;line-height:1.9;color:#3d4f49;">
+        <li>Sign in to your dashboard</li>
+        <li>Pick a service — airtime, data, electricity, cable TV or exam PINs</li>
+        <li>Confirm your purchase — your receipt is generated instantly</li>
+      </ol>
+      <a href="${config.appUrl}/login" style="display:inline-block;background:#0d7c4f;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 28px;border-radius:999px;">Open my dashboard</a>
+      <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#6b7c75;">
+        Need a hand? Our support assistant is available in-app 24/7
+        (Home → Support), or email <a href="mailto:${config.supportEmail}" style="color:#0d7c4f;">${config.supportEmail}</a>.
+      </p>
+      <p style="margin:20px 0 0;font-size:12px;color:#93a39c;">You received this email because an account was created with this address on TopFlowNG.</p>
+    </div>
+  </div>
+</body></html>`;
+  return sendEmail({
+    to: userEmail,
+    subject: 'Welcome to TopFlowNG — your account is ready',
+    html,
+  });
+}
+
+module.exports = { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail, sendWelcomeEmail, isSmtpConfigured };

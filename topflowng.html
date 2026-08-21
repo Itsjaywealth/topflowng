@@ -1217,8 +1217,6 @@ html.dark .icon-moon{display:none}
   #screen-history .txn-list{max-width:960px}
   #screen-notifications .notif-list{max-width:760px}
   #screen-notifications .filter-chips{max-width:760px}
-  #screen-wallet{max-width:880px}
-  #screen-wallet .wallet-stats{grid-template-columns:repeat(2,1fr)}
 }
 
 .txn-list{display:flex;flex-direction:column;gap:6px;border-radius:20px;
@@ -1323,11 +1321,6 @@ html.dark .icon-moon{display:none}
   margin-bottom:18px;letter-spacing:-.8px;
   background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 60%,var(--text-primary)));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-/* .glance-fund removed — wallet funding no longer customer-facing */
-.glance-fund-DISABLED{padding:10px 20px;background:var(--brand);color:#fff;
-  border-radius:999px;font:700 12px/1 var(--display);
-  border:none;cursor:pointer;transition:background var(--transition)}
-/* .glance-fund:hover removed */
 .glance-shortcut{display:flex;justify-content:space-between;align-items:center;
   width:100%;padding:12px 15px;border-radius:14px;
   border:1.5px solid var(--border-subtle);background:var(--surface);
@@ -1707,17 +1700,6 @@ html.dark .icon-moon{display:none}
   padding:11px 14px;background:var(--surface-muted);border-radius:12px;
   font:500 12px/1 var(--font);color:var(--text-secondary);margin-bottom:16px}
 .payment-provider .provider-logo-frame{width:24px;height:24px;border-radius:6px}
-
-/* ── Fund wallet modal ─────────────────────────────────────────────── */
-.btn-fund{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5)}
-.btn-fund:hover{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.7)}
-.fund-quick-amounts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.fund-quick-amounts .chip{flex:1 1 auto;min-width:calc(50% - 4px);padding:10px;
-  border:1px solid color-mix(in srgb,var(--brand) 25%,transparent);
-  background:var(--surface-muted);color:var(--text-primary);border-radius:12px;
-  font:600 13px/1 var(--font);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.fund-quick-amounts .chip:hover{background:color-mix(in srgb,var(--brand) 10%,var(--surface-muted));border-color:var(--brand)}
-.fund-quick-amounts .chip.active{background:var(--brand);color:#fff;border-color:var(--brand)}
 .modal-note{font:400 11px/1.5 var(--font);color:var(--text-tertiary);margin:14px 0 0;text-align:center}
 
 /* ══════════════════════════════════════════════════════════════
@@ -1947,7 +1929,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="preview-top"><div><span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>TopFlowNG</div><button type="button" onclick="openAuthFromMarketing('register')">Open account</button></div>
       <div class="preview-slides" id="preview-slides">
         <div class="preview-slide active">
-          <div class="preview-label">Available balance</div>
+          <div class="preview-label">Purchases this month</div>
           <div class="preview-balance">₦24,850.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>MTN airtime · 0803 123 4567</span><strong>−₦500.00</strong></div>
@@ -1955,15 +1937,15 @@ html.dark .btn-wa-share{color:#25D366!important}
           <div class="ledger-row"><span>IKEDC prepaid electricity</span><strong>−₦2,000.00</strong></div>
         </div>
         <div class="preview-slide">
-          <div class="preview-label">Available balance</div>
+          <div class="preview-label">Purchases this month</div>
           <div class="preview-balance">₦52,300.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>Glo data 10GB · 0813 555 7890</span><strong>−₦4,950.00</strong></div>
-          <div class="ledger-row"><span>Wallet top-up</span><strong style="color:#20B486">+₦20,000.00</strong></div>
+          <div class="ledger-row"><span>MTN airtime · 0812 000 1122</span><strong style="color:#20B486">Sent</strong></div>
           <div class="ledger-row"><span>Airtel 1GB data · 0702 333 4455</span><strong>−₦800.00</strong></div>
         </div>
         <div class="preview-slide">
-          <div class="preview-label">Available balance</div>
+          <div class="preview-label">Purchases this month</div>
           <div class="preview-balance">₦8,420.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>GOtv Jinja · IUC 5678 1234</span><strong>−₦3,900.00</strong></div>
@@ -1971,15 +1953,15 @@ html.dark .btn-wa-share{color:#25D366!important}
           <div class="ledger-row"><span>EKEDC prepaid token</span><strong>−₦5,000.00</strong></div>
         </div>
         <div class="preview-slide">
-          <div class="preview-label">Available balance</div>
+          <div class="preview-label">Purchases this month</div>
           <div class="preview-balance">₦67,150.00</div>
           <div class="ledger-cap">Recent activity</div>
-          <div class="ledger-row"><span>Wallet top-up</span><strong style="color:#20B486">+₦50,000.00</strong></div>
+          <div class="ledger-row"><span>Airtel airtime · 0702 111 9988</span><strong style="color:#20B486">Sent</strong></div>
           <div class="ledger-row"><span>T2 airtime · 0906 888 1111</span><strong>−₦1,000.00</strong></div>
           <div class="ledger-row"><span>WAEC exam PIN × 2</span><strong>−₦10,700.00</strong></div>
         </div>
         <div class="preview-slide">
-          <div class="preview-label">Available balance</div>
+          <div class="preview-label">Purchases this month</div>
           <div class="preview-balance">₦3,200.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>PHEDC prepaid token</span><strong>−₦5,000.00</strong></div>
@@ -1987,11 +1969,11 @@ html.dark .btn-wa-share{color:#25D366!important}
           <div class="ledger-row"><span>StarTimes Nova · IUC 9012 3456</span><strong>−₦2,100.00</strong></div>
         </div>
         <div class="preview-slide">
-          <div class="preview-label">Available balance</div>
+          <div class="preview-label">Purchases this month</div>
           <div class="preview-balance">₦41,680.00</div>
           <div class="ledger-cap">Recent activity</div>
           <div class="ledger-row"><span>DStv Premium · IUC 3456 7890</span><strong>−₦44,500.00</strong></div>
-          <div class="ledger-row"><span>Wallet top-up</span><strong style="color:#20B486">+₦80,000.00</strong></div>
+          <div class="ledger-row"><span>IKEJA electricity token</span><strong style="color:#20B486">Sent</strong></div>
           <div class="ledger-row"><span>AEDC postpaid bill</span><strong>−₦12,000.00</strong></div>
         </div>
       </div>
@@ -2449,18 +2431,6 @@ html.dark .btn-wa-share{color:#25D366!important}
           </div>
 
           <div class="dash-stat-grid">
-            <div class="dash-stat dash-stat--link" onclick="goTab('wallet')" role="button" tabindex="0" aria-label="Open wallet" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goTab('wallet')}">
-              <span class="dash-stat-icon dash-stat-icon--teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M16 12h5"/><circle cx="16.5" cy="12" r=".5" fill="currentColor"/></svg></span>
-              <span class="dash-stat-label">Available balance</span>
-              <span class="dash-stat-value" id="stat-balance">₦0.00</span>
-              <span class="dash-stat-hint" id="stat-balance-hint">Tap to view wallet</span>
-            </div>
-            <div class="dash-stat">
-              <span class="dash-stat-icon dash-stat-icon--green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></span>
-              <span class="dash-stat-label">Total credits</span>
-              <span class="dash-stat-value" id="stat-credits">₦0.00</span>
-              <span class="dash-stat-hint" id="stat-credits-hint">Wallet top-ups</span>
-            </div>
             <div class="dash-stat">
               <span class="dash-stat-icon dash-stat-icon--purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
               <span class="dash-stat-label">Total spend</span>
@@ -2486,17 +2456,18 @@ html.dark .btn-wa-share{color:#25D366!important}
 
           <div class="dash-balance-card">
             <div class="dash-balance-top">
-              <div class="dash-balance-label">Available balance</div>
+              <div class="dash-balance-label">TopFlowNG services</div>
               <button class="dash-notif-btn" onclick="goTab('notifications')" aria-label="Notifications">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
                 <span class="dash-notif-dot" id="dash-notif-dot" hidden></span>
               </button>
             </div>
-            <div class="dash-balance-amount" id="dash-balance-main">₦0.00</div>
+            <div class="dash-balance-amount" style="font-size:clamp(20px,4vw,26px)">Airtime · Data · Electricity · Cable TV · Exam PINs</div>
             <div class="dash-balance-actions">
               <button class="dash-action-btn" onclick="openService('airtime')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg> Airtime</button>
               <button class="dash-action-btn" onclick="openService('data')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a14.5 14.5 0 0 1 20 0"/><path d="M5 13.5a9.5 9.5 0 0 1 14 0"/><path d="M8.5 17a4.5 4.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg> Data</button>
               <button class="dash-action-btn" onclick="openService('electricity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 14h5L11 22l8.5-12h-5L13 2Z"/></svg> Electricity</button>
+              <button class="dash-action-btn" onclick="openService('cable')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="11" rx="2"/><path d="M8 20h8M12 16v4"/></svg> Cable TV</button>
             </div>
           </div>
 
@@ -2625,49 +2596,6 @@ html.dark .btn-wa-share{color:#25D366!important}
       </div>
     </div>
 
-    <div class="screen" id="screen-wallet">
-      <div class="history-head">
-        <div>
-          <div class="eyebrow">Workspace</div>
-          <h1>Wallet</h1>
-        </div>
-        <button class="history-refresh" type="button" onclick="loadWalletData(true)">Refresh</button>
-      </div>
-      <div class="wallet-hero">
-        <div class="wallet-hero-label">Available balance</div>
-        <div class="wallet-hero-amount" id="wallet-balance">₦0.00</div>
-        <div class="wallet-hero-actions">
-          <button class="btn-fund btn-history-quick" onclick="openFundModal()">Fund wallet</button>
-          <button class="btn-history-quick" onclick="goTab('history')">View transactions</button>
-        </div>
-      </div>
-      <div class="wallet-stats">
-        <div class="wallet-stat">
-          <span class="wallet-stat-icon credit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></span>
-          <span class="wallet-stat-body">
-            <span class="wallet-stat-label">Total credits</span>
-            <span class="wallet-stat-value wallet-stat-value--credit" id="wallet-credits">₦0.00</span>
-          </span>
-        </div>
-        <div class="wallet-stat">
-          <span class="wallet-stat-icon debit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
-          <span class="wallet-stat-body">
-            <span class="wallet-stat-label">Total spend</span>
-            <span class="wallet-stat-value" id="wallet-spend">₦0.00</span>
-          </span>
-        </div>
-      </div>
-      <section class="home-activity" aria-labelledby="wallet-activity-heading">
-        <div class="home-section-head">
-          <h2 class="section-title" id="wallet-activity-heading">Wallet activity</h2>
-          <button class="section-link" onclick="goTab('history')">View all</button>
-        </div>
-        <div class="txn-list" id="wallet-txns">
-          <div class="txn-empty">Loading wallet activity…</div>
-        </div>
-      </section>
-    </div>
-
     <div class="screen" id="screen-notifications">
       <div class="history-head">
         <div>
@@ -2741,6 +2669,7 @@ html.dark .btn-wa-share{color:#25D366!important}
         <div class="acct-hero-name" id="acct-name">—</div>
         <div class="acct-hero-email" id="acct-email">—</div>
         <div class="acct-hero-phone" id="acct-phone">—</div>
+        <div class="acct-hero-balance" id="acct-balance" style="margin-top:8px;font:600 13px/1 var(--font);color:var(--text-secondary)">Balance —</div>
       </div>
 
       <!-- Referral card -->
@@ -3358,7 +3287,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="support-faq-cat">Transactions &amp; receipts</div>
       <details class="faq-item" data-cat="Transactions &amp; receipts">
         <summary>How do I view old transactions?</summary>
-        <p>Open the Transactions tab from Home, Wallet or the bottom navigation. Use the filters and search to find any purchase or top-up.</p>
+        <p>Open the Transactions tab from Home or the bottom navigation. Use the filters and search to find any purchase or top-up.</p>
       </details>
       <details class="faq-item" data-cat="Transactions &amp; receipts">
         <summary>Where do I find my receipt?</summary>
@@ -3429,33 +3358,7 @@ html.dark .btn-wa-share{color:#25D366!important}
   </div>
 </div>
 
-<!-- ══════════════ FUND WALLET MODAL ══════════════ -->
-<!-- Fund wallet — Monnify checkout (card + bank transfer) on web and mobile -->
-<div id="fund-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fund-modal-title" hidden>
-  <div class="modal-card" id="fund-modal-card">
-    <div class="modal-head">
-      <h2 class="modal-title" id="fund-modal-title">Fund wallet</h2>
-      <button type="button" class="modal-close" onclick="closeFundModal()" aria-label="Close fund wallet">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <p class="modal-sub">Add money to your wallet with a card or bank transfer. Your wallet is credited automatically once payment is confirmed.</p>
-    <div id="fund-modal-error" class="auth-error" role="alert"></div>
-    <div class="field">
-      <label for="fund-amount">Amount (₦)</label>
-      <input type="number" id="fund-amount" min="100" step="50" placeholder="e.g. 1000" inputmode="numeric">
-      <div class="fund-quick-amounts" role="listbox" aria-label="Quick amounts">
-        <button type="button" class="chip" data-amt="500">₦500</button>
-        <button type="button" class="chip" data-amt="1000">₦1,000</button>
-        <button type="button" class="chip" data-amt="2000">₦2,000</button>
-        <button type="button" class="chip" data-amt="5000">₦5,000</button>
-        <button type="button" class="chip" data-amt="10000">₦10,000</button>
-      </div>
-    </div>
-    <button id="btn-fund-pay" class="btn-primary btn-block" onclick="initiateFunding()">Continue to payment</button>
-    <p class="modal-note">Powered by Monnify. Card and bank transfer payments are secured by our payment provider.</p>
-  </div>
-</div>
+<!-- Fund wallet modal removed — wallet funding is no longer customer-facing -->
 
 
 
@@ -3629,7 +3532,7 @@ function showSucc(id, msg) {
 
 // ── BALANCE COUNTER ───────────────────────────────────────────────────────
 function animateBalance(from, to) {
-  const targets = ['balance-display', 'dash-balance-main']
+  const targets = ['balance-display']
     .map(id => document.getElementById(id)).filter(Boolean);
   const start = performance.now();
   const dur = 350;
@@ -3966,6 +3869,11 @@ function updateUserUI() {
   document.getElementById('acct-name').textContent = user.fullName;
   document.getElementById('acct-email').textContent = user.email;
   document.getElementById('acct-phone').textContent = user.phone;
+  const acctBalance = document.getElementById('acct-balance');
+  if (acctBalance) {
+    const bal = Number(user.wallet || 0);
+    acctBalance.textContent = 'Available balance: ' + fmt(bal);
+  }
   const sideName = document.getElementById('side-nav-name');
   const sideEmail = document.getElementById('side-nav-email');
   const sideAvatar = document.getElementById('side-nav-avatar');
@@ -3989,32 +3897,6 @@ function updateBalance(newBal) {
   const prev = user.wallet || 0;
   animateBalance(prev, newBal);
   user.wallet = newBal;
-}
-
-// ── WALLET SCREEN ─────────────────────────────────────────────────────────
-async function loadWalletData() {
-  try {
-    const [balRes, txnRes] = await Promise.all([
-      api('GET', '/api/wallet/balance'),
-      api('GET', '/api/wallet/transactions?limit=20'),
-    ]);
-    const balance = Number(balRes.balance) || 0;
-    document.getElementById('wallet-balance').textContent = fmt(balance);
-    const txns = txnRes.transactions || [];
-    let credits = 0, spend = 0;
-    for (const t of txns) {
-      if (t.type === 'credit' && t.status === 'completed') credits += Number(t.amount) || 0;
-      if (t.type === 'debit' && t.status === 'completed') spend += Number(t.amount) || 0;
-    }
-    document.getElementById('wallet-credits').textContent = fmt(credits);
-    document.getElementById('wallet-spend').textContent = fmt(spend);
-    const el = document.getElementById('wallet-txns');
-    el.innerHTML = txns.length
-      ? txns.map(txnHTML).join('')
-      : '<div class="txn-empty">No wallet activity yet. Make your first purchase to get started.</div>';
-  } catch {
-    document.getElementById('wallet-balance').textContent = 'Unavailable';
-  }
 }
 
 // ── DASHBOARD GREETING + STAT CARDS ─────────────────────────────────────
@@ -4053,12 +3935,8 @@ async function loadDashboardStats() {
       }
     }
     const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    setText('stat-balance', fmt(balance));
-    setText('stat-credits', fmt(credits));
     setText('stat-spend', fmt(spend));
     setText('stat-orders', String(ordersThisMonth));
-    setText('stat-balance-hint', (balance > 0 ? 'Ready to spend · ' : 'Fund your wallet · ') + 'tap to view');
-    setText('stat-credits-hint', credits > 0 ? 'Wallet top-ups' : 'No top-ups yet');
     setText('stat-spend-hint', spend > 0 ? 'All purchases' : 'No purchases yet');
     setText('stat-orders-hint', ordersThisMonth > 0 ? 'Completed purchases' : 'No purchases this month');
   } catch (e) { /* non-critical */ }
@@ -5315,66 +5193,12 @@ window.closeReceipt = function() {
   setTimeout(maybeShowPwaPrompt, 1200);
 };
 
-// ── FUND WALLET ───────────────────────────────────────────────────────────
-// Monnify checkout flow: pick an amount -> redirect to Monnify's hosted
-// checkout (card or bank transfer) -> return with ?verified=<ref> -> verify
-// and credit the wallet. Works identically on web and mobile.
+// Payment return handling: after a provider redirect back with
+// ?verified=<reference>, confirm server-side and refresh state.
 function lockBodyScroll(lock) {
   document.body.style.overflow = lock ? 'hidden' : '';
 }
 
-function openFundModal() {
-  var modal = document.getElementById('fund-modal');
-  modal.classList.add('open');
-  modal.hidden = false;
-  hideErr('fund-modal-error');
-  var input = document.getElementById('fund-amount');
-  input.value = '';
-  input.focus();
-  document.querySelectorAll('#fund-modal .chip').forEach(function (c) { c.classList.remove('active'); });
-  lockBodyScroll(true);
-}
-
-function closeFundModal() {
-  var modal = document.getElementById('fund-modal');
-  modal.classList.remove('open');
-  modal.hidden = true;
-  hideErr('fund-modal-error');
-  lockBodyScroll(false);
-}
-
-// Quick-amount chips
-document.addEventListener('click', function (e) {
-  var chip = e.target.closest && e.target.closest('#fund-modal .chip');
-  if (!chip) return;
-  document.querySelectorAll('#fund-modal .chip').forEach(function (c) { c.classList.remove('active'); });
-  chip.classList.add('active');
-  document.getElementById('fund-amount').value = chip.dataset.amt;
-});
-
-async function initiateFunding() {
-  var input = document.getElementById('fund-amount');
-  var amount = Math.round(Number(input.value));
-  hideErr('fund-modal-error');
-  if (!amount || amount < 100) {
-    return showErr('fund-modal-error', 'Enter an amount of at least ₦100.');
-  }
-  var btn = document.getElementById('btn-fund-pay');
-  btn.disabled = true; btn.textContent = 'Redirecting to payment…';
-  try {
-    var res = await api('POST', '/api/payment/initialize', { amount: amount });
-    pendingPaymentReference = res.reference || null;
-    if (res.authorization_url) {
-      window.location.href = res.authorization_url;
-      return;
-    }
-    showErr('fund-modal-error', 'Payment could not be started. Please try again.');
-  } catch (e) {
-    showErr('fund-modal-error', e.message || 'Payment could not be started. Please try again.');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Continue to payment';
-  }
-}
 
 // After redirect back with ?verified=<reference>, confirm the payment and credit.
 async function completePendingPayment() {
@@ -5385,7 +5209,7 @@ async function completePendingPayment() {
     if (res.success) {
       if (window.user) window.user.walletBalance = res.balance;
       showToast('Wallet funded successfully 🎉', 'success', 3200);
-      loadWalletData && loadWalletData();
+      loadDashboardStats && loadDashboardStats();
     }
   } catch (e) {
     showToast('Payment confirmed, but credit is being processed. Check your wallet shortly.', 'info', 4000);
@@ -5709,7 +5533,6 @@ async function setTransactionPin() {
 // Override goTab to load account data on account tab
 function goTab(tab) {
   _goTab(tab);
-  if (tab === 'wallet') loadWalletData();
   if (tab === 'account') {
     loadReferral();
     loadAnalytics();
@@ -7114,10 +6937,10 @@ html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--b
   /* ── Promotions engine ──────────────────────────────────────── */
   /* Generic, factual placements only — no invented discounts. */
   var PROMOS = [
-    { id: 'wallet',  title: 'New to TopFlowNG?', description: 'Open a free wallet and buy airtime, data and bills from as little as ₦100.', cta: 'Create free account', target: 'register', placement: ['marketing'], active: true, priority: 1 },
-    { id: 'bills',   title: 'One wallet for every bill', description: 'Electricity, cable TV and WAEC result checker PINs — pay them all from your balance.', cta: 'See services', target: 'cable', placement: ['marketing'], active: true, priority: 2 },
+    { id: 'welcome', title: 'New to TopFlowNG?', description: 'Buy airtime, data, electricity, cable TV and exam PINs in seconds — with instant receipts.', cta: 'Create free account', target: 'register', placement: ['marketing'], active: true, priority: 1 },
+    { id: 'bills',   title: 'Every bill in one place', description: 'Electricity, cable TV and WAEC result checker PINs — pay them all from one dashboard.', cta: 'See services', target: 'cable', placement: ['marketing'], active: true, priority: 2 },
     { id: 'repeat',  title: 'Built for repeat buyers', description: 'Save numbers, protect purchases with a PIN and keep one searchable history.', cta: 'Open an account', target: 'register', placement: ['marketing'], active: true, priority: 3 },
-    { id: 'pin',     title: 'Secure your wallet', description: 'Set a 4–6 digit transaction PIN and approve every purchase with it.', cta: 'Set up', target: 'account', placement: ['dashboard'], active: true, priority: 1 },
+    { id: 'pin',     title: 'Approve every purchase', description: 'Set a 4–6 digit transaction PIN and confirm each order with it.', cta: 'Set up', target: 'account', placement: ['dashboard'], active: true, priority: 1 },
     { id: 'refer',   title: 'Invite friends', description: 'Share your referral link so friends get instant access to cheap airtime, data, electricity and more.', cta: 'Share link', target: 'referral', placement: ['dashboard'], active: true, priority: 2 },
     { id: 'history', title: 'Full transaction history', description: 'Every purchase is logged. Search, filter and download your history from the Transactions tab.', cta: 'View history', target: 'history', placement: ['dashboard'], active: true, priority: 3 }
   ];
