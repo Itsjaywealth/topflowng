@@ -39,7 +39,7 @@ router.get('/campaign', async (req, res) => {
     // Established users with an unused code and recent purchase activity.
     const { rows: nudges } = await db.pool.query(
       `
-      SELECT u.id, u.full_name, u.email, u.referral_code,
+      SELECT u.id, u.full_name, u.email, u.referral_code, u.marketing_opt_in,
              MAX(t.created_at)::text AS last_activity
       FROM users u
       LEFT JOIN transactions t ON t.user_id = u.id AND t.type = 'debit' AND t.status = 'completed'
@@ -58,7 +58,7 @@ router.get('/campaign', async (req, res) => {
     // Users whose code has been used by at least minReferrals signups.
     const { rows: top } = await db.pool.query(
       `
-      SELECT u.id, u.full_name, u.email, u.referral_code,
+      SELECT u.id, u.full_name, u.email, u.referral_code, u.marketing_opt_in,
              COUNT(r2.id)::int AS total_referrals
       FROM users u
       JOIN users r2 ON r2.referred_by = u.id
@@ -81,6 +81,7 @@ router.get('/campaign', async (req, res) => {
             name: r.full_name,
             email: r.email,
             referral_code: r.referral_code,
+            marketing_opt_in: Boolean(r.marketing_opt_in),
             last_activity: r.last_activity,
           })),
         },
@@ -91,6 +92,7 @@ router.get('/campaign', async (req, res) => {
             name: r.full_name,
             email: r.email,
             referral_code: r.referral_code,
+            marketing_opt_in: Boolean(r.marketing_opt_in),
             total_referrals: r.total_referrals,
           })),
         },
