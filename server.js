@@ -2130,7 +2130,7 @@ function scheduleProviderBalanceWatch() {
 
   async function check() {
     try {
-      const balance = await vtpassService.getWalletBalance();
+      const balance = await getWalletBalance();
       providerBalanceState.lastBalance = balance;
       providerBalanceState.lastCheckedAt = new Date().toISOString();
       providerBalanceState.lastError = null;
