@@ -148,10 +148,9 @@ function sendOrderStatusEmail(userEmail, userName, { service, description, amoun
     ? `TopFlowNG — ${service} purchase confirmed`
     : `TopFlowNG — ${service} order update`;
   const body = isSuccess
-    ? `<p>Your <strong>${escapeHtml(service)}</strong> purchase was successful.</p>
-       <p>New balance: <strong>${formatted}</strong></p>`
+    ? `<p>Your <strong>${escapeHtml(service)}</strong> purchase was successful. Amount: <strong>${formatted}</strong>.</p>`
     : `<p>Your <strong>${service}</strong> order could not be completed by the provider.</p>
-       <p style="color:#DC2626;font-weight:600">Your wallet was NOT debited.</p>`;
+       <p style="color:#DC2626;font-weight:600">You have NOT been charged.</p>`;
   sendEmail({
     to: userEmail,
     subject,
@@ -267,16 +266,16 @@ function sendAutoRechargeEmail(userEmail, userName, { amount, threshold, authori
     replyTo: config.supportEmail,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-        <h2 style="color:#0E2235">Your balance dropped below ${thresh}</h2>
+        <h2 style="color:#0E2235">Your stored balance dropped below ${thresh}</h2>
         <p>Hi ${escapeHtml(userName)},</p>
-        <p>Your wallet balance fell below your reminder threshold, so we prepared a
-           Paystack checkout for <strong>${formatted}</strong>. Nothing has been charged automatically.</p>
+        <p>Your stored order balance fell below your reminder threshold, so we prepared a
+           secure checkout for <strong>${formatted}</strong>. Nothing has been charged automatically.</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Top-up amount</td><td style="padding:8px 0;font-size:13px;font-weight:600;text-align:right">${formatted}</td></tr>
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Threshold</td><td style="padding:8px 0;font-size:13px;text-align:right">${thresh}</td></tr>
           <tr><td style="padding:8px 0;color:#6B7280;font-size:13px">Reference</td><td style="padding:8px 0;font-size:12px;font-family:monospace;text-align:right">${escapeHtml(reference)}</td></tr>
         </table>
-        <p>Just click below to complete the payment — your balance is credited instantly:</p>
+        <p>Just click below to complete the payment — your stored balance is credited instantly:</p>
         <a href="${escapeHtml(safeUrl)}"
           style="display:inline-block;background:#00A868;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700;margin:8px 0">
           Complete top-up of ${formatted}

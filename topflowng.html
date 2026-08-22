@@ -17,7 +17,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Subscriptions in Nigeria</title>
-<meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and T2 airtime and data, pay for electricity and cable TV instantly from one wallet. Secure, reliable payments in Naira.">
+<meta name="description" content="TopFlowNG lets you buy MTN, Glo, Airtel and T2 airtime and data, pay for electricity and cable TV instantly in one place. Pay securely per order, in Naira.">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0B7E8E" media="(prefers-color-scheme: light)">
  <meta name="theme-color" content="#0C1828" media="(prefers-color-scheme: dark)">
@@ -31,14 +31,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TopFlowNG">
 <meta property="og:title" content="TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Bills">
-<meta property="og:description" content="Buy airtime and data, and pay electricity and cable bills instantly from one wallet. Secure payments in Naira.">
+<meta property="og:description" content="Buy airtime and data, and pay electricity and cable bills instantly. Secure per-order payments in Naira.">
 <meta property="og:url" content="https://topflowng.com/">
 <meta property="og:image" content="https://topflowng.com/icons/icon-512.png?v=4">
 <!-- Twitter -->
 <meta name="twitter:card" content="summary">
 <meta name="twitter:site" content="@topflowng">
 <meta name="twitter:title" content="TopFlowNG — Buy Airtime, Data, Electricity &amp; TV Bills">
-<meta name="twitter:description" content="Buy airtime and data, renew electricity and TV bills instantly from one wallet in Naira.">
+<meta name="twitter:description" content="Buy airtime and data, renew electricity and TV bills instantly in Naira.">
 <meta name="twitter:image" content="https://topflowng.com/icons/icon-512.png?v=4">
 <!-- Structured data -->
 <script type="application/ld+json">
@@ -1955,7 +1955,7 @@ html.dark .btn-wa-share{color:#25D366!important}
         <button type="button" class="marketing-quick-hero" onclick="openLauncher()">Quick pay</button>
       </div>
     </div>
-<aside class="marketing-ledger" aria-label="TopFlowNG wallet preview">
+<aside class="marketing-ledger" aria-label="TopFlowNG purchases preview">
       <div class="preview-top"><div><span class="logo-mark" aria-hidden="true"><img src="/assets/brand/topflowng-mark.svg" alt=""></span>TopFlowNG</div><button type="button" onclick="openAuthFromMarketing('register')">Open account</button></div>
       <div class="preview-slides" id="preview-slides">
         <div class="preview-slide active">
@@ -2116,7 +2116,7 @@ html.dark .btn-wa-share{color:#25D366!important}
             <div style="width:40px;height:40px;border-radius:50%;">C</div>
             <div><strong style="font:600 14px/1 var(--font);color:var(--text-primary)">Chioma</strong><span style="display:block;font:400 12px/1 var(--font);color:var(--text-muted);margin-top:2px">Lagos</span></div>
           </div>
-          <p style="font:400 13px/1.6 var(--font);color:var(--text-secondary)">"I use TopFlowNG for my staff airtime and data every week. The wallet makes it easy to track spending and the receipts are perfect for my records."</p>
+          <p style="font:400 13px/1.6 var(--font);color:var(--text-secondary)">"I buy airtime and data for my staff every week on TopFlowNG. Checkout is quick and the receipts are perfect for my records."</p>
         </div>
         <div class="testimonial-card" style="background:var(--surface);border-radius:16px;padding:24px;box-shadow:var(--shadow-sm)">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -2403,7 +2403,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="balance-panel" id="hero-slider">
         <div class="hero-slide active" id="hero-slide-balance">
           <div>
-            <div class="balance-label">Available balance</div>
+            <div class="balance-label">This week on TopFlowNG</div>
             <div class="balance-amount" id="balance-display">₦0.00</div>
           </div>
           <div class="header-actions">
@@ -2652,7 +2652,7 @@ html.dark .btn-wa-share{color:#25D366!important}
     <div class="screen" id="screen-history">
       <div class="history-head">
         <div>
-          <div class="eyebrow">Wallet ledger</div>
+          <div class="eyebrow">Payment history</div>
           <h1>Transactions</h1>
         </div>
         <button class="history-refresh" type="button" onclick="loadAllTxns(true)">Refresh</button>
@@ -4098,8 +4098,8 @@ function updateDashboardAttention(n, amt) {
   if (n > 0) {
     const text = document.getElementById('dash-attention-text');
     if (text) text.textContent = n === 1
-      ? `One purchase of ${amt} is awaiting provider confirmation. Your wallet has not been debited — it resolves automatically.`
-      : `${n} purchases (${amt} total) are awaiting provider confirmation. Your wallet has not been debited — they resolve automatically.`;
+      ? `One purchase of ${amt} is awaiting provider confirmation. You have not been charged — it resolves automatically.`
+      : `${n} purchases (${amt} total) are awaiting provider confirmation. You have not been charged — they resolve automatically.`;
     card.removeAttribute('hidden');
   } else {
     card.setAttribute('hidden', '');
@@ -4168,7 +4168,7 @@ async function loadNotifications(reset) {
     const el = document.getElementById('notif-list');
     if (reset) el.innerHTML = '';
     if (!list.length && reset) {
-      el.innerHTML = '<div class="txn-empty">No notifications yet. We\'ll notify you here about wallet activity and purchases.</div>';
+      el.innerHTML = '<div class="txn-empty">No notifications yet. We\'ll notify you here about your orders and payments.</div>';
     }
     list.forEach(n => { el.insertAdjacentHTML('beforeend', notificationHTML(n)); });
     if (notifOffset + NOTIF_LIMIT < notifTotal) {
@@ -4496,7 +4496,7 @@ async function buyAirtime() {
   if (!network) return showErr('svc-airtime-error', 'Select a network.');
   if (!phone || phone.length < 10) return showErr('svc-airtime-error', 'Enter a valid phone number.');
   if (!amount || amount < 50) return showErr('svc-airtime-error', 'Minimum airtime is ₦50.');
-  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-airtime-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-airtime-error', `Stored balance too low for this order (${fmt(user.wallet)}). Choose “Pay at checkout” instead.`);
 
   // Safety: never silently send an MTN number as Airtel/Glo/etc. If the number
   // maps to a different network than the one selected, auto-correct and warn.
@@ -4562,7 +4562,7 @@ async function buyData() {
   if (!network) return showErr('svc-data-error', 'Select a network.');
   if (!phone || phone.length < 10) return showErr('svc-data-error', 'Enter a valid phone number.');
   if (!selectedDataPlan) return showErr('svc-data-error', 'Choose a data plan.');
-  if (!isDirectPay() && selectedDataPlan.price > (user.wallet || 0)) return showErr('svc-data-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && selectedDataPlan.price > (user.wallet || 0)) return showErr('svc-data-error', `Stored balance too low for this order (${fmt(user.wallet)}). Choose “Pay at checkout” instead.`);
 
   // Safety: never silently send an MTN number as Glo/Airtel/etc. If the number
   // maps to a different network than the one selected, auto-correct and warn.
@@ -4631,7 +4631,7 @@ async function buyElectricity() {
   if (!disco) return showErr('svc-electricity-error', 'Select a disco.');
   if (!meterNumber) return showErr('svc-electricity-error', 'Enter meter number.');
   if (!amount || amount < 500) return showErr('svc-electricity-error', 'Minimum electricity payment is ₦500.');
-  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-electricity-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-electricity-error', `Stored balance too low for this order (${fmt(user.wallet)}). Choose “Pay at checkout” instead.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(disco) || null,
@@ -4684,7 +4684,7 @@ async function buyCable() {
   if (!provider) return showErr('svc-cable-error', 'Select a provider.');
   if (!smartCardNumber) return showErr('svc-cable-error', 'Enter smart card / IUC number.');
   if (!selectedCablePlan) return showErr('svc-cable-error', 'Choose a package.');
-  if (!isDirectPay() && selectedCablePlan.price > (user.wallet || 0)) return showErr('svc-cable-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && selectedCablePlan.price > (user.wallet || 0)) return showErr('svc-cable-error', `Stored balance too low for this order (${fmt(user.wallet)}). Choose “Pay at checkout” instead.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(provider) || null,
@@ -4768,7 +4768,7 @@ function flipPendingOrder(data, { successTitle, successSub, baseLines, pendingTi
   const lines = baseLines.concat([['Provider order', data.providerOrderId || '—'], ['Status', failed ? 'Failed' : 'Completed']]);
   showReceipt({
     title: failed ? 'Order not confirmed' : (successTitle || 'Confirmed'),
-    sub: failed ? (data.message || 'The provider did not confirm this order. Your wallet has not been debited.') : (successSub || (data.message || 'Your order was completed and your wallet was debited once.')),
+    sub: failed ? (data.message || 'The provider did not confirm this order. You have not been charged.') : (successSub || (data.message || 'Your order was completed successfully.')),
     lines,
     failed,
   });
@@ -4956,7 +4956,7 @@ var _chatReady = false; // whether the greeting has already been rendered
 var _chatRobotIntro = 'I am the TopFlowNG support bot. I respond automatically based on the topics below.';
 
 var _chatResponses = {
-  'Transaction pending or failed': 'INITIATING RESPONSE — TRANSACTION STATUS CHECK.<br><br>If a transaction shows "Pending", the provider has not yet confirmed it. Your wallet has NOT been debited. If it shows "Failed", you were NOT charged. Please check your Transaction History for the current status, or email your reference number to <strong>hello@topflowng.com</strong> for manual review.',
+  'Transaction pending or failed': 'INITIATING RESPONSE — TRANSACTION STATUS CHECK.<br><br>If a transaction shows "Pending", the provider has not yet confirmed it. You have NOT been charged. If it shows "Failed", you were NOT charged Please check your Transaction History for the current status, or email your reference number to <strong>hello@topflowng.com</strong> for manual review.',
   'Airtime & Data': 'INITIATING RESPONSE — DELIVERY CHECK.<br><br>Airtime and data are delivered within seconds after payment. Confirm the recipient number is correct and active. If delivery exceeds a few minutes, email your reference number to <strong>hello@topflowng.com</strong> and a support agent will investigate.',
   'Electricity token': 'INITIATING RESPONSE — TOKEN RETRIEVAL.<br><br>Your electricity token is displayed immediately after a successful purchase. Open the transaction in your History to view it, or check your downloadable receipt. To recover a token, provide your reference number to <strong>hello@topflowng.com</strong>.',
   'Cable TV subscription': 'INITIATING RESPONSE — SUBSCRIPTION CHECK.<br><br>Cable TV renewals are processed in seconds. Verify that your IUC or smart card number is correct. If the renewal did not activate, email your IUC number and reference to <strong>hello@topflowng.com</strong> for review.',
@@ -4988,7 +4988,7 @@ async function _chatAskAI(message) {
 function _chatRobotFallback(msg) {
   var lower = String(msg).toLowerCase();
   if (/ref(erence)?\s*[:# ]?[a-z0-9]{6,}/i.test(msg) || /transaction|pending|failed|order/i.test(lower)) {
-    return 'INITIATING RESPONSE — REFERENCE TRACE.<br><br>Recorded your reference. Please email it to <strong>hello@topflowng.com</strong> with your full name and the service purchased. A support agent will trace the order and reply with the outcome. No wallet debit occurs for pending or failed orders.';
+    return 'INITIATING RESPONSE — REFERENCE TRACE.<br><br>Recorded your reference. Please email it to <strong>hello@topflowng.com</strong> with your full name and the service purchased. A support agent will trace the order and reply with the outcome. Pending or failed orders are never charged.';
   }
   if (/airtime|data|mtn|glo|airtel|9mobile/i.test(lower)) {
     return 'INITIATING RESPONSE — TOP-UP CHECK.<br><br>Airtime and data are delivered automatically after payment. Confirm the recipient number. For failed delivery, email your reference to <strong>hello@topflowng.com</strong>.';
@@ -5003,7 +5003,7 @@ function _chatRobotFallback(msg) {
     return 'INITIATING RESPONSE — SECURITY.<br><br>Reset a forgotten password from the login screen. Change your password immediately if you suspect unauthorised access, then email <strong>hello@topflowng.com</strong>.';
   }
   if (/balance|wallet|credit|debit|money/i.test(lower)) {
-    return 'INITIATING RESPONSE — WALLET CHECK.<br><br>Your wallet balance is shown on your dashboard. Transactions and order status are visible in your Transaction History. The bot cannot modify your wallet — only a support agent can assist further via <strong>hello@topflowng.com</strong>.';
+    return 'INITIATING RESPONSE — PAYMENT STATUS CHECK.<br><br>TopFlowNG charges you per order at checkout — there is no stored balance to manage. Your payment and order status are visible under Transaction History. For anything else, a support agent can help via <strong>hello@topflowng.com</strong>.';
   }
   return 'INITIATING RESPONSE — GENERAL ENQUIRY.<br><br>I could not auto-match your message to a known topic. For assistance, email <strong>hello@topflowng.com</strong> with your full name and any reference numbers, or visit the in-app support section under Account → Support.';
 }
@@ -5373,11 +5373,11 @@ async function completePendingPayment() {
     pendingPaymentReference = null;
     if (res.success) {
       if (window.user) window.user.walletBalance = res.balance;
-      showToast('Wallet funded successfully 🎉', 'success', 3200);
+      showToast('Payment confirmed ✅', 'success', 3200);
       loadDashboardStats && loadDashboardStats();
     }
   } catch (e) {
-    showToast('Payment confirmed, but credit is being processed. Check your wallet shortly.', 'info', 4000);
+    showToast('Payment confirmed and being processed.', 'info', 4000);
   }
 }
 
@@ -5589,7 +5589,7 @@ async function buyExamPin() {
     ? (priceEntry[_jambVariation] || 6200)
     : (priceEntry || 5350);
   const amount = unitPrice * quantity;
-  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-exam-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (!isDirectPay() && amount > (user.wallet || 0)) return showErr('svc-exam-error', `Stored balance too low for this order (${fmt(user.wallet)}). Choose “Pay at checkout” instead.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(examBody) || null,
@@ -5678,7 +5678,7 @@ async function buyRechargePin() {
   if (!network) return showErr('svc-recharge-error', 'Select a network.');
   if (!amount || amount < 100) return showErr('svc-recharge-error', 'Enter a valid denomination (min ₦100).');
   const total = amount * quantity;
-  if (total > (user.wallet || 0)) return showErr('svc-recharge-error', `Insufficient balance. Your balance is ${fmt(user.wallet)}.`);
+  if (total > (user.wallet || 0)) return showErr('svc-recharge-error', `Stored balance too low for this order (${fmt(user.wallet)}). Choose “Pay at checkout” instead.`);
 
   const confirmed = await openReview({
     providerKey: window.TopFlowLogos?.keyFor(network) || null,
@@ -7750,7 +7750,7 @@ html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--b
       <p>By creating an account on TopFlowNG, you agree to these Terms. TopFlowNG is operated by Brandverse Ventures and provides a digital payment platform for airtime, data, electricity, cable TV and exam PINs in Nigeria.</p>
       <h3>2. Account</h3>
       <p>You must be at least 18 years old to register. You are responsible for keeping your password and transaction PIN confidential. TopFlowNG staff will never ask for your PIN or password.</p>
-      <h3>3. Payments &amp; Wallet</h3>
+      <h3>3. Payments</h3>
       <p>You pay for each order at checkout through our secure payment provider. TopFlowNG is not a bank and does not offer stored-value accounts; all prices are displayed in Nigerian Naira (₦). Any legacy balance shown on your account remains spendable on services and may be refunded on request.</p>
       <h3>4. Purchases</h3>
       <p>Every order is verified and fulfilled by our licensed bill-payment provider. If a service is not delivered, TopFlowNG will investigate and, where applicable, refund the disputed amount within 24–72 hours.</p>

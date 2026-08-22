@@ -1,6 +1,6 @@
 # TopFlowNG
 
-> Nigeria's leading VTU platform — airtime, data, electricity, cable TV, betting wallets, exam pins, and recharge pins.
+> Nigeria's instant VTU platform — airtime, data, electricity, cable TV, and exam pins, paid for securely per order.
 
 [![Status](https://img.shields.io/badge/status-active-success)]()
 [![Node](https://img.shields.io/badge/node-22-green)]()
@@ -8,16 +8,15 @@
 
 ## Overview
 
-TopFlowNG provides instant virtual top-up services across Nigeria. Users can purchase airtime, data bundles, pay electricity bills, subscribe to cable TV, fund betting wallets, and buy exam/recharge pins — all from a single platform.
+TopFlowNG provides instant virtual top-up services across Nigeria. Users can purchase airtime, data bundles, pay electricity bills, subscribe to cable TV, and buy exam pins — all from a single platform, paying securely for each order.
 
 ### Features
 
 - **Airtime & Data** — Instant top-up for all major Nigerian networks (MTN, Glo, Airtel, 9mobile)
 - **Bill Payments** — Electricity (IKEDC, AEDC, Eko, Kano, Port Harcourt, Jos) and cable TV (DSTV, GOtv, Startimes)
-- **Betting Wallets** — Fund betting accounts (Bet9ja, SportyBet, 1xBet, MerryBet)
-- **Exam Pins** — WAEC, NECO, JAMB registration pins
+- **Exam Pins** — WAEC result checker PINs (genuinely active provider products only)
 - **Admin Dashboard** — User management, transaction history, financial reconciliation
-- **Wallet System** — Multi-currency wallet with debit/credit tracking
+- **Direct Per-Order Payment** — customers pay securely at checkout; no stored-value wallet
 - **Automated Scheduling** — Cron-based recurring purchase execution
 
 ## Tech Stack
