@@ -147,24 +147,26 @@ router.get('/anomalies', async (req, res) => {
     const { rows } = await db.pool.query(
       `
       WITH hourly AS (
-        SELECT
-          date_trunc('hour', updated_at) AS hr,
-          COUNT(*) FILTER (WHERE status = 'failed')::int          AS failures,
-          COUNT(*)::int                                            AS orders,
-          (SELECT COALESCE(SUM(amount), 0) FROM transactions td
-             JOIN vtu_orders o2 ON o2.transaction_id = td.id
-             WHERE td.type = 'debit' AND td.status = 'completed'
-               AND date_trunc('hour', td.created_at) = hr)         AS debit_volume
+        SELECT date_trunc('hour', updated_at) AS hr,
+          COUNT(*) FILTER (WHERE status = 'failed')::int AS failures,
+          COUNT(*)::int AS orders
         FROM vtu_orders
         WHERE updated_at >= NOW() - interval '7 days'
         GROUP BY hr
-      ),
-      baseline AS (
-        SELECT AVG(failures)::float AS avg_failures, AVG(orders)::float AS avg_orders,
-               AVG(debit_volume)::float AS avg_debit_volume
-        FROM hourly WHERE hr < date_trunc('hour', NOW())
-      ),
-      current_hour AS (
+      ), debits AS (
+        SELECT date_trunc('hour', td.created_at) AS hr,
+          COALESCE(SUM(td.amount), 0)::float AS volume
+        FROM transactions td
+        WHERE td.type = 'debit' AND td.status = 'completed'
+          AND td.created_at >= NOW() - interval '7 days'
+        GROUP BY hr
+      ), baseline AS (
+        SELECT AVG(h.failures)::float AS avg_failures,
+          AVG(h.orders)::float AS avg_orders,
+          AVG(COALESCE(d.volume, 0))::float AS avg_debit_volume
+        FROM hourly h LEFT JOIN debits d ON d.hr = h.hr
+        WHERE h.hr < date_trunc('hour', NOW())
+      ), current_hour AS (
         SELECT
           COUNT(*) FILTER (WHERE status = 'failed')::int AS failures,
           COUNT(*)::int AS orders,
