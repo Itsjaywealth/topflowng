@@ -247,7 +247,7 @@ router.get('/transactions/:reference', async (req, res) => {
     const { rows } = await db.pool.query(
       `SELECT o.request_id, o.user_id, o.service_type, o.amount, o.description,
               o.status, o.provider_order_id, o.created_at, o.updated_at,
-              u.email AS user_email, u.full_name AS user_name
+              u.email AS user_email, u.full_name AS user_name, u.phone AS user_phone
        FROM vtu_orders o JOIN users u ON u.id = o.user_id
        WHERE o.request_id = $1 LIMIT 1`,
       [String(req.params.reference).slice(0, 120)]
@@ -261,6 +261,7 @@ router.get('/transactions/:reference', async (req, res) => {
         user_id: row.user_id,
         user_email: row.user_email,
         user_name: row.user_name,
+        user_phone: row.user_phone,
         service_type: row.service_type,
         amount: Number(row.amount),
         description: row.description,
