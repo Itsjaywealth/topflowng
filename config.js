@@ -92,8 +92,10 @@ const config = {
     // Repeated login failures within the window trigger a temporary lockout.
     // TOTP at-rest encryption (falls back to a derivation of the JWT secret).
     totpEncryptionKey: str(process.env.TOTP_ENCRYPTION_KEY, null),
-    // Owners must enrol in TOTP before receiving a session.
-    ownerTwoFactorRequired: str(process.env.OWNER_2FA_REQUIRED, 'true') === 'true',
+    // 2FA is OPT-IN for everyone (owners included). When enabled per-account,
+    // login demands a TOTP code. Flip OWNER_2FA_REQUIRED=true to force
+    // enrolment for owner emails.
+    ownerTwoFactorRequired: str(process.env.OWNER_2FA_REQUIRED, 'false') === 'true',
     loginMaxFailures: num(process.env.AUTH_LOCKOUT_MAX_FAILURES, 5),
     lockoutWindowMs: num(process.env.AUTH_LOCKOUT_WINDOW_MS, 15 * 60 * 1000),
     lockoutDurationMs: num(process.env.AUTH_LOCKOUT_DURATION_MS, 15 * 60 * 1000),

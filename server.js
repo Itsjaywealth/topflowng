@@ -409,6 +409,17 @@ function challengeOrAuth(req, res, next) {
   }
 }
 
+// Status probe for the Account screen (never returns the secret).
+app.get('/api/auth/2fa/status', authMiddleware, async (req, res) => {
+  try {
+    const record = await db.getTotp(req.user.id);
+    res.json({ enabled: Boolean(record && record.enabled) });
+  } catch (err) {
+    logger.error('2FA status error', { detail: err.message });
+    sendError(res, 500, 'Could not read two-factor status');
+  }
+});
+
 // Begin enrolment: generates a secret, stores it encrypted as PENDING
 // (enabling only happens on first valid code) and returns the otpauth URL.
 app.post('/api/auth/2fa/setup', challengeOrAuth, async (req, res) => {
