@@ -39,3 +39,16 @@ the eligible purchase back to BizFlowNG (same signed expense receiver).
 Point the service-orders caller at THESE paths/scheme (or ask TopFlowNG to add
 a compat alias). The previously documented `/api/integrations/bizflow/orders`
 with TOPFLOWNG_SYNC_SECRET shared-secret headers was NOT implemented.
+
+## UPDATE — shared-secret scheme now ALSO accepted (compat with the original spec)
+`TOPFLOWNG_SYNC_SECRET` is set on BOTH services (same value). TopFlowNG
+additionally accepts, at `/api/integrations/topflowng/*`, the original
+BizFlowNG scheme:
+- header `x-topflow-signature: t=<unix>,v1=<hex(HMAC_SHA256(secret,"<ts>.<rawBody>"))>`
+- `POST /api/integrations/topflowng/orders` with body
+  `{ source:"bizflowng", reference, business_id, service_type, amount,
+     recipient?, note?, details? }`
+  → responds `{ ok:true, status:"pending", topflow_ref, amount_charged }`
+  (status becomes final after the linked user confirms + pays; plan-based
+  products are always re-priced server-side — client `amount` is a hint).
+Alias base: `/api/integrations/bizflow/*` also mounts the same routes.

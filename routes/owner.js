@@ -63,6 +63,11 @@ router.get('/overview', async (req, res) => {
       `SELECT count(*)::int AS accounts, coalesce(sum(wallet),0)::float AS total
        FROM users WHERE wallet > 0`
     ).catch(() => ({ rows: [{ accounts: 0, total: 0 }] }));
+    const { rows: refundRequired } = await db.pool.query(
+      `SELECT request_id, user_id, service_type, amount, payment_reference, updated_at
+       FROM vtu_orders WHERE payment_status = 'paid' AND status = 'failed'
+       ORDER BY updated_at DESC LIMIT 20`
+    ).catch(() => ({ rows: [] }));
     const { rows: flaggedRecent } = await db.pool.query(
       `SELECT count(*)::int AS n FROM audit_log
        WHERE action = 'wallet.balance.reconciliation_required'
@@ -94,6 +99,11 @@ router.get('/overview', async (req, res) => {
       catalogueSync: (() => {
         try { return require('../services/catalog-sync').getLastReport(); } catch { return null; }
       })(),
+      refundRequired: {
+        count: refundRequired.length,
+        orders: refundRequired,
+        note: "Paid orders whose fulfilment failed — customer is owed a refund via the admin refund endpoint (idempotent).",
+      },
       reconciliation: {
         storedBalanceAccounts: balanceHolders[0]?.accounts || 0,
         storedBalanceTotalNgn: balanceHolders[0]?.total || 0,

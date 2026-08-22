@@ -46,6 +46,10 @@ const config = {
   internalApiKey: str(process.env.INTERNAL_API_KEY, ''),
   ownerEmails: (process.env.OWNER_EMAILS || 'josephegbedi@gmail.com,admin@brandverseventures.com')
     .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
+  // Shared platform secret for the BizFlowNG-native integration scheme
+  // (x-topflow-signature: t=<unix>,v1=<hex>). Optional: the per-business
+  // link-key scheme works without it.
+  topflowSyncSecret: str(process.env.TOPFLOWNG_SYNC_SECRET, ''),
   trustProxy: str(process.env.TRUST_PROXY, '1') === '1',
   bodyLimit: str(process.env.BODY_LIMIT, '10kb'),
 

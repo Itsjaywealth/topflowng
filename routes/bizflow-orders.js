@@ -36,7 +36,39 @@ const bizflowSync = require('../services/bizflow-sync');
 const router = express.Router();
 
 // ── Signature auth ───────────────────────────────────────────────────────────
+// Two accepted schemes:
+//   A) per-business link key:  x-bizflow-key + x-topflow-timestamp/v1 sig
+//   B) platform shared secret: x-topflow-signature: t=<unix>,v1=<hex> over
+//      "<ts>.<rawBody>" with TOPFLOWNG_SYNC_SECRET (BizFlowNG native scheme)
+function verifySharedSecret(req) {
+  const secret = config.topflowSyncSecret;
+  const header = String(req.headers['x-topflow-signature'] || '');
+  if (!secret || !header.includes('v1=')) return false;
+  const m = header.match(/t=(\d+),\s*v1=([0-9a-f]{64})/i);
+  if (!m) return false;
+  const ts = Number(m[1]);
+  if (Math.abs(Math.floor(Date.now() / 1000) - ts) > 300) return false;
+  const expected = crypto.createHmac('sha256', secret).update(`${ts}.${req.rawBody || ''}`).digest('hex');
+  const a = Buffer.from(expected);
+  const b = Buffer.from(m[2]);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 async function authenticateBizflow(req, res) {
+  // Scheme B: platform shared secret authenticates the CALLER; the business is
+  // still resolved from the body and must hold an ACTIVE link.
+  if (!req.headers['x-bizflow-key'] && verifySharedSecret(req)) {
+    let bid = null;
+    try { bid = JSON.parse(req.rawBody || '{}').business_id || null; } catch { }
+    if (!bid) bid = req.query.business_id || null;
+    if (!bid) { sendError(res, 400, 'business_id is required'); return null; }
+    const link = await db.getBizflowLinkByBusiness(String(bid));
+    if (!link || link.status !== 'active') {
+      sendError(res, 403, 'No active TopFlowNG link for this business');
+      return null;
+    }
+    return { link, businessId: String(bid), userId: link.user_id, scheme: 'shared' };
+  }
   const key = req.headers['x-bizflow-key'] || '';
   const ts = req.headers['x-topflow-timestamp'] || '';
   const sig = req.headers['x-topflow-signature'] || '';
@@ -267,6 +299,62 @@ router.post('/order-intents', async (req, res) => {
   }).catch(() => {});
 
   res.status(201).json({ ok: true, intent: publicIntent(intent) });
+});
+
+// BizFlowNG-native alias: POST /orders creates the same intent under their
+// contract and answers in their response shape (status "pending" until the
+// linked user confirms and pays; final state flows back via callback).
+router.post('/orders', async (req, res) => {
+  const auth = await authenticateBizflow(req, res);
+  if (!auth) return;
+  let body;
+  try { body = JSON.parse(req.rawBody || '{}'); } catch { return sendError(res, 400, 'Invalid JSON'); }
+  const reference = String(body.reference || '').trim();
+  if (!reference || reference.length > 120) return sendError(res, 400, 'reference is required');
+
+  const existing = await db.getBizflowIntentByIdempotency(auth.businessId, reference);
+  if (existing) {
+    return res.json({ ok: true, status: existing.status === 'confirmed' ? 'pending'
+      : existing.status === 'declined' ? 'failed' : existing.status,
+      topflow_ref: existing.order_request_id || existing.id, amount_charged: Number(existing.amount) });
+  }
+
+  const st = String(body.service_type || '').toLowerCase();
+  const d = {
+    phone: body.recipient || undefined,
+    network: (body.details && body.details.network) || undefined,
+    planCode: (body.details && body.details.planCode) || undefined,
+    meterNumber: (body.details && body.details.meterNumber) || body.recipient || undefined,
+    disco: (body.details && body.details.disco) || undefined,
+    smartCardNumber: (body.details && body.details.smartCardNumber) || body.recipient || undefined,
+    examBody: (body.details && body.details.examBody) || undefined,
+    quantity: (body.details && body.details.quantity) || 1,
+    amount: body.amount,
+  };
+  const priced = priceIntent(st, d);
+  if (priced.error) return sendError(res, 400, priced.error);
+
+  const intent = await db.createBizflowOrderIntent({
+    userId: auth.userId, bizflowBusiness: auth.businessId,
+    serviceType: st, requestPayload: priced.payload,
+    amount: priced.amount, description: `${priced.description}${body.note ? ' — ' + String(body.note).slice(0, 80) : ''} (via BizFlowNG)`,
+    idempotencyKey: reference,
+  });
+
+  db.createNotification({
+    userId: auth.userId, category: 'transaction',
+    title: 'New business order to approve',
+    message: `${auth.businessId} requested ${intent.description} — ${Number(intent.amount).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}. Approve it in Account → Business orders.`,
+    link: '/?tab=account',
+  }).catch(() => {});
+  require('../services/events').emit('topflow.bizflow.order_intent.created', {
+    intent_id: intent.id, user_id: auth.userId, business: auth.businessId,
+    service_type: intent.service_type, amount: Number(intent.amount),
+  }, { entityType: 'order_intent', entityId: intent.id }).catch(() => {});
+
+  res.status(201).json({ ok: true, status: 'pending', topflow_ref: intent.id,
+    amount_charged: Number(intent.amount),
+    note: 'Awaiting linked-user confirmation and secure payment.' });
 });
 
 router.get('/order-intents/:id', async (req, res) => {
