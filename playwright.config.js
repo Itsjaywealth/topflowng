@@ -40,6 +40,19 @@ module.exports = defineConfig({
           : {}),
       },
     },
+    // Cross-engine smoke coverage (browsers installed via
+    // `npx playwright install firefox webkit` where available).
+    // serviceWorkers blocked on the cross-engine projects: WebKit upgrades
+    // http://127.0.0.1 SW-scope subresources to https in this local harness
+    // (production serves https, so this is a test-env-only artifact).
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'], serviceWorkers: 'block' },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'], serviceWorkers: 'block' },
+    },
   ],
   webServer: {
     command: 'node test/browser/harness.cjs',
