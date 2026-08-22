@@ -126,6 +126,10 @@ router.post('/orders', authMiddleware, apiLimiter, directModeGuard, validate(req
     });
 
     logger.info('Direct order created awaiting payment', { requestId, reference, serviceType, amount });
+    require('../services/events').emit('topflow.order.created', {
+      reference, request_id: requestId, service_type: serviceType,
+      amount: Number(amount), mode: 'direct', initiated_by: 'customer',
+    }, { entityType: 'transaction', entityId: requestId }).catch(() => {});
     res.json({ authorization_url: init.authorizationUrl, reference, order_request_id: requestId, amount });
   } catch (err) {
     if (err instanceof VtpassProductError) return sendError(res, 400, err.message);

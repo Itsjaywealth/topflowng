@@ -2582,7 +2582,7 @@ html.dark .btn-wa-share{color:#25D366!important}
           </section>
           <section class="glance-pending" id="glance-pending" hidden>
             <div class="glance-label">Pending order</div>
-            <p id="glance-pending-text">One purchase is awaiting provider confirmation. Your wallet has not been debited and it resolves automatically.</p>
+            <p id="glance-pending-text">One purchase is awaiting provider confirmation. You have not been charged and it resolves automatically.</p>
             <button type="button" onclick="goTab('history')">View order</button>
           </section>
         </aside>
@@ -2637,7 +2637,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="filter-chips notif-filter-chips">
         <div role="button" tabindex="0" class="filter-chip active" onclick="filterNotifications('all',this)">All</div>
         <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('transaction',this)">Transactions</div>
-        <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('wallet',this)">Wallet</div>
+        <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('wallet',this)">Credits</div>
         <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('schedule',this)">Schedules</div>
         <div role="button" tabindex="0" class="filter-chip" onclick="filterNotifications('security',this)">Security</div>
       </div>
@@ -2659,7 +2659,7 @@ html.dark .btn-wa-share{color:#25D366!important}
       </div>
       <div class="filter-chips" role="group" aria-label="Filter by category">
         <div role="button" tabindex="0" class="filter-chip active" data-cat="all" onclick="filterTxns('all',this)">All</div>
-        <div role="button" tabindex="0" class="filter-chip" data-cat="wallet" onclick="filterTxns('wallet',this)">Wallet</div>
+        <div role="button" tabindex="0" class="filter-chip" data-cat="wallet" onclick="filterTxns('wallet',this)">Credits</div>
         <div role="button" tabindex="0" class="filter-chip" data-cat="airtime" onclick="filterTxns('airtime',this)">Airtime</div>
         <div role="button" tabindex="0" class="filter-chip" data-cat="data" onclick="filterTxns('data',this)">Data</div>
         <div role="button" tabindex="0" class="filter-chip" data-cat="electricity" onclick="filterTxns('electricity',this)">Electricity</div>
@@ -2797,6 +2797,13 @@ html.dark .btn-wa-share{color:#25D366!important}
         <p>Loading…</p>
       </div>
 
+      <!-- Business orders (BizFlowNG-initiated, need your confirmation) -->
+      <div class="pin-section" id="bizflow-orders-card" hidden>
+        <h4>Business orders</h4>
+        <p style="margin-bottom:8px"><span id="bizflow-orders-business"></span> requested these purchases. Approving opens a secure checkout — nothing is bought until you pay.</p>
+        <div id="bizflow-intents-list" class="txn-list" style="padding:6px"></div>
+      </div>
+
       <!-- Scheduled purchases -->
       <div class="acct-group-label">Purchases</div>
       <div class="pin-section" id="scheduled-section">
@@ -2856,7 +2863,7 @@ html.dark .btn-wa-share{color:#25D366!important}
         <h4>Notifications</h4>
         <p>Control which in-app notifications you receive.</p>
         <label class="pref-row"><input type="checkbox" id="pref-transactions" checked onchange="saveNotifPrefs()"><span>Transaction updates</span></label>
-        <label class="pref-row"><input type="checkbox" id="pref-wallet" checked onchange="saveNotifPrefs()"><span>Wallet activity</span></label>
+        <label class="pref-row"><input type="checkbox" id="pref-wallet" data-legacy="1" checked onchange="saveNotifPrefs()"><span>Payment confirmations</span></label>
         <label class="pref-row"><input type="checkbox" id="pref-schedule" checked onchange="saveNotifPrefs()"><span>Scheduled purchase alerts</span></label>
         <label class="pref-row"><input type="checkbox" id="pref-security" checked disabled title="Security notices are always kept on for your protection"><span>Security notifications</span></label>
         <div id="notif-prefs-msg" class="auth-error" style="margin-top:8px;display:none"></div>
@@ -3326,15 +3333,15 @@ html.dark .btn-wa-share{color:#25D366!important}
       <div class="support-faq-cat">Purchases</div>
       <details class="faq-item" data-cat="Purchases">
         <summary>How quickly are purchases delivered?</summary>
-        <p>Most airtime, data and bill payments are delivered within seconds. Some orders are held as "pending" while the provider confirms them — your wallet is only debited once the order is confirmed.</p>
+        <p>Most airtime, data and bill payments are delivered within seconds. Some orders are held as "pending" while the provider confirms them — you are only charged once the order is confirmed.</p>
       </details>
       <details class="faq-item" data-cat="Purchases">
         <summary>What happens when a transaction is pending?</summary>
-        <p>Pending transactions are being confirmed by the provider. Your wallet has not been debited. The order resolves automatically, and you can watch it in Transactions.</p>
+        <p>Pending transactions are being confirmed by the provider. You have not been charged. The order resolves automatically, and you can watch it in Transactions.</p>
       </details>
       <details class="faq-item" data-cat="Purchases">
         <summary>What happens if a purchase fails?</summary>
-        <p>If a purchase fails, you are never charged. Your wallet is only debited after the provider confirms the order. The failed order appears in your transaction history.</p>
+        <p>If a purchase fails, you are never charged. Payment is only captured once the provider confirms the order. The failed order appears in your transaction history.</p>
       </details>
       <details class="faq-item" data-cat="Purchases">
         <summary>Can I buy airtime for another phone number?</summary>
@@ -3466,7 +3473,7 @@ html.dark .btn-wa-share{color:#25D366!important}
 <div class="modal-overlay" id="sched-modal" role="dialog" aria-modal="true" aria-labelledby="sched-modal-title">
   <div class="modal-card">
     <div class="modal-title" id="sched-modal-title">Schedule a purchase</div>
-    <div class="modal-sub">Recurring airtime charged from your wallet. Other scheduled services will appear after provider certification.</div>
+    <div class="modal-sub">Recurring purchases execute automatically using your stored authorization. Other scheduled services will appear after provider certification.</div>
     <div id="sched-msg" class="auth-error" style="display:none"></div>
     <div class="field"><label for="sched-service">Service</label>
       <select id="sched-service" class="field-input" onchange="updateSchedPlan()">
@@ -3987,8 +3994,8 @@ async function checkPendingOrders() {
       const n = data.orders.length;
       const amt = fmt(data.orders.reduce((s, o) => s + Number(o.amount || 0), 0));
       text.textContent = n === 1
-        ? `One purchase of ${amt} is awaiting provider confirmation. Your wallet has not been debited — it resolves automatically.`
-        : `${n} purchases (${amt} total) are awaiting provider confirmation. Your wallet has not been debited — they resolve automatically.`;
+        ? `One purchase of ${amt} is awaiting provider confirmation. You have not been charged — it resolves automatically.`
+        : `${n} purchases (${amt} total) are awaiting provider confirmation. You have not been charged — they resolve automatically.`;
       widget.removeAttribute('hidden');
       updateDashboardAttention(n, amt);
     } else {
@@ -4010,7 +4017,12 @@ function updateUserUI() {
   const acctBalance = document.getElementById('acct-balance');
   if (acctBalance) {
     const bal = Number(user.wallet || 0);
-    acctBalance.textContent = 'Available balance: ' + fmt(bal);
+    if (bal > 0) {
+      acctBalance.textContent = 'Legacy balance (spendable): ' + fmt(bal);
+      acctBalance.hidden = false;
+    } else {
+      acctBalance.hidden = true;
+    }
   }
   const sideName = document.getElementById('side-nav-name');
   const sideEmail = document.getElementById('side-nav-email');
@@ -5801,6 +5813,53 @@ async function setTransactionPin() {
   setLoading('btn-set-pin', false);
 }
 
+// ── BIZFLOW ORDER INTENTS (Account → Business orders) ─────────────────────
+async function loadBizflowIntents() {
+  const card = document.getElementById('bizflow-orders-card');
+  const list = document.getElementById('bizflow-intents-list');
+  if (!card || !list || !token) return;
+  try {
+    const res = await api('GET', '/api/bizflow/intents');
+    const intents = res.intents || [];
+    if (!intents.length) { card.hidden = true; return; }
+    document.getElementById('bizflow-orders-business').textContent = intents[0].bizflow_business;
+    list.innerHTML = intents.map((i) => `
+      <div class="txn-item" data-intent="${i.id}" style="cursor:default">
+        <div class="txn-icon debit"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg></div>
+        <div class="txn-info">
+          <div class="txn-title">${escHtml(i.description)}</div>
+          <div class="txn-sub">${escHtml(i.bizflow_business)} · ${fmtTime(i.created_at)}</div>
+        </div>
+        <div class="txn-right">
+          <div class="txn-amount">${fmt(i.amount)}</div>
+          <div style="display:flex;gap:5px">
+            <button type="button" class="chip active" style="padding:5px 10px;font-size:11px" onclick="decideBizflowIntent('${i.id}','confirmed')">Approve</button>
+            <button type="button" class="chip" style="padding:5px 10px;font-size:11px" onclick="decideBizflowIntent('${i.id}','declined')">Decline</button>
+          </div>
+        </div>
+      </div>`).join('');
+    card.hidden = false;
+  } catch { /* non-critical */ }
+}
+
+async function decideBizflowIntent(id, decision) {
+  if (decision === 'confirmed') {
+    // Confirming creates the order and opens its secure checkout.
+    try {
+      const res = await api('POST', `/api/bizflow/intents/${id}/confirm`, {});
+      if (res.authorization_url) { window.location.href = res.authorization_url; return; }
+      showToast(res.message || 'Order request handled.', 'info');
+    } catch (e) { showToast(e.message || 'Could not start checkout.', 'error'); }
+    loadBizflowIntents();
+    return;
+  }
+  try {
+    await api('POST', `/api/bizflow/intents/${id}/decline`, {});
+    showToast('Business order declined.', 'info');
+  } catch (e) { showToast(e.message || 'Could not decline.', 'error'); }
+  loadBizflowIntents();
+}
+
 // ── TWO-FACTOR (Account → Security) — optional per account ────────────────
 async function tfaRefreshStatus() {
   const badge = document.getElementById('tfa-status-badge');
@@ -5885,6 +5944,7 @@ function goTab(tab) {
     loadScheduledPurchases();
     loadBizflowLink();
     showAppearanceSection();
+    loadBizflowIntents();
   }
 }
 
@@ -7667,7 +7727,7 @@ html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--b
       </div>
       <div class="welcome-step">
         <div class="welcome-step-num">2</div>
-        <div class="welcome-step-text"><strong>Buy airtime or pay a bill</strong> — pick any service from the home screen and pay from your balance.</div>
+        <div class="welcome-step-text"><strong>Buy airtime or pay a bill</strong> — pick any service from the home screen and pay securely at checkout.</div>
       </div>
       <div class="welcome-step">
         <div class="welcome-step-num">3</div>
@@ -7691,9 +7751,9 @@ html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--b
       <h3>2. Account</h3>
       <p>You must be at least 18 years old to register. You are responsible for keeping your password and transaction PIN confidential. TopFlowNG staff will never ask for your PIN or password.</p>
       <h3>3. Payments &amp; Wallet</h3>
-      <p>Your wallet balance is held for use within the platform. TopFlowNG does not hold funds as a bank — wallets are for purchasing services only. All prices are displayed in Nigerian Naira (₦).</p>
+      <p>You pay for each order at checkout through our secure payment provider. TopFlowNG is not a bank and does not offer stored-value accounts; all prices are displayed in Nigerian Naira (₦). Any legacy balance shown on your account remains spendable on services and may be refunded on request.</p>
       <h3>4. Purchases</h3>
-      <p>Every purchase requires your transaction PIN. Successful orders are final. If a service is not delivered, TopFlowNG will investigate and, where applicable, reverse the charge to your wallet within 24–72 hours.</p>
+      <p>Every order is verified and fulfilled by our licensed bill-payment provider. If a service is not delivered, TopFlowNG will investigate and, where applicable, refund the disputed amount within 24–72 hours.</p>
       <h3>5. Prohibited Use</h3>
       <p>You may not use TopFlowNG for fraud, money laundering, or any unlawful purpose. We reserve the right to suspend or terminate accounts found in violation.</p>
       <h3>6. Limitation of Liability</h3>

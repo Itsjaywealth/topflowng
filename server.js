@@ -116,6 +116,9 @@ app.use(cors({
 
 // Raw body for Paystack webhook signature verification
 app.use('/api/paystack/webhook', express.raw({ type: 'application/json' }));
+// BizFlowNG integration endpoints need the exact raw bytes for HMAC
+// verification, captured before the global JSON parser.
+app.use('/api/integrations/topflowng', express.raw({ type: 'application/json', limit: '64kb' }));
 
 // JSON body for everything else
 app.use(express.json({ limit: config.bodyLimit }));
@@ -1107,6 +1110,8 @@ app.use('/api/internal/referrals', require('./routes/referrals').router);
 app.use('/api/rag', require('./routes/rag'));
 // BizFlowNG account linking + explicit expense sync opt-in (customer JWT).
 app.use('/api/bizflow', require('./routes/bizflow'));
+// BizFlowNG → TopFlowNG business catalogue + order intents (integration-key HMAC).
+app.use('/api/integrations/topflowng', require('./routes/bizflow-orders'));
 
 // ── Support escalation (chat → human handoff) ───────────────────────────────
 // Creates a ticket for the ops team and notifies the customer. The chatbot
@@ -2300,6 +2305,11 @@ function scheduleProviderBalanceWatch() {
       providerBalanceState.wasLow = verdict.low;
       if (verdict.alert) {
         logger.error('PROVIDER BALANCE LOW — orders will fail until topped up', { balanceNgn: balance, thresholdNgn: minBalance });
+        require('./services/events').emit('topflow.provider.alert', {
+          kind: 'balance_low',
+          balance: Number(balance.toFixed(2)),
+          threshold: minBalance,
+        }, { entityType: 'provider', entityId: 'vtpass' }).catch(() => {});
         require('./services/events').emit('topflow.provider.balance_low', {
           balance: Number(balance.toFixed(2)),
           threshold: minBalance,

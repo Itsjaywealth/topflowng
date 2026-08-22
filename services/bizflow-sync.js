@@ -108,6 +108,9 @@ async function deliverSync(row) {
         reference: row.reference, category: row.category, amount: Number(row.amount),
         bizflow_expense_id: res.data?.expense?.id || res.data?.id || null,
       }, { entityType: 'bizflow_sync', entityId: row.reference });
+      await events.emit('topflow.bizflow.sync.ready', {
+        reference: row.reference, expense_id: res.data?.expense?.id || res.data?.id || null,
+      }, { entityType: 'bizflow_sync', entityId: row.reference }).catch(() => {});
       await events.audit('bizflow.sync.delivered', {
         actorType: 'customer', actorId: row.user_id,
         entityType: 'bizflow_sync', entityId: row.reference,

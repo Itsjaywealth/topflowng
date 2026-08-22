@@ -438,6 +438,64 @@ async function findOrderByPaymentReference(paymentReference) {
 // Mark a direct order's payment as confirmed (paid) after the payment provider
 // authoritatively verifies it. Idempotent: setting paid when already paid is a
 // no-op. Never changes users.wallet.
+// ── BizFlowNG order intents ────────────────────────────────────────────────
+// A linked business PROPOSES an order; nothing is purchased until the linked
+// user explicitly confirms. Idempotent per (business, idempotency_key).
+async function getBizflowLinkByBusiness(bizflowBusiness) {
+  const { rows } = await pool.query(
+    `SELECT * FROM bizflow_links WHERE bizflow_business_id = $1 AND status = 'active'
+     ORDER BY id DESC LIMIT 1`,
+    [bizflowBusiness]
+  );
+  return rows[0] || null;
+}
+
+async function createBizflowOrderIntent({ userId, bizflowBusiness, serviceType, requestPayload, amount, description, idempotencyKey }) {
+  const { rows } = await pool.query(
+    `INSERT INTO bizflow_order_intents
+       (user_id, bizflow_business, service_type, request_payload, amount, description, idempotency_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (bizflow_business, idempotency_key) DO UPDATE SET updated_at = NOW()
+     RETURNING *`,
+    [userId, bizflowBusiness, serviceType, JSON.stringify(requestPayload || {}), amount, description, idempotencyKey]
+  );
+  return rows[0];
+}
+
+async function getBizflowIntentByIdempotency(bizflowBusiness, idempotencyKey) {
+  const { rows } = await pool.query(
+    'SELECT * FROM bizflow_order_intents WHERE bizflow_business = $1 AND idempotency_key = $2 LIMIT 1',
+    [bizflowBusiness, idempotencyKey]
+  );
+  return rows[0] || null;
+}
+
+async function getBizflowIntent(id) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(id))) return null;
+  const { rows } = await pool.query('SELECT * FROM bizflow_order_intents WHERE id = $1 LIMIT 1', [id]);
+  return rows[0] || null;
+}
+
+async function listPendingBizflowIntents(userId) {
+  const { rows } = await pool.query(
+    `SELECT id, bizflow_business, service_type, amount, description, status, created_at
+     FROM bizflow_order_intents WHERE user_id = $1 AND status = 'pending'
+     ORDER BY created_at DESC LIMIT 20`,
+    [userId]
+  );
+  return rows;
+}
+
+async function setBizflowIntentStatus(id, userId, status, orderRequestId = null) {
+  const { rows } = await pool.query(
+    `UPDATE bizflow_order_intents
+     SET status = $3, order_request_id = COALESCE($4, order_request_id), updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND status = 'pending' RETURNING *`,
+    [id, userId, status, orderRequestId]
+  );
+  return rows[0] || null;
+}
+
 // ── Two-factor (TOTP) storage ─────────────────────────────────────────────
 // The secret arrives already AES-256-GCM encrypted by services/totp.js — the
 // database never sees plaintext TOTP secrets.
@@ -1959,6 +2017,12 @@ module.exports = {
   createVtuAttempt,
   createDirectOrder,
   getTotp,
+  getBizflowLinkByBusiness,
+  createBizflowOrderIntent,
+  getBizflowIntentByIdempotency,
+  getBizflowIntent,
+  listPendingBizflowIntents,
+  setBizflowIntentStatus,
   setTotpPending,
   confirmTotp,
   disableTotp,

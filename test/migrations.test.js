@@ -157,6 +157,7 @@ test('migration 001 applies successfully', async () => {
   assert.match(out, /applied 012_marketing_opt_in\.sql/);
   assert.match(out, /applied 013_direct_pay_self_heal\.sql/);
   assert.match(out, /applied 014_auth_hardening\.sql/);
+  assert.match(out, /applied 015_bizflow_order_intents\.sql/);
 
   const rows = await q('SELECT version FROM schema_migrations ORDER BY version');
   assert.deepStrictEqual(rows.map((r) => r.version), [
@@ -164,7 +165,7 @@ test('migration 001 applies successfully', async () => {
     '004_auto_recharge', '005_scheduled_purchases', '006_auto_recharge_sessions',
     '007_bizflow_data', '008_scheduled_execution_claims', '009_notifications',
     '010_direct_pay_orders', '011_automation_events', '012_marketing_opt_in',
-    '013_direct_pay_self_heal', '014_auth_hardening',
+    '013_direct_pay_self_heal', '014_auth_hardening', '015_bizflow_order_intents',
   ]);
 
   const cols = await q(

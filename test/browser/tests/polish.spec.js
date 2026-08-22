@@ -135,9 +135,10 @@ test.describe('wallet + branding', () => {
     await expect(page.getByText('Fund wallet')).toHaveCount(0);
     // Dashboard hero is services-focused, not a balance hero.
     await expect(page.locator('.dash-balance-card')).toContainText('TopFlowNG services');
-    // Balance remains visible as quiet accounting on the Account tab.
+    // Legacy balance shows only when non-zero, labelled honestly (not a
+    // wallet hero). Fresh accounts see nothing.
     await page.evaluate(() => goTab('account'));
-    await expect(page.locator('#acct-balance')).toContainText('Available balance');
+    await expect(page.locator('#acct-balance')).toBeHidden();
     await expect(page.locator('.wordmark img')).toBeVisible();
   });
 });

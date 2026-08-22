@@ -14,7 +14,9 @@ const config = require('../config');
 const events = require('../services/events');
 const bizflowSync = require('../services/bizflow-sync');
 const { authMiddleware } = require('../middleware/auth');
+const { apiLimiter } = require('../middleware/rate-limit');
 const { sendError } = require('../lib/errors');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -148,6 +150,94 @@ router.post('/sync', authMiddleware, async (req, res) => {
     res.status(202).json({ ok: true, queued: true, sync: { reference: queued.reference, category: queued.category, amount: Number(queued.amount), status: queued.status } });
   } catch {
     sendError(res, 500, 'Failed to queue expense sync');
+  }
+});
+
+// ── Order intents (business-initiated, user-confirmed) ──────────────────────
+router.get('/intents', authMiddleware, async (req, res) => {
+  try {
+    const intents = await db.listPendingBizflowIntents(req.user.id);
+    res.json({ ok: true, intents });
+  } catch {
+    sendError(res, 500, 'Failed to load business orders');
+  }
+});
+
+router.post('/intents/:id/:decision(confirm|decline)', authMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const { id, decision } = req.params;
+    if (decision === 'decline') {
+      const declined = await db.setBizflowIntentStatus(id, req.user.id, 'declined');
+      if (!declined) return sendError(res, 404, 'Order request not found or already handled');
+      await events.audit('bizflow.intent.declined', {
+        actorType: 'customer', actorId: req.user.id,
+        entityType: 'order_intent', entityId: id,
+      });
+      return res.json({ ok: true, status: 'declined' });
+    }
+
+    // Confirm: re-price server-side from the stored payload, create a real
+    // direct order and hand back its secure checkout URL. No provider call and
+    // no money movement happens here — payment completes at the provider.
+    const intent = await db.getBizflowIntent(id);
+    if (!intent || String(intent.user_id) !== String(req.user.id)) return sendError(res, 404, 'Order request not found');
+    if (intent.status !== 'pending') return sendError(res, 409, 'This order request was already handled');
+
+    const { productFor } = require('../services/vtpass');
+    const d = (intent.request_payload && intent.request_payload.details) || {};
+    const serviceType = intent.service_type;
+    let product;
+    switch (serviceType) {
+      case 'airtime':
+        product = productFor('airtime', { network: String(d.network || '').toUpperCase(), phone: d.phone, amount: parseFloat(intent.amount) });
+        break;
+      case 'data':
+        product = productFor('data', { network: String(d.network || '').toUpperCase(), phone: d.phone, planCode: d.planCode });
+        break;
+      case 'electricity':
+        product = productFor('electricity', { disco: String(d.disco || '').toUpperCase(), meterNumber: d.meterNumber, meterType: d.meterType || 'prepaid', amount: parseFloat(intent.amount) });
+        break;
+      case 'cable':
+        product = productFor('cable', { provider: String(d.provider || '').toUpperCase(), smartCardNumber: d.smartCardNumber, planCode: d.planCode });
+        break;
+      case 'exam-pin':
+        product = productFor('exam-pin', { examBody: String(d.examBody || '').toUpperCase(), examVariation: d.examVariation, quantity: d.quantity || 1, amount: parseFloat(intent.amount) });
+        break;
+      default:
+        return sendError(res, 400, 'Unsupported service');
+    }
+
+    const requestId = require('../services/vtpass').buildRequestId();
+    const reference = `TF-${Date.now()}-${req.user.id}`;
+    await db.createDirectOrder({
+      requestId, userId: req.user.id, serviceType,
+      amount: parseFloat(intent.amount),
+      description: `${intent.description} (via BizFlowNG)`,
+      paymentReference: reference,
+      requestPayload: { serviceType, product, details: d },
+    });
+
+    const provider = require('../payment').getPaymentProvider();
+    const user = await db.findUserById(req.user.id);
+    const init = await provider.initializePayment({
+      email: user.email,
+      amount: parseFloat(intent.amount),
+      reference,
+      metadata: { user_id: req.user.id, order_request_id: requestId, direct: true },
+      callbackUrl: `${config.appUrl}/?direct_verified=${reference}`,
+    });
+
+    await db.setBizflowIntentStatus(id, req.user.id, 'confirmed', requestId);
+    await events.audit('bizflow.intent.confirmed', {
+      actorType: 'customer', actorId: req.user.id,
+      entityType: 'order_intent', entityId: id,
+      metadata: { requestId, amount: parseFloat(intent.amount) },
+    });
+
+    res.json({ ok: true, authorization_url: init.authorizationUrl, reference, request_id: requestId });
+  } catch (err) {
+    logger.error('Intent decision failed', { detail: err.message });
+    sendError(res, 500, 'Could not process that order request');
   }
 });
 

@@ -193,6 +193,42 @@ const mockDb = {
   },
 
   // ── Two-factor (TOTP) storage ────────────────────────────────────────────
+  // ── BizFlowNG order intents ──────────────────────────────────────────────
+  async getBizflowLinkByBusiness(bizflowBusiness) {
+    const matches = bizflowLinks.filter((l) => l.bizflow_business_id === String(bizflowBusiness) && l.status === 'active');
+    return matches[matches.length - 1] || null;
+  },
+  async createBizflowOrderIntent({ userId, bizflowBusiness, serviceType, requestPayload, amount, description, idempotencyKey }) {
+    const existing = bizflowIntents.find((i) => i.bizflow_business === String(bizflowBusiness) && i.idempotency_key === idempotencyKey);
+    if (existing) return existing;
+    const intent = {
+      id: 'bi-' + (nextIntentId++), user_id: Number(userId), bizflow_business: String(bizflowBusiness),
+      service_type: serviceType, request_payload: requestPayload || {}, amount,
+      description, idempotency_key: idempotencyKey, status: 'pending',
+      order_request_id: null, created_at: new Date().toISOString(),
+    };
+    bizflowIntents.push(intent);
+    return intent;
+  },
+  async getBizflowIntentByIdempotency(bizflowBusiness, idempotencyKey) {
+    return bizflowIntents.find((i) => i.bizflow_business === String(bizflowBusiness) && i.idempotency_key === idempotencyKey) || null;
+  },
+  async getBizflowIntent(id) {
+    return bizflowIntents.find((i) => i.id === id) || null;
+  },
+  async listPendingBizflowIntents(userId) {
+    return bizflowIntents.filter((i) => i.user_id === Number(userId) && i.status === 'pending');
+  },
+  async setBizflowIntentStatus(id, userId, status, orderRequestId = null) {
+    const intent = bizflowIntents.find((i) => i.id === id && i.user_id === Number(userId) && i.status === 'pending');
+    if (!intent) return null;
+    intent.status = status;
+    if (orderRequestId) intent.order_request_id = orderRequestId;
+    return intent;
+  },
+  async __resetBizflowIntents() { bizflowIntents.length = 0; },
+  __seedBizflowLink(link) { bizflowLinks.push(link); return link; },
+
   async getTotp(userId) {
     const u = users.find((x) => x.id === Number(userId));
     if (!u || !u.totp_secret) return null;
@@ -246,6 +282,8 @@ const mockDb = {
   },
 
   __reset() {
+    bizflowLinks.length = 0;
+    bizflowIntents.length = 0;
     users.length = 0;
     resets.length = 0;
     nextUserId = 1;
@@ -258,6 +296,9 @@ const mockDb = {
 mockDb.pool = { query: async () => ({ rows: [] }) };
 
 const notifications = [];
+const bizflowLinks = [];
+const bizflowIntents = [];
+let nextIntentId = 1;
 
 // ── Mock in-app notifications ────────────────────────────────────────────────
 mockDb.createNotification = async ({ userId, category = 'transaction', title, message, link = null }) => {
@@ -316,6 +357,7 @@ installMock('services/email.js', {
 // ── Mock provider client (never dials VTPass) ──────────────────────────
 const vtpassMock = {
   getProductRegistry: () => [],
+  PRODUCT_MAP: { data: { MTN14GB: 'mtn-14.5gb-5000', MTN1GB: 'mtn-1gb-600' }, cable: { DSTV_PREMIUM: 'dstv3', GOTV_JOLLI: 'gotv-jolli' }, exam: { WAEC: { serviceID: 'waec', variation: 'waecdirect' } }, recharge: {} },
   MAX_PURCHASE_AMOUNT: 1000000,
   parseValidatedAmount: (value) => {
     const n = Number(value);
