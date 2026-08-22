@@ -3477,9 +3477,10 @@ let pendingDirectReference = null;
 let serviceReturnFocus = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
-async function api(method, path, body, noAuth) {
+async function api(method, path, body, noAuth, bearerOverride) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (!noAuth && token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (bearerOverride) opts.headers['Authorization'] = 'Bearer ' + bearerOverride;
+  else if (!noAuth && token) opts.headers['Authorization'] = 'Bearer ' + token;
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(path, opts);
   const raw = await r.text();
@@ -3619,6 +3620,14 @@ async function handleLogin() {
   setLoading('btn-login', true, 'Logging in…');
   try {
     const data = await api('POST', '/api/auth/login', { email, password }, true);
+    if (data.twoFactorRequired) {
+      setLoading('btn-login', false);
+      return startTwoFactorLogin(data.challenge, false);
+    }
+    if (data.twoFactorEnrollmentRequired) {
+      setLoading('btn-login', false);
+      return startTwoFactorLogin(data.challenge, true);
+    }
     token = data.token;
     user  = data.user;
     localStorage.setItem('tf_token', token);
@@ -3630,6 +3639,56 @@ async function handleLogin() {
     showErr('login-error', e.message);
   }
   setLoading('btn-login', false);
+}
+
+// ── TWO-FACTOR LOGIN ───────────────────────────────────────────────────────
+let tfaState = null; // { challenge, enroll }
+
+function startTwoFactorLogin(challenge, enroll) {
+  tfaState = { challenge, enroll };
+  hideErr('tfa-error');
+  document.getElementById('tfa-setup-block').hidden = !enroll;
+  document.getElementById('tfa-code-block').hidden = Boolean(enroll);
+  const panel = document.getElementById('tfa-panel');
+  panel.classList.add('open');
+  panel.hidden = false;
+  if (enroll) {
+    api('POST', '/api/auth/2fa/setup', {}, true, challenge).then((res) => {
+      document.getElementById('tfa-secret').textContent = res.secret || '';
+      tfaState.otpauthUrl = res.otpauthUrl || '';
+    }).catch((e) => showErr('tfa-error', e.message || 'Could not start setup.'));
+  }
+  setTimeout(() => document.getElementById('tfa-code').focus(), 150);
+}
+
+async function submitTwoFactorLogin() {
+  if (!tfaState) return;
+  hideErr('tfa-error');
+  const code = document.getElementById('tfa-code').value.trim();
+  if (!/^\d{6}$/.test(code)) return showErr('tfa-error', 'Enter the 6-digit code.');
+  setLoading('btn-tfa-verify', true, 'Verifying…');
+  try {
+    const endpoint = tfaState.enroll ? '/api/auth/2fa/confirm' : '/api/auth/2fa/verify-login';
+    const body = tfaState.enroll ? { code } : { challenge: tfaState.challenge, code };
+    const data = await api('POST', endpoint, body, true, tfaState.enroll ? tfaState.challenge : undefined);
+    token = data.token;
+    user = data.user || null;
+    if (!user) {
+      const profile = await api('GET', '/api/user/profile');
+      user = profile;
+    }
+    localStorage.setItem('tf_token', token);
+    tfaState = null;
+    const panel = document.getElementById('tfa-panel');
+    panel.classList.remove('open');
+    panel.hidden = true;
+    const nx = safeNextPath();
+    if (nx) { window.location.href = nx; return; }
+    launchApp();
+  } catch (e) {
+    showErr('tfa-error', e.message || 'Verification failed.');
+  }
+  setLoading('btn-tfa-verify', false);
 }
 
 async function handleRegister() {
@@ -7412,6 +7471,31 @@ html.dark .tile-icon{background:linear-gradient(140deg,color-mix(in srgb,var(--b
     <button class="pin-prompt-confirm" id="review-balance-btn" onclick="confirmReview('balance')" aria-label="Use stored balance" hidden></button>
     <button class="pin-prompt-confirm" onclick="confirmReview()" id="review-confirm-btn">Confirm &amp; continue</button>
     <button class="review-back" onclick="cancelReview()">Edit details</button>
+  </div>
+</div>
+
+<!-- ══════════════ TWO-FACTOR PANEL (login) ══════════════ -->
+<div id="tfa-panel" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="tfa-title" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="tfa-title">Two-factor authentication</h2>
+    </div>
+    <div id="tfa-setup-block" hidden>
+      <p class="modal-sub">Your owner account must enable two-factor authentication before signing in.</p>
+      <p class="modal-sub" style="margin-top:8px">1. Open your authenticator app and add this key:</p>
+      <div style="display:flex;gap:8px;align-items:center;margin:10px 0 2px">
+        <code id="tfa-secret" style="flex:1;font:700 15px/1.4 ui-monospace,monospace;letter-spacing:1px;background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:10px;padding:12px;word-break:break-all"></code>
+        <button type="button" class="btn-history-quick" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('tfa-secret').textContent)">Copy</button>
+      </div>
+      <p class="modal-sub" style="margin-top:8px">2. Enter the 6-digit code it shows:</p>
+    </div>
+    <div id="tfa-code-block" hidden>
+      <p class="modal-sub">Enter the 6-digit code from your authenticator app.</p>
+    </div>
+    <div id="tfa-error" class="auth-error" role="alert"></div>
+    <input type="text" id="tfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"
+      style="width:100%;text-align:center;font:800 24px/1 var(--display);letter-spacing:8px;padding:14px;border:1.5px solid var(--border-strong);border-radius:14px;background:var(--surface);color:var(--text-primary);margin:6px 0 14px">
+    <button type="button" id="btn-tfa-verify" class="btn-primary btn-block" onclick="submitTwoFactorLogin()">Verify &amp; continue</button>
   </div>
 </div>
 

@@ -1,8 +1,10 @@
 /**
  * TopFlowNG — Account security: login failure lockout + token revocation.
  *
- * In-memory only (resets on restart). Good enough for a single-instance app;
- * documented limitation in INTERNAL-PLAN.md. Never logs tokens or emails.
+ * Revocations are held in an in-memory map for O(1) request-path checks AND
+ * persisted to the revoked_tokens table (sha256 hashes only), so a logout
+ * survives server restarts. The map is hydrated from Postgres at boot.
+ * Never logs tokens or emails.
  */
 
 'use strict';
@@ -72,6 +74,39 @@ function revokeToken(token) {
   } catch { /* ignore malformed */ }
   revokedTokens.set(hash, expiresAt);
   pruneRevoked();
+  persistRevocation(hash, expiresAt);
+}
+
+// Fire-and-forget persistence — a failed write must never break logout, and
+// the in-memory map already covers this process. Lazy require avoids a
+// circular import (database.js does not import this module today, but stay safe).
+function persistRevocation(hash, expiresAt) {
+  Promise.resolve().then(() => {
+    const db = require('../database');
+    return db.pool.query(
+      `INSERT INTO revoked_tokens (token_hash, expires_at) VALUES ($1, $2)
+       ON CONFLICT (token_hash) DO NOTHING`,
+      [hash, new Date(expiresAt).toISOString()]
+    );
+  }).catch(() => {});
+}
+
+// Load every unexpired revocation recorded by previous process lifetimes.
+async function hydrateRevocations() {
+  try {
+    const db = require('../database');
+    const { rows } = await db.pool.query(
+      'SELECT token_hash, expires_at FROM revoked_tokens WHERE expires_at > NOW()'
+    );
+    for (const row of rows) {
+      revokedTokens.set(row.token_hash, new Date(row.expires_at).getTime());
+    }
+    // Opportunistic cleanup of long-expired rows.
+    await db.pool.query('DELETE FROM revoked_tokens WHERE expires_at < NOW() - INTERVAL \'1 day\'');
+    return rows.length;
+  } catch {
+    return 0; // table may not exist yet mid-deploy — degrade gracefully
+  }
 }
 
 function isTokenRevoked(token) {
@@ -86,4 +121,5 @@ module.exports = {
   isLockedOut,
   revokeToken,
   isTokenRevoked,
+  hydrateRevocations,
 };

@@ -41,6 +41,7 @@ const directRouter = require('./routes/direct');
 const aiRouter = require('./routes/ai').router;
 const adminAnalyticsRouter = require('./routes/admin-analytics');
 const { queryVtpassOrder, processVtpassPurchase, processDirectPurchase, productFor, buildRequestId, getWalletBalance, evaluateProviderBalance } = require('./services/vtpass');
+const totpService = require('./services/totp');
 const { sendEmail, sendPurchaseEmail, sendOrderStatusEmail, sendAutoRechargeEmail, sendInvoiceEmail } = require('./services/email');
 const sms = require('./services/sms');
 const { sendError } = require('./lib/errors');
@@ -359,6 +360,20 @@ app.post('/api/auth/login', authLimiter, validate(loginSchema), async (req, res)
     }
 
     security.resetLoginFailures(email);
+
+    // Two-factor gate: enabled accounts must present a TOTP code; owner
+    // accounts are REQUIRED to enrol before they can receive a session.
+    const twoFactor = await db.getTotp(user.id);
+    if (twoFactor && twoFactor.enabled) {
+      const challenge = jwt.sign({ id: user.id, purpose: '2fa' }, config.jwt.secret, { expiresIn: '5m' });
+      return res.json({ twoFactorRequired: true, challenge });
+    }
+    const isOwner = config.ownerEmails.includes(String(user.email).toLowerCase());
+    if (isOwner && config.auth.ownerTwoFactorRequired && !(twoFactor && twoFactor.secret)) {
+      const challenge = jwt.sign({ id: user.id, purpose: '2fa-enroll' }, config.jwt.secret, { expiresIn: '15m' });
+      return res.json({ twoFactorEnrollmentRequired: true, challenge });
+    }
+
     const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     await db.createNotification({
       userId: user.id, category: 'security', title: 'New sign-in',
@@ -369,6 +384,117 @@ app.post('/api/auth/login', authLimiter, validate(loginSchema), async (req, res)
     logger.error('Login error', { message: err.message });
     if (config.sentry.dsn) Sentry.captureException(err);
     sendError(res, 500, 'Login failed');
+  }
+});
+
+// ── Two-factor authentication (TOTP) ────────────────────────────────────────
+// Accepts EITHER a real session token OR a short-lived login challenge
+// (purpose '2fa' / '2fa-enroll') — the only endpoints a challenge can reach.
+function challengeOrAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return sendError(res, 401, 'No token provided');
+  if (security.isTokenRevoked(token)) return sendError(res, 401, 'Invalid or expired token');
+  try {
+    const payload = jwt.verify(token, config.jwt.secret);
+    if (payload.purpose && !['2fa', '2fa-enroll'].includes(payload.purpose)) {
+      return sendError(res, 403, 'Invalid challenge');
+    }
+    req.user = payload;
+    req.is2faChallenge = Boolean(payload.purpose);
+    return next();
+  } catch {
+    return sendError(res, 401, 'Invalid or expired token');
+  }
+}
+
+// Begin enrolment: generates a secret, stores it encrypted as PENDING
+// (enabling only happens on first valid code) and returns the otpauth URL.
+app.post('/api/auth/2fa/setup', challengeOrAuth, async (req, res) => {
+  try {
+    const user = await db.findUserById(req.user.id);
+    if (!user) return sendError(res, 404, 'User not found');
+    const existing = await db.getTotp(user.id);
+    if (existing && existing.enabled) return sendError(res, 409, 'Two-factor is already enabled');
+    const secret = totpService.generateSecret();
+    await db.setTotpPending(user.id, totpService.encryptSecret(secret));
+    res.json({ secret, otpauthUrl: totpService.otpauthUrl(user.email, secret) });
+  } catch (err) {
+    logger.error('2FA setup error', { detail: err.message });
+    sendError(res, 500, 'Could not start two-factor setup');
+  }
+});
+
+// Confirm enrolment with the first valid code.
+app.post('/api/auth/2fa/confirm', challengeOrAuth, async (req, res) => {
+  try {
+    const code = String((req.body || {}).code || '');
+    const record = await db.getTotp(req.user.id);
+    if (!record || !record.secretEncrypted) return sendError(res, 400, 'Start two-factor setup first');
+    const secret = totpService.decryptSecret(record.secretEncrypted);
+    if (!secret || !totpService.verifyTotp(secret, code)) return sendError(res, 401, 'Invalid code');
+    const enabled = await db.confirmTotp(req.user.id);
+    const challengeOnly = req.is2faChallenge;
+    const payload = { ok: true, enabled };
+    if (challengeOnly) {
+      // Enrolment completed at login: issue the real session now.
+      const user = await db.findUserById(req.user.id);
+      const token = jwt.sign({ id: req.user.id, email: req.user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+      return res.json({ ...payload, token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
+    }
+    res.json(payload);
+  } catch (err) {
+    logger.error('2FA confirm error', { detail: err.message });
+    sendError(res, 500, 'Could not confirm two-factor');
+  }
+});
+
+// Complete a login protected by TOTP.
+app.post('/api/auth/2fa/verify-login', authLimiter, async (req, res) => {
+  try {
+    const { challenge, code } = req.body || {};
+    if (!challenge || !/^\d{6}$/.test(String(code || ''))) return sendError(res, 400, 'Enter your 6-digit code');
+    let payload;
+    try {
+      payload = jwt.verify(String(challenge), config.jwt.secret);
+    } catch {
+      return sendError(res, 401, 'This code request expired. Sign in again.');
+    }
+    if (payload.purpose !== '2fa') return sendError(res, 403, 'Invalid challenge');
+    const record = await db.getTotp(payload.id);
+    if (!record || !record.enabled) return sendError(res, 400, 'Two-factor is not active for this account');
+    const secret = totpService.decryptSecret(record.secretEncrypted);
+    if (!secret || !totpService.verifyTotp(secret, code)) {
+      await security.recordLoginFailure(`2fa:${payload.id}`);
+      return sendError(res, 401, 'Invalid code');
+    }
+    const user = await db.findUserById(payload.id);
+    if (!user) return sendError(res, 404, 'User not found');
+    const token = jwt.sign({ id: user.id, email: user.email }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    res.json({ token, user: { id: user.id, fullName: user.full_name, email: user.email, phone: user.phone, wallet: parseFloat(user.wallet), isAdmin: user.is_admin } });
+  } catch (err) {
+    logger.error('2FA verify-login error', { detail: err.message });
+    sendError(res, 500, 'Verification failed');
+  }
+});
+
+// Disable 2FA: requires the account password AND a current valid code.
+app.post('/api/auth/2fa/disable', authMiddleware, async (req, res) => {
+  try {
+    const { password, code } = req.body || {};
+    const user = await db.findUserById(req.user.id);
+    if (!user) return sendError(res, 404, 'User not found');
+    const record = await db.getTotp(user.id);
+    if (!record || !record.secretEncrypted) return res.json({ ok: true, enabled: false });
+    const okPw = await db.verifyPassword(user, String(password || ''));
+    if (!okPw) return sendError(res, 401, 'Invalid password');
+    const secret = totpService.decryptSecret(record.secretEncrypted);
+    if (!secret || !totpService.verifyTotp(secret, String(code || ''))) return sendError(res, 401, 'Invalid code');
+    await db.disableTotp(user.id);
+    res.json({ ok: true, enabled: false });
+  } catch (err) {
+    logger.error('2FA disable error', { detail: err.message });
+    sendError(res, 500, 'Could not disable two-factor');
   }
 });
 
@@ -2175,7 +2301,9 @@ function scheduleProviderBalanceWatch() {
   }
 
   void check();
-  return setInterval(check, intervalMs);
+  const timer = setInterval(check, intervalMs);
+  if (typeof timer.unref === 'function') timer.unref();
+  return timer;
 }
 
 // ── Provider catalogue sync ─────────────────────────────────────────────────
@@ -2199,11 +2327,16 @@ function scheduleCatalogSync() {
 
   // First run shortly after boot so the owner surface has data quickly.
   setTimeout(run, 45_000).unref();
-  return setInterval(run, intervalMs);
+  const timer = setInterval(run, intervalMs);
+  if (typeof timer.unref === 'function') timer.unref();
+  return timer;
 }
 
 async function start() {
   await db.initDB();
+  // Logout revocations from previous process lifetimes must keep biting.
+  const revivedCount = await security.hydrateRevocations().catch(() => 0);
+  if (revivedCount > 0) logger.info('Hydrated persisted token revocations', { count: revivedCount });
 
   // Owner promotion — idempotent, server-side only. Emails in OWNER_EMAILS
   // are granted admin on boot so owners always retain administrative access.

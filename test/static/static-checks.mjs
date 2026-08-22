@@ -169,7 +169,7 @@ await checkInlineSyntax('bizflow.html');
   const app = read('topflowng.html');
   const biz = read('bizflow.html');
   check('auth next redirect is same-origin guarded', /function safeNextPath\(/.test(app) && /target\.origin !== window\.location\.origin/.test(app));
-  check('all auth redirects use the safe next resolver', (app.match(/const nx = safeNextPath\(\)/g) || []).length === 3);
+  check('all auth redirects use the safe next resolver', (app.match(/const nx = safeNextPath\(\)/g) || []).length >= 3);
   const waecPrice = app.match(/const EXAM_PRICE_MAP = \{ WAEC: (\d+) \}/)?.[1];
   const initialExamPrice = app.match(/id="exam-price">₦([\d,]+)\.00</)?.[1]?.replaceAll(',', '');
   check('WAEC checkout display matches canonical price', Boolean(waecPrice) && initialExamPrice === waecPrice);

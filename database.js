@@ -438,6 +438,35 @@ async function findOrderByPaymentReference(paymentReference) {
 // Mark a direct order's payment as confirmed (paid) after the payment provider
 // authoritatively verifies it. Idempotent: setting paid when already paid is a
 // no-op. Never changes users.wallet.
+// ── Two-factor (TOTP) storage ─────────────────────────────────────────────
+// The secret arrives already AES-256-GCM encrypted by services/totp.js — the
+// database never sees plaintext TOTP secrets.
+async function getTotp(userId) {
+  const { rows } = await pool.query(
+    'SELECT totp_secret, totp_enabled FROM users WHERE id = $1', [userId]
+  );
+  const row = rows[0];
+  if (!row || !row.totp_secret) return null;
+  return { secretEncrypted: row.totp_secret, enabled: Boolean(row.totp_enabled) };
+}
+
+async function setTotpPending(userId, secretEncrypted) {
+  await pool.query('UPDATE users SET totp_secret = $1, totp_enabled = FALSE WHERE id = $2',
+    [secretEncrypted, userId]);
+}
+
+async function confirmTotp(userId) {
+  const { rows } = await pool.query(
+    `UPDATE users SET totp_enabled = TRUE
+     WHERE id = $1 AND totp_secret IS NOT NULL RETURNING totp_enabled`, [userId]
+  );
+  return Boolean(rows[0]);
+}
+
+async function disableTotp(userId) {
+  await pool.query('UPDATE users SET totp_secret = NULL, totp_enabled = FALSE WHERE id = $1', [userId]);
+}
+
 async function markOrderPaid(requestId, paymentReference) {
   const client = await pool.connect();
   try {
@@ -1929,6 +1958,10 @@ module.exports = {
   logFailedTransaction,
   createVtuAttempt,
   createDirectOrder,
+  getTotp,
+  setTotpPending,
+  confirmTotp,
+  disableTotp,
   findOrderByPaymentReference,
   markOrderPaid,
   acquireVtuIdempotency,

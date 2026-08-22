@@ -387,6 +387,12 @@ tbody tr:hover td{background:var(--mist)}
         </button>
       </div>
     </div>
+    <div class="field" id="admin-totp-field" style="display:none">
+      <label for="admin-totp">Two-factor code</label>
+      <input type="text" id="admin-totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="text-align:center;letter-spacing:6px;font-weight:700">
+      <p style="margin:6px 0 0;font-size:11.5px;color:#64748B">Enrolment required: open your authenticator app, use “Add account → enter setup key” with the key shown, then enter its code.</p>
+      <code id="admin-totp-secret" style="display:block;margin-top:6px;padding:8px;border-radius:8px;background:#F1F5F9;font:700 13px/1.4 ui-monospace,monospace;word-break:break-all;display:none"></code>
+    </div>
     <button type="button" class="btn" id="login-btn" onclick="adminLogin()">Sign in</button>
     <p class="error-msg" id="login-error" role="alert"></p>
   </div>
@@ -838,20 +844,64 @@ async function adminLogin() {
   const errEl = document.getElementById('login-error');
   const btn = document.getElementById('login-btn');
   errEl.style.display = 'none';
+  const totpCode = (document.getElementById('admin-totp')?.value || '').trim();
+  if (window.__adminChallenge) {
+    if (!/^\d{6}$/.test(totpCode)) { showErr('Enter the 6-digit code from your authenticator app'); return; }
+    btn.textContent = 'Verifying…'; btn.disabled = true;
+    try {
+      const ch = window.__adminChallenge;
+      const path = ch.enroll ? '/api/auth/2fa/confirm' : '/api/auth/2fa/verify-login';
+      const body = ch.enroll ? { code: totpCode } : { challenge: ch.challenge, code: totpCode };
+      const vr = await fetch(API + path, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + ch.challenge }, body: JSON.stringify(body) });
+      const vbody = await vr.json();
+      if (!vr.ok) throw new Error(vbody.error || 'Invalid code');
+      window.__adminChallenge = null;
+      document.getElementById('admin-totp-field').style.display = 'none';
+      finishAdminLogin(vbody);
+      return;
+    } catch(e3) { showErr(e3.message || 'Verification failed'); btn.textContent='Verify code'; btn.disabled=false; return; }
+  }
   if (!email || !pass) { showErr('Email and password required'); return; }
   btn.textContent = 'Signing in…'; btn.disabled = true;
   try {
-    const r = await apiFetch('/api/auth/login', { method:'POST', body:{ email, password:pass } }, false);
+    let r = await apiFetch('/api/auth/login', { method:'POST', body:{ email, password:pass } }, false);
+    if (r.twoFactorRequired || r.twoFactorEnrollmentRequired) {
+      // Owner/admin second factor: verify the TOTP code against the challenge.
+      const enroll = Boolean(r.twoFactorEnrollmentRequired);
+      document.getElementById('admin-totp-field').style.display = 'block';
+      if (enroll) {
+        try {
+          const setup = await fetch(API + '/api/auth/2fa/setup', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + r.challenge } });
+          const setupBody = await setup.json();
+          if (!setup.ok) throw new Error(setupBody.error || 'Setup failed');
+          const secretEl = document.getElementById('admin-totp-secret');
+          secretEl.textContent = setupBody.secret;
+          secretEl.style.display = 'block';
+        } catch(e2) { throw new Error(e2.message || 'Could not start two-factor setup'); }
+      }
+      btn.textContent = 'Verify code'; btn.disabled = false;
+      document.getElementById('admin-totp').focus();
+      window.__adminChallenge = { challenge: r.challenge, enroll };
+      return;
+    }
+    if (window.__adminChallenge && !r.twoFactorRequired) {
+      // Completed via the confirm endpoint below — fall through handled there.
+    }
     if (!r.user?.isAdmin) { showErr('Not an admin account'); btn.textContent='Sign in'; btn.disabled=false; return; }
-    TOKEN = r.token;
-    localStorage.setItem('admin_token', TOKEN);
-    document.getElementById('sidebar-name').textContent = r.user.fullName;
-    document.getElementById('sidebar-email').textContent = r.user.email;
-    initApp();
+    finishAdminLogin(r);
   } catch(e) {
     showErr(e.message || 'Login failed');
     btn.textContent = 'Sign in'; btn.disabled = false;
   }
+}
+
+function finishAdminLogin(r) {
+  if (!r.token || !r.user?.isAdmin) { showErr('Not an admin account'); const b=document.getElementById('login-btn'); b.textContent='Sign in'; b.disabled=false; return; }
+  TOKEN = r.token;
+  localStorage.setItem('admin_token', TOKEN);
+  document.getElementById('sidebar-name').textContent = r.user.fullName;
+  document.getElementById('sidebar-email').textContent = r.user.email;
+  initApp();
 }
 
 function showErr(msg) {

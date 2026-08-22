@@ -192,6 +192,27 @@ const mockDb = {
     return { transactions: list, total: transactions.filter((t) => t.user_id === userId).length };
   },
 
+  // ── Two-factor (TOTP) storage ────────────────────────────────────────────
+  async getTotp(userId) {
+    const u = users.find((x) => x.id === Number(userId));
+    if (!u || !u.totp_secret) return null;
+    return { secretEncrypted: u.totp_secret, enabled: Boolean(u.totp_enabled) };
+  },
+  async setTotpPending(userId, secretEncrypted) {
+    const u = users.find((x) => x.id === Number(userId));
+    if (u) { u.totp_secret = secretEncrypted; u.totp_enabled = false; }
+  },
+  async confirmTotp(userId) {
+    const u = users.find((x) => x.id === Number(userId));
+    if (!u || !u.totp_secret) return false;
+    u.totp_enabled = true;
+    return true;
+  },
+  async disableTotp(userId) {
+    const u = users.find((x) => x.id === Number(userId));
+    if (u) { u.totp_secret = null; u.totp_enabled = false; }
+  },
+
   async setTransactionPin() {},
   async hasTransactionPin() { return false; },
   async verifyTransactionPin() { return false; },
@@ -231,6 +252,10 @@ const mockDb = {
     notifications.length = 0;
   },
 };
+
+// Minimal pool stub so boot-time sweeps (owner promotion, balance
+// reconciliation, revocation hydration) no-op cleanly in tests.
+mockDb.pool = { query: async () => ({ rows: [] }) };
 
 const notifications = [];
 
