@@ -130,6 +130,7 @@ const ROOT_ASSET_PATHS = new Set([
   '/topflowng.html',
   '/admin.html',
   '/bizflow.html',
+  '/help.html',
   '/manifest.json',
   '/sw.js',
   '/robots.txt',
@@ -1064,6 +1065,11 @@ app.get('/api/vtu/orders/:requestId', authMiddleware, async (req, res) => {
     logger.error('VTU order status lookup failed', { requestId, message: err.message });
     sendError(res, 500, 'Failed to check this order');
   }
+});
+
+// Public help center (SEO-friendly, grounded in the shared knowledge base).
+app.get('/help', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'help.html'));
 });
 
 // Purchase rate limiter (per-user, default 10 req/min) applies to all VTU

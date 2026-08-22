@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help Center — TopFlow NG</title>
+<meta name="description" content="Guides and answers for TopFlow NG — airtime, data, cable TV, electricity bills and exam PINs.">
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f7faf9;color:#12241f}
+  .wrap{max-width:720px;margin:0 auto;padding:40px 16px}
+  a.back{color:#0d7a5f;text-decoration:none;font-size:14px}
+  h1{margin:12px 0 4px}
+  p.sub{color:#5b6f68;margin-top:0}
+  form{display:flex;gap:8px;margin:24px 0}
+  input{flex:1;padding:12px;border:1px solid #cfe0da;border-radius:10px;font-size:15px;outline:none}
+  input:focus{border-color:#0d7a5f}
+  button{padding:12px 20px;border:0;border-radius:10px;background:#0d7a5f;color:#fff;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.5}
+  .card{background:#fff;border:1px solid #dcebe5;border-radius:12px;padding:16px;margin-bottom:12px}
+  .card .t{font-weight:600}
+  .card .s{font-size:14px;color:#41564e;margin-top:6px;line-height:1.5}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .muted{color:#8aa39a;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← Back to TopFlow NG</a>
+  <h1>Help Center</h1>
+  <p class="sub">Guides and answers for TopFlow NG — airtime, data, cable TV, electricity bills and exam PINs.</p>
+
+  <form id="f">
+    <input id="q" placeholder="Search help articles…" autocomplete="off">
+    <button id="btn" type="submit">Search</button>
+  </form>
+
+  <section id="results"></section>
+
+  <section id="browse">
+    <h2 style="font-size:18px">Browse topics</h2>
+    <div class="grid" id="list"><div class="muted">Loading…</div></div>
+  </section>
+</div>
+<script>
+const RAG = "https://rag-api-production-3332a.up.railway.app/help/topflow";
+const list = document.getElementById("list");
+
+fetch(RAG + "/articles").then(r => r.json()).then(d => {
+  list.innerHTML = (d.articles || []).map(a =>
+    `<div class="card"><div class="t">${a.title || ""}</div><div class="muted">Updated ${a.updatedAt || ""}</div></div>`
+  ).join("") || '<div class="muted">No articles yet.</div>';
+}).catch(() => { list.innerHTML = '<div class="muted">Could not load articles.</div>'; });
+
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = document.getElementById("q").value.trim();
+  if (q.length < 2) return;
+  const btn = document.getElementById("btn");
+  btn.disabled = true;
+  try {
+    const r = await fetch(RAG + "/search?q=" + encodeURIComponent(q));
+    const d = await r.json();
+    const box = document.getElementById("results");
+    box.innerHTML = (d.results || []).length
+      ? `<h2 style="font-size:18px">Results</h2>` + d.results.map(x =>
+          `<div class="card"><div class="t">${x.title || "Help article"}</div><div class="s">${x.snippet}…</div></div>`).join("")
+      : `<h2 style="font-size:18px">No matches — try different words</h2>`;
+  } finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>
