@@ -497,7 +497,9 @@ app.post('/api/auth/2fa/verify-login', authLimiter, async (req, res) => {
 app.post('/api/auth/2fa/disable', authMiddleware, async (req, res) => {
   try {
     const { password, code } = req.body || {};
-    const user = await db.findUserById(req.user.id);
+    // findUserById deliberately omits the password column; the disable check
+    // needs the real hash, so re-fetch by email.
+    const user = await db.findUserByEmail(req.user.email);
     if (!user) return sendError(res, 404, 'User not found');
     const record = await db.getTotp(user.id);
     if (!record || !record.secretEncrypted) return res.json({ ok: true, enabled: false });

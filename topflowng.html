@@ -5867,7 +5867,7 @@ async function tfaRefreshStatus() {
   try {
     // The profile endpoint exposes nothing about TOTP; probe via a cheap
     // authenticated call that reports state without side effects.
-    const res = await api('POST', '/api/auth/2fa/status', {});
+    const res = await api('GET', '/api/auth/2fa/status');
     const on = Boolean(res.enabled);
     badge.textContent = on ? 'On' : 'Off';
     badge.className = 'status-pill ' + (on ? 'status-pill--completed' : 'status-pill--pending');
