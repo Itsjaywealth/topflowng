@@ -14,6 +14,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('node:crypto');
 
+process.env.TOPFLOWNG_SYNC_SECRET = process.env.TOPFLOWNG_SYNC_SECRET || 'bf-shared-secret-0123456789abcdef';
+process.env.BF_SYNC_SECRET = process.env.TOPFLOWNG_SYNC_SECRET;
 const h = require('./helpers/load-app');
 const bizflowSync = require('../services/bizflow-sync');
 const paystackAdapter = require('../payment/paystack');
@@ -140,6 +142,58 @@ test('linked user sees the pending intent and approving issues a checkout', asyn
 
   const list2 = await h.api('GET', '/api/bizflow/intents', { token });
   assert.equal(list2.data.intents.length, 0, 'confirmed intent leaves the pending list');
+});
+
+// ── BizFlowNG-native compat scheme (shared secret, their exact payload) ────
+
+function nativeRequest(path, payloadObj) {
+  const rawBody = JSON.stringify(payloadObj);
+  const ts = Math.floor(Date.now() / 1000);
+  const mac = crypto.createHmac('sha256', process.env.BF_SYNC_SECRET).update(`${ts}.${rawBody}`).digest('hex');
+  return fetch(`${h.BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-topflow-signature': `t=${ts},v1=${mac}`,
+    },
+    body: rawBody,
+  }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
+}
+
+test('native scheme: their exact airtime payload prices via phone prefix', async () => {
+  await setupLink();
+  const r = await nativeRequest('/api/integrations/bizflow/orders', {
+    source: 'bizflowng', type: 'bizflow.order.intent',
+    reference: 'BF-NATIVE-001', business_id: BUSINESS_ID,
+    service_type: 'airtime', amount: 200,
+    recipient: '08031234567', note: 'staff airtime', requested_by: 'user_1',
+  });
+  assert.equal(r.status, 201);
+  assert.equal(r.data.ok, true);
+  assert.equal(r.data.status, 'pending', 'nothing fulfils until the linked user confirms');
+  assert.equal(r.data.amount_charged, 200);
+  assert.ok(r.data.topflow_ref);
+
+  // Idempotent on reference.
+  const replay = await nativeRequest('/api/integrations/bizflow/orders', {
+    ...{ source: 'bizflowng', type: 'bizflow.order.intent' }, reference: 'BF-NATIVE-001',
+    business_id: BUSINESS_ID, service_type: 'airtime', amount: 200, recipient: '08031234567',
+  });
+  assert.equal(replay.status, 200);
+  assert.equal(replay.data.topflow_ref, r.data.topflow_ref);
+
+  // The alias base serves the same routes.
+  const aliasList = await signedRequest('GET', '/api/integrations/bizflow/services');
+  assert.equal(aliasList.status, 200);
+});
+
+test('native scheme: unsupported service type is rejected clearly', async () => {
+  await setupLink();
+  const r = await nativeRequest('/api/integrations/bizflow/orders', {
+    source: 'bizflowng', reference: 'BF-NATIVE-002', business_id: BUSINESS_ID,
+    service_type: 'other', amount: 500, recipient: '08031234567',
+  });
+  assert.equal(r.status, 400);
 });
 
 test('declining an intent is terminal and purchases nothing', async () => {

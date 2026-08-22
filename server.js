@@ -118,7 +118,7 @@ app.use(cors({
 app.use('/api/paystack/webhook', express.raw({ type: 'application/json' }));
 // BizFlowNG integration endpoints need the exact raw bytes for HMAC
 // verification, captured before the global JSON parser.
-app.use('/api/integrations/topflowng', express.raw({ type: 'application/json', limit: '64kb' }));
+app.use(['/api/integrations/topflowng', '/api/integrations/bizflow'], express.raw({ type: 'application/json', limit: '64kb' }));
 
 // JSON body for everything else
 app.use(express.json({ limit: config.bodyLimit }));
@@ -1112,6 +1112,9 @@ app.use('/api/rag', require('./routes/rag'));
 app.use('/api/bizflow', require('./routes/bizflow'));
 // BizFlowNG → TopFlowNG business catalogue + order intents (integration-key HMAC).
 app.use('/api/integrations/topflowng', require('./routes/bizflow-orders'));
+// Alias base matching BizFlowNG's documented default path
+// (TOPFLOWNG_ORDER_PATH=/api/integrations/bizflow/orders).
+app.use('/api/integrations/bizflow', require('./routes/bizflow-orders'));
 
 // ── Support escalation (chat → human handoff) ───────────────────────────────
 // Creates a ticket for the ops team and notifies the customer. The chatbot

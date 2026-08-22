@@ -212,13 +212,30 @@ router.get('/services', async (req, res) => {
 });
 
 // ── Order intents ────────────────────────────────────────────────────────────
+// Coarse NG carrier prefix map — sufficient to route airtime; VTPass itself
+// validates ported numbers at purchase time.
+const NG_PREFIXES = [
+  ['MTN', /^(0703|0706|0803|0806|0810|0813|0814|0816|0903|0906|0913|0916)/],
+  ['GLO', /^(0705|0805|0807|0811|0815|0905|0915)/],
+  ['AIRTEL', /^(0701|0708|0802|0808|0812|0901|0902|0904|0907|0912)/],
+  ['9MOBILE', /^(0809|0817|0818|0908|0909)/],
+];
+function detectNgNetwork(phone) {
+  const digits = String(phone || '').replace(/[^\d]/g, '').replace(/^234/, '0');
+  for (const [name, re] of NG_PREFIXES) if (re.test(digits)) return name;
+  return null;
+}
+
 function priceIntent(serviceType, d) {
   switch (serviceType) {
     case 'airtime': {
       const amount = parseValidatedAmount(d.amount);
       if (amount === null) return { error: 'amount must be between ₦50 and ₦1,000,000' };
-      if (!d.network || !d.phone) return { error: 'network and phone are required' };
-      return { amount, description: `Airtime — ${String(d.network).toUpperCase()} ${d.phone}`, payload: { serviceType, details: d } };
+      if (!d.phone) return { error: 'phone is required' };
+      // Network may arrive explicitly or is derived from the NG prefix.
+      const network = String(d.network || detectNgNetwork(d.phone) || '').toUpperCase();
+      if (!network) return { error: 'Could not determine network from the recipient number; pass network explicitly' };
+      return { amount, description: `Airtime — ${network} ${d.phone}`, payload: { serviceType, details: { ...d, network } } };
     }
     case 'data': {
       const network = String(d.network || '').toUpperCase();
